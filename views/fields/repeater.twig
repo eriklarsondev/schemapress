@@ -1,0 +1,19 @@
+{#
+  Repeated rows. Laid out as a grid when the section sets a column count,
+  which is how a "row of three cards" becomes a row of three cards.
+
+  Each row's fields have already been described by the view model, so this is
+  the same include the section body uses.
+#}
+<div {% include 'fields/_attrs.twig' with {
+	field: field,
+	extra: 'sp-list sp-list--' ~ field.key ~ (field.columns > 1 ? ' sp-grid sp-grid-' ~ field.columns : '')
+} only %}>
+	{% for row in field.rows %}
+		<div class="sp-item" id="{{ row.id }}">
+			{% for item in row.fields %}
+				{% include ['fields/' ~ item.kind ~ '.twig', 'fields/text.twig'] with { field: item } only %}
+			{% endfor %}
+		</div>
+	{% endfor %}
+</div>

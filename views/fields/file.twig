@@ -1,0 +1,4 @@
+{# A non-image attachment. #}
+<p class="sp-field sp-field--{{ field.key }}{% if field.classes %} {{ field.classes }}{% endif %}">
+	<a href="{{ field.value.url }}">{{ field.value.title|default(field.value.url) }}</a>
+</p>

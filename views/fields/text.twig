@@ -1,0 +1,2 @@
+{# Plain text, and the fallback for any field kind without a template. #}
+<p {% include 'fields/_attrs.twig' with { field: field } only %}>{{ field.value }}</p>

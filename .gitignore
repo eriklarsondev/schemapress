@@ -1,0 +1,63 @@
+# SchemaPress
+#
+# The governing rule for a WordPress plugin: anything the person installing it
+# cannot produce themselves has to be committed. They have no Composer and no
+# npm — they unzip a folder into wp-content/plugins and activate it. So the
+# compiled output is source as far as distribution is concerned.
+#
+#   vendor/   committed — Timber and Twig
+#   build/    committed — the admin bundles
+#
+# Neither is ignored below, deliberately. If this ever becomes a repo that is
+# only ever deployed through CI, both can be ignored and built on the way out;
+# until then, leaving them out ships a plugin that half works.
+#
+# Before packaging a release, rebuild both without dev dependencies:
+#
+#   composer install --no-dev --optimize-autoloader
+#   npm ci && npm run build
+
+# --- dependencies -----------------------------------------------------------
+
+node_modules/
+
+# --- generated at runtime ---------------------------------------------------
+
+# The Tailwind safelist is written by the plugin whenever a schema is saved, so
+# it reflects one site's schemas. Committing it would carry another site's
+# classes into this one.
+generated/
+
+# --- local tooling ----------------------------------------------------------
+
+composer.phar
+.php-cs-fixer.cache
+.phpunit.result.cache
+.phpunit.cache/
+
+# --- environment ------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+
+# --- editors ----------------------------------------------------------------
+
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# --- operating systems ------------------------------------------------------
+
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# --- logs and scratch -------------------------------------------------------
+
+*.log
+*.bak
+*.orig
+*~

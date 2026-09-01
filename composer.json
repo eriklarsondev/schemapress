@@ -1,0 +1,15 @@
+{
+  "name": "eriklarson/schemapress",
+  "description": "Define reusable page content schemas and render them with Timber",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.2",
+    "timber/timber": "^2.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
+  }
+}

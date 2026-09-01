@@ -1,0 +1,43 @@
+{#
+  The default section template.
+
+  Handles any component, whatever its author named it, by rendering the view
+  model rather than knowing about specific field keys. Override it for a
+  particular type by adding `views/sections/{type}.twig` to your theme.
+
+  Context:
+    id, type, classes, columns
+    backdrop  { url, alt }  or null
+    flow      [ field ]     fields in authored order
+    actions   [ field ]     links with the action role, grouped at the end
+    children  [ section ]   nested components, for containers
+#}
+<section class="{{ classes }}" id="{{ id }}"{% if editing %} data-sp-section="{{ id }}" data-sp-label="{{ type }}"{% endif %}>
+	{% if backdrop %}
+		<div class="sp-backdrop" role="presentation" style="background-image:url('{{ backdrop.url }}')"></div>
+	{% endif %}
+
+	<div class="sp-container">
+		{% for field in flow %}
+			{% include ['fields/' ~ field.kind ~ '.twig', 'fields/text.twig'] with { field: field } only %}
+		{% endfor %}
+
+		{% if children %}
+			<div class="sp-children{% if columns > 1 %} sp-grid sp-grid-{{ columns }}{% endif %}">
+				{% for child in children %}
+					<div class="sp-child">
+						{% include ['sections/' ~ child.type ~ '.twig', 'sections/default.twig'] with child only %}
+					</div>
+				{% endfor %}
+			</div>
+		{% endif %}
+
+		{% if actions %}
+			<div class="sp-actions">
+				{% for field in actions %}
+					{% include ['fields/' ~ field.kind ~ '.twig', 'fields/link.twig'] with { field: field } only %}
+				{% endfor %}
+			</div>
+		{% endif %}
+	</div>
+</section>

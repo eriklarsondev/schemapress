@@ -1,0 +1,6 @@
+{# A fixed set of nested fields under one key. #}
+<div class="sp-group sp-group--{{ field.key }}{% if field.classes %} {{ field.classes }}{% endif %}">
+	{% for item in field.fields %}
+		{% include ['fields/' ~ item.kind ~ '.twig', 'fields/text.twig'] with { field: item } only %}
+	{% endfor %}
+</div>

@@ -1,0 +1,202 @@
+/**
+ * Admin styles.
+ *
+ * Tailwind's preflight is disabled (see tailwind.config.js), so the reset here
+ * is written by hand and scoped to `.schemapress`. It normalizes only what
+ * wp-admin would otherwise impose on our controls — borders, backgrounds,
+ * font inheritance, focus rings — and leaves the rest of the admin untouched.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.schemapress {
+  --sp-background: 0 0% 100%;
+  --sp-foreground: 224 20% 12%;
+
+  --sp-card: 0 0% 100%;
+  --sp-card-foreground: 224 20% 12%;
+
+  --sp-popover: 0 0% 100%;
+  --sp-popover-foreground: 224 20% 12%;
+
+  --sp-primary: 222 47% 20%;
+  --sp-primary-foreground: 0 0% 100%;
+
+  --sp-secondary: 220 14% 96%;
+  --sp-secondary-foreground: 222 47% 20%;
+
+  --sp-muted: 220 14% 96%;
+  --sp-muted-foreground: 220 9% 46%;
+
+  --sp-accent: 220 14% 96%;
+  --sp-accent-foreground: 222 47% 20%;
+
+  --sp-destructive: 0 72% 51%;
+  --sp-destructive-foreground: 0 0% 100%;
+
+  --sp-border: 220 13% 90%;
+  /* a touch darker than the border: a field has to read as an affordance,
+     not as a hairline */
+  --sp-input: 218 12% 82%;
+  --sp-ring: 222 47% 20%;
+
+  --sp-appbar: 222 39% 17%;
+  --sp-appbar-foreground: 210 40% 98%;
+  --sp-appbar-muted: 215 20% 70%;
+  --sp-appbar-active: 217 33% 25%;
+
+  --sp-radius: 0.6rem;
+
+  color: hsl(var(--sp-foreground));
+  font-family: theme('fontFamily.sans');
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- scoped reset -------------------------------------------------------- */
+
+.schemapress *,
+.schemapress *::before,
+.schemapress *::after {
+  box-sizing: border-box;
+}
+
+.schemapress h1,
+.schemapress h2,
+.schemapress h3,
+.schemapress h4,
+.schemapress p {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.schemapress button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* wp-admin styles form controls globally and does it with attribute selectors
+   like `input[type=text]`. matching on the same attributes is fragile — an
+   <input> with no type attribute is a text field but matches none of them — so
+   these rules select by element and subtract the controls that need their own
+   treatment. the stacked :not() also carries enough specificity to win against
+   wp-admin without resorting to !important */
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']),
+.schemapress textarea,
+.schemapress select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 36px;
+  margin: 0;
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background-color: hsl(var(--sp-background));
+  box-shadow: none;
+  color: hsl(var(--sp-foreground));
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.schemapress textarea {
+  min-height: 0;
+}
+
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):focus,
+.schemapress textarea:focus,
+.schemapress select:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: hsl(var(--sp-ring));
+  box-shadow: 0 0 0 3px hsl(var(--sp-ring) / 0.12);
+}
+
+/* wp-admin gives checkboxes a 1px margin and its own box; ours are Radix
+   elements, so the native control only appears in the multi-select field */
+.schemapress input[type='checkbox'] {
+  margin: 0;
+}
+
+.schemapress input::placeholder,
+.schemapress textarea::placeholder {
+  color: hsl(var(--sp-muted-foreground));
+}
+
+.schemapress ul,
+.schemapress ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schemapress code {
+  font-family: theme('fontFamily.mono');
+  font-size: 11px;
+}
+
+/* --- host chrome --------------------------------------------------------- */
+
+/* the app owns the whole screen, so wp-admin's gutter and the .wrap margins
+   are removed to let the app bar run edge to edge.
+   these selectors are keyed to the screen's body class rather than to
+   `.schemapress`, because they target host elements that sit outside our root
+   — and the stylesheet is also loaded on post edit screens, where wp-admin's
+   own layout must be left alone */
+body.toplevel_page_schemapress #wpcontent {
+  padding-left: 0;
+}
+
+body.toplevel_page_schemapress #wpbody-content {
+  padding-bottom: 0;
+}
+
+body.toplevel_page_schemapress .schemapress-wrap {
+  margin: 0;
+  padding: 0;
+}
+
+/* wp-admin prints notices into the wrap; keep them off the app bar */
+body.toplevel_page_schemapress .schemapress-wrap > .notice {
+  margin: 12px 24px;
+}
+
+body.toplevel_page_schemapress #wpfooter {
+  display: none;
+}
+
+.schemapress-boot {
+  margin: 0;
+  padding: 24px;
+  color: hsl(220 9% 46%);
+}
+
+/* the metabox on a page's edit screen supplies its own frame */
+#schemapress-content .inside {
+  margin: 0;
+  padding: 0;
+}
+
+/* --- rich text ----------------------------------------------------------- */
+
+/* TinyMCE renders its own chrome; only the container border is ours */
+.schemapress .wp-editor-container {
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  overflow: hidden;
+}
+
+.schemapress .wp-editor-tabs {
+  margin-bottom: -1px;
+}
