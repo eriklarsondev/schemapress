@@ -1,17 +1,134 @@
 /**
  * The field tree editor.
  *
- * FieldsEditor and FieldEditor are mutually recursive: group and repeater
- * fields nest another FieldsEditor, so a schema can describe arbitrarily deep
+ * A field is the most important object on this screen, so it is drawn as one: a
+ * card with its type as an icon, its label at reading size, and its machine key
+ * beside it. The previous version was a hairline row that collapsed to almost
+ * nothing, which made a schema of eight fields look like an empty box with some
+ * text in it.
+ *
+ * Adding a field asks what kind first. Defaulting to Text and making you change
+ * it afterwards buries the one decision that actually shapes the data.
+ *
+ * FieldsEditor and FieldRow are mutually recursive: group and repeater fields
+ * nest another FieldsEditor, so a schema can describe arbitrarily deep
  * structures with one component pair.
  */
 
 import { useState } from '@wordpress/element'
-import { __ } from '@wordpress/i18n'
-import { ChevronUp, ChevronDown, Trash2, Plus, ChevronRight } from 'lucide-react'
+import { __, sprintf } from '@wordpress/i18n'
+import {
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Plus,
+  ChevronRight,
+  Type,
+  AlignLeft,
+  FileText,
+  Hash,
+  ToggleRight,
+  ListChecks,
+  Image as ImageIcon,
+  Paperclip,
+  Link2,
+  FileSymlink,
+  Share2,
+  Group as GroupIcon,
+  Rows3,
+  CircleHelp,
+} from 'lucide-react'
 import { move, removeAt, replaceAt, toKey, uniqueKey } from '../utils'
-import { Button, Input, Field, Select, Switch, Badge, Heading, cn } from '../../ui'
+import { Button, Input, Field, Select, Switch, Badge, Dialog, cn } from '../../ui'
 import { FieldConfig } from './FieldConfig'
+
+/**
+ * An icon per field type. A type is the thing you scan a schema for, and a
+ * word in a corner is not scannable at eight fields.
+ */
+const ICONS = {
+  text: Type,
+  textarea: AlignLeft,
+  wysiwyg: FileText,
+  number: Hash,
+  toggle: ToggleRight,
+  select: ListChecks,
+  image: ImageIcon,
+  file: Paperclip,
+  link: Link2,
+  post: FileSymlink,
+  relation: Share2,
+  group: GroupIcon,
+  repeater: Rows3,
+}
+
+/**
+ * The icon for a field type.
+ *
+ * @param {string} type
+ * @return {Function} A lucide icon component.
+ */
+function iconFor(type) {
+  return ICONS[type] || CircleHelp
+}
+
+/**
+ * A one-line description of what a field is configured to do, for its collapsed
+ * card — so the card says something even before it is opened.
+ *
+ * @param {Object} field
+ * @return {string} The summary, or an empty string.
+ */
+function summarize(field) {
+  const config = field.config || {}
+
+  switch (field.type) {
+    case 'select': {
+      const count = (config.options || []).length
+
+      return count
+        ? sprintf(
+            /* translators: %d: number of choices */
+            __('%d choices', 'schemapress'),
+            count,
+          )
+        : __('no choices yet', 'schemapress')
+    }
+
+    case 'repeater': {
+      const count = (field.fields || []).length
+      const bounds = [
+        config.min ? sprintf(__('min %d', 'schemapress'), config.min) : '',
+        config.max ? sprintf(__('max %d', 'schemapress'), config.max) : '',
+      ].filter(Boolean)
+
+      return [
+        sprintf(
+          /* translators: %d: number of sub fields */
+          __('%d sub fields', 'schemapress'),
+          count,
+        ),
+        ...bounds,
+      ].join(' · ')
+    }
+
+    case 'group':
+      return sprintf(
+        /* translators: %d: number of sub fields */
+        __('%d sub fields', 'schemapress'),
+        (field.fields || []).length,
+      )
+
+    case 'post':
+      return (config.post_types || []).join(', ')
+
+    case 'relation':
+      return config.multiple ? __('many entries', 'schemapress') : __('one entry', 'schemapress')
+
+    default:
+      return config.placeholder || ''
+  }
+}
 
 /**
  * An ordered list of field definitions.
@@ -19,35 +136,57 @@ import { FieldConfig } from './FieldConfig'
  * @param {Object} props
  * @return {JSX.Element} The list editor.
  */
-export function FieldsEditor({ fields, fieldTypes, onChange }) {
+export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
+  const [picking, setPicking] = useState(false)
+
+  // a field created from the picker opens straight away: you chose a type, and
+  // naming it is the very next thing you were going to do
+  const [opened, setOpened] = useState(null)
+
   /**
-   * Appends a text field with a unique key.
+   * Appends a field of a chosen type.
    *
+   * @param {Object} type
    * @return {void}
    */
-  const addField = () =>
+  const addField = (type) => {
+    const key = uniqueKey(
+      'field',
+      fields.map((field) => field.key),
+    )
+
     onChange([
       ...fields,
       {
-        key: uniqueKey('field', fields.map((field) => field.key)),
+        key,
         label: __('New Field', 'schemapress'),
-        type: 'text',
+        type: type.type,
         help: '',
         required: false,
-        config: {}
-      }
+        config: {},
+        ...(type.children ? { fields: [] } : {}),
+      },
     ])
 
+    setPicking(false)
+    setOpened(key)
+  }
+
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {fields.map((field, index) => (
-        <FieldEditor
+        // keyed by position, not by field.key: a new field's key tracks its
+        // label as you type it, so keying on that would remount the row and
+        // drop the caret after every keystroke
+        <FieldRow
           key={index}
           field={field}
           index={index}
           total={fields.length}
           siblingKeys={fields.filter((_, i) => i !== index).map((f) => f.key)}
           fieldTypes={fieldTypes}
+          startOpen={opened === field.key}
+          onOpened={() => setOpened(null)}
           onChange={(next) => onChange(replaceAt(fields, index, next))}
           onMove={(to) => onChange(move(fields, index, to))}
           onRemove={() => onChange(removeAt(fields, index))}
@@ -55,38 +194,93 @@ export function FieldsEditor({ fields, fieldTypes, onChange }) {
       ))}
 
       {fields.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-[12px] text-muted-foreground">
-          {__('No fields yet.', 'schemapress')}
-        </p>
+        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+          <p className="text-[13px] font-medium">
+            {nested ? __('No sub fields yet', 'schemapress') : __('No fields yet', 'schemapress')}
+          </p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {__('Add one to describe what an entry holds.', 'schemapress')}
+          </p>
+        </div>
       ) : null}
 
-      <div>
-        <Button size="sm" variant="outline" onClick={addField}>
-          <Plus />
-          {__('Add field', 'schemapress')}
-        </Button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:border-ring/40 hover:bg-accent/40 hover:text-foreground"
+      >
+        <Plus className="size-4" />
+        {__('Add field', 'schemapress')}
+      </button>
+
+      {picking ? (
+        <FieldTypePicker
+          fieldTypes={fieldTypes}
+          onPick={addField}
+          onClose={() => setPicking(false)}
+        />
+      ) : null}
     </div>
   )
 }
 
 /**
- * One field definition, collapsible, with its type settings and any children.
+ * The grid of field types shown when adding one.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The picker.
+ */
+function FieldTypePicker({ fieldTypes, onPick, onClose }) {
+  return (
+    <Dialog
+      open
+      size="md"
+      onOpenChange={(next) => !next && onClose()}
+      title={__('Add a field', 'schemapress')}
+      description={__('What kind of thing does this hold?', 'schemapress')}
+    >
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {fieldTypes.map((type) => {
+          const Icon = iconFor(type.type)
+
+          return (
+            <button
+              key={type.type}
+              type="button"
+              onClick={() => onPick(type)}
+              className="flex items-center gap-2.5 rounded-lg border border-border p-3 text-left transition-colors hover:border-ring/40 hover:bg-accent/40"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <Icon className="size-4" />
+              </span>
+              <span className="min-w-0 truncate text-[13px] font-medium">{type.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </Dialog>
+  )
+}
+
+/**
+ * One field definition, as a card that opens onto its settings.
  *
  * @param {Object} props
  * @return {JSX.Element} The field editor.
  */
-function FieldEditor({
+function FieldRow({
   field,
   index,
   total,
   siblingKeys,
   fieldTypes,
+  startOpen,
+  onOpened,
   onChange,
   onMove,
-  onRemove
+  onRemove,
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(Boolean(startOpen))
 
   // a key is the address of every value already stored under it, so renaming
   // one orphans that content. the key tracks the label only while it is still
@@ -96,6 +290,8 @@ function FieldEditor({
 
   const type = fieldTypes.find((candidate) => candidate.type === field.type)
   const nests = Boolean(type?.children)
+  const Icon = iconFor(field.type)
+  const summary = summarize(field)
 
   /**
    * Merges a partial change into the field.
@@ -118,65 +314,92 @@ function FieldEditor({
     update({
       type: next,
       config: {},
-      fields: definition?.children ? field.fields || [] : undefined
+      fields: definition?.children ? field.fields || [] : undefined,
     })
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-background">
-      <div className="flex items-center gap-1 px-2 py-1.5">
+    <div
+      className={cn(
+        'overflow-hidden rounded-lg border bg-background transition-colors',
+        open ? 'border-ring/40' : 'border-border hover:border-ring/30',
+      )}
+    >
+      <div className="group flex items-center gap-3 p-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+          <Icon className="size-4" />
+        </span>
+
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => setOpen((state) => !state)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={() => {
+            setOpen((state) => !state)
+            onOpened?.()
+          }}
+          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left"
         >
-          <ChevronRight
-            className={cn(
-              'size-3 shrink-0 text-muted-foreground transition-transform',
-              open && 'rotate-90'
-            )}
-          />
-          <span className="truncate text-[13px] font-medium">
-            {field.label || __('(unnamed)', 'schemapress')}
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="text-[14px] font-semibold">
+              {field.label || __('(unnamed)', 'schemapress')}
+            </span>
+            <Badge variant="mono">{field.key}</Badge>
+            {field.required ? (
+              <Badge variant="warning">{__('required', 'schemapress')}</Badge>
+            ) : null}
           </span>
-          <Badge variant="mono">{field.key}</Badge>
-          {field.required ? <Badge variant="warning">{__('required', 'schemapress')}</Badge> : null}
-          <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
-            {type?.label || field.type}
+
+          <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+            <span>{type?.label || field.type}</span>
+            {summary ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate">{summary}</span>
+              </>
+            ) : null}
           </span>
         </button>
 
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={__('Move up', 'schemapress')}
-          disabled={index === 0}
-          onClick={() => onMove(index - 1)}
-        >
-          <ChevronUp />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={__('Move down', 'schemapress')}
-          disabled={index === total - 1}
-          onClick={() => onMove(index + 1)}
-        >
-          <ChevronDown />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="destructive-ghost"
-          aria-label={__('Remove field', 'schemapress')}
-          onClick={onRemove}
-        >
-          <Trash2 />
-        </Button>
+        <span className="flex shrink-0 items-center gap-0.5">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={__('Move up', 'schemapress')}
+            disabled={index === 0}
+            onClick={() => onMove(index - 1)}
+          >
+            <ChevronUp />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={__('Move down', 'schemapress')}
+            disabled={index === total - 1}
+            onClick={() => onMove(index + 1)}
+          >
+            <ChevronDown />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="destructive-ghost"
+            aria-label={__('Remove field', 'schemapress')}
+            onClick={onRemove}
+          >
+            <Trash2 />
+          </Button>
+
+          <ChevronRight
+            aria-hidden="true"
+            className={cn(
+              'ml-1 size-4 text-muted-foreground/40 transition-transform',
+              open && 'rotate-90',
+            )}
+          />
+        </span>
       </div>
 
       {open ? (
-        <div className="flex flex-col gap-3 border-t border-border bg-muted/20 p-3">
+        <div className="flex flex-col gap-4 border-t border-border bg-muted/20 p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={__('Label', 'schemapress')}>
               {(id) => (
@@ -188,9 +411,9 @@ function FieldEditor({
                       derived
                         ? {
                             label: event.target.value,
-                            key: uniqueKey(toKey(event.target.value), siblingKeys)
+                            key: uniqueKey(toKey(event.target.value), siblingKeys),
                           }
-                        : { label: event.target.value }
+                        : { label: event.target.value },
                     )
                   }
                 />
@@ -225,7 +448,7 @@ function FieldEditor({
                   value={field.type}
                   options={fieldTypes.map((candidate) => ({
                     value: candidate.type,
-                    label: candidate.label
+                    label: candidate.label,
                   }))}
                   onChange={changeType}
                 />
@@ -239,6 +462,7 @@ function FieldEditor({
                 <Input
                   id={id}
                   value={field.help || ''}
+                  placeholder={__('Shown under the control on the entry form', 'schemapress')}
                   onChange={(event) => update({ help: event.target.value })}
                 />
               )}
@@ -256,9 +480,12 @@ function FieldEditor({
           <FieldConfig field={field} onChange={(config) => update({ config })} />
 
           {nests ? (
-            <div className="rounded-md border-l-2 border-border bg-background p-3 pl-4">
-              <Heading className="mb-2">{__('Sub fields', 'schemapress')}</Heading>
+            <div className="rounded-lg border-l-2 border-ring/30 bg-background p-3 pl-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {__('Sub fields', 'schemapress')}
+              </p>
               <FieldsEditor
+                nested
                 fields={field.fields || []}
                 fieldTypes={fieldTypes}
                 onChange={(fields) => update({ fields })}
