@@ -124,7 +124,7 @@ class Collection implements \IteratorAggregate, \Countable
     /**
      * one entry by id, or null when it does not belong to this collection.
      *
-     * @param integer $id
+     * @param string $id the entry's uuid
      *
      * @return Entry|null
      */

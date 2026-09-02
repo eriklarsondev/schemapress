@@ -35,13 +35,12 @@ import {
   Image as ImageIcon,
   Paperclip,
   Link2,
-  FileSymlink,
-  Share2,
   Group as GroupIcon,
   Rows3,
   CircleHelp,
 } from 'lucide-react'
 import { move, removeAt, replaceAt, toKey, uniqueKey } from '../utils'
+import { conditionTargets } from '../conditions'
 import { Button, Input, Field, Select, Switch, Badge, Dialog, cn } from '../../ui'
 import { FieldConfig } from './FieldConfig'
 
@@ -62,8 +61,6 @@ const ICONS = {
   image: ImageIcon,
   file: Paperclip,
   link: Link2,
-  post: FileSymlink,
-  relation: Share2,
   group: GroupIcon,
   repeater: Rows3,
 }
@@ -125,12 +122,6 @@ function summarize(field) {
         (field.fields || []).length,
       )
 
-    case 'post':
-      return (config.post_types || []).join(', ')
-
-    case 'relation':
-      return config.multiple ? __('many entries', 'schemapress') : __('one entry', 'schemapress')
-
     default:
       return config.placeholder || ''
   }
@@ -189,6 +180,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
           field={field}
           index={index}
           total={fields.length}
+          siblings={fields}
           siblingKeys={fields.filter((_, i) => i !== index).map((f) => f.key)}
           fieldTypes={fieldTypes}
           startOpen={opened === field.key}
@@ -225,6 +217,98 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
           onPick={addField}
           onClose={() => setPicking(false)}
         />
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * When a field appears on the entry form.
+ *
+ * Off by default and stated in one sentence when on, because the setting reads
+ * as a sentence — "show this field when Contactable is filled" — and a row of
+ * three unlabelled selects does not.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The settings.
+ */
+function ConditionSettings({ field, siblings, onChange }) {
+  const condition = field.config?.condition || { field: '', operator: 'filled', value: '' }
+  const targets = conditionTargets(siblings, field.key)
+  const on = Boolean(condition.field)
+
+  const needsValue = ['equals', 'not_equals'].includes(condition.operator)
+
+  if (targets.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-3">
+      <Switch
+        label={__('Only show this field sometimes', 'schemapress')}
+        help={__(
+          'A hidden field keeps whatever was already in it, and still delivers it.',
+          'schemapress',
+        )}
+        checked={on}
+        onChange={(next) =>
+          onChange(
+            next
+              ? { field: targets[0].key, operator: 'filled', value: '' }
+              : { field: '', operator: 'filled', value: '' },
+          )
+        }
+      />
+
+      {on ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <span className="pb-2 text-[13px] text-muted-foreground">
+            {__('Show when', 'schemapress')}
+          </span>
+
+          <Field label={__('Field', 'schemapress')} className="min-w-40 flex-1">
+            {(id) => (
+              <Select
+                id={id}
+                value={condition.field}
+                options={targets.map((target) => ({
+                  value: target.key,
+                  label: target.label || target.key,
+                }))}
+                onChange={(next) => onChange({ ...condition, field: next })}
+              />
+            )}
+          </Field>
+
+          <Field label={__('Is', 'schemapress')} className="min-w-36">
+            {(id) => (
+              <Select
+                id={id}
+                value={condition.operator}
+                options={[
+                  { value: 'filled', label: __('filled in', 'schemapress') },
+                  { value: 'empty', label: __('empty', 'schemapress') },
+                  { value: 'equals', label: __('exactly', 'schemapress') },
+                  { value: 'not_equals', label: __('anything but', 'schemapress') },
+                ]}
+                onChange={(next) => onChange({ ...condition, operator: next })}
+              />
+            )}
+          </Field>
+
+          {needsValue ? (
+            <Field label={__('Value', 'schemapress')} className="min-w-36 flex-1">
+              {(id) => (
+                <Input
+                  id={id}
+                  value={condition.value || ''}
+                  onChange={(event) => onChange({ ...condition, value: event.target.value })}
+                />
+              )}
+            </Field>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )
@@ -278,6 +362,7 @@ function FieldRow({
   field,
   index,
   total,
+  siblings,
   siblingKeys,
   fieldTypes,
   startOpen,
@@ -484,6 +569,12 @@ function FieldRow({
           </div>
 
           <FieldConfig field={field} onChange={(config) => update({ config })} />
+
+          <ConditionSettings
+            field={field}
+            siblings={siblings}
+            onChange={(condition) => update({ config: { ...field.config, condition } })}
+          />
 
           {nests ? (
             <div className="rounded-lg border-l-2 border-ring/30 bg-background p-3 pl-4">

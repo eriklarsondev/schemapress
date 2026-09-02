@@ -238,10 +238,15 @@ class ContentType
                 'label' => get_the_title($post),
                 'singularLabel' => $labels['singular'],
                 'pluralLabel' => $labels['plural'],
+                // what this collection is for, in the author's own words
+                'description' => (string) $post->post_excerpt,
                 // the machine names: singular identifies, plural addresses
                 'key' => self::key($post->ID),
                 'plural' => self::plural($post->ID),
                 'postType' => self::postType($post->ID),
+                // whether entries here have a working copy, or saving is
+                // publishing — the entry screen is a different screen either way
+                'draftAndPublish' => !empty($definition['settings']['draftAndPublish']),
                 'fields' => count($definition['fields']),
                 'entries' => null,
             ];

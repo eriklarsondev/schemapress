@@ -11,8 +11,9 @@ if (!defined('ABSPATH')) {
  * a definition is the shape of one collection's entries:
  *
  *   [
- *     'version' => 1,
- *     'fields'  => [ [ 'key' => 'name', 'type' => 'text', ... ] ],
+ *     'version'  => 1,
+ *     'settings' => [ 'draftAndPublish' => true ],
+ *     'fields'   => [ [ 'key' => 'name', 'type' => 'text', ... ] ],
  *   ]
  *
  * this class touches no WordPress state beyond the sanitizers, so it is safe to
@@ -40,11 +41,75 @@ class SchemaModel
             : [];
 
         $used = [];
+        $normalized = self::normalizeFields($fields, $used);
 
         return [
             'version' => self::VERSION,
-            'fields' => self::normalizeFields($fields, $used),
+            // settings after fields, because one of them names fields and a
+            // column pointing at a field that was deleted is a blank column
+            'settings' => self::normalizeSettings($definition['settings'] ?? null, $normalized),
+            'fields' => $normalized,
         ];
+    }
+
+    /**
+     * coerces a collection's settings.
+     *
+     * draftAndPublish: whether an entry has a working copy separate from what
+     * the site is serving. some collections want that — a page of copy someone
+     * drafts over a week — and some are a list of facts where an extra step
+     * before anything appears is only friction. it defaults to on, because
+     * turning it off is the destructive direction: a collection that had
+     * drafts and stops having them publishes them all.
+     *
+     * listColumns: which fields the entries table shows, in order. null means
+     * nobody has chosen, and the table picks the first few — which is what
+     * makes a field added later appear on its own. an empty ARRAY is a real
+     * choice and means no field columns at all, so the two are kept distinct.
+     *
+     * @param mixed $settings
+     * @param array $fields   the normalized field list
+     *
+     * @return array{draftAndPublish: boolean, listColumns: array|null}
+     */
+    private static function normalizeSettings($settings, array $fields)
+    {
+        $settings = is_array($settings) ? $settings : [];
+
+        return [
+            'draftAndPublish' => array_key_exists('draftAndPublish', $settings)
+                ? (bool) $settings['draftAndPublish']
+                : true,
+            'listColumns' => self::normalizeColumns($settings['listColumns'] ?? null, $fields),
+        ];
+    }
+
+    /**
+     * coerces a chosen column list to keys that exist, in the order given.
+     *
+     * @param mixed $columns
+     * @param array $fields
+     *
+     * @return array|null
+     */
+    private static function normalizeColumns($columns, array $fields)
+    {
+        if (!is_array($columns)) {
+            return null;
+        }
+
+        $keys = array_column($fields, 'key');
+        $chosen = [];
+
+        foreach ($columns as $column) {
+            $key = sanitize_key((string) $column);
+
+            if (in_array($key, $keys, true) && !in_array($key, $chosen, true)) {
+                $chosen[] = $key;
+            }
+        }
+
+        return $chosen;
     }
 
     /**
@@ -122,11 +187,15 @@ class SchemaModel
     {
         $config = isset($field['config']) && is_array($field['config']) ? $field['config'] : [];
 
-        // how wide the control sits on the entry form. this is the admin's own
-        // screen, not the delivered content, which is the only reason a layout
-        // value is allowed to live in a definition at all
+        // how wide the control sits on the entry form, and when it appears at
+        // all. both describe the admin's own screen rather than the delivered
+        // content, which is the only reason a presentation value is allowed to
+        // live in a definition
         $clean = [
-            'width' => ($config['width'] ?? '') === 'half' ? 'half' : 'full',
+            'width' => in_array($config['width'] ?? '', ['third', 'half', 'two-thirds'], true)
+                ? $config['width']
+                : 'full',
+            'condition' => self::normalizeCondition($config['condition'] ?? null),
         ];
 
         switch ($type) {
@@ -147,20 +216,6 @@ class SchemaModel
                     ];
                 }
 
-                $clean['multiple'] = !empty($config['multiple']);
-                break;
-
-            case 'post':
-                $types = isset($config['post_types']) ? (array) $config['post_types'] : ['page'];
-                $clean['post_types'] = array_values(array_filter(array_map('sanitize_key', $types)));
-                $clean['multiple'] = !empty($config['multiple']);
-                break;
-
-            case 'relation':
-                // which collection this points at, by content type id
-                $clean['collection'] = isset($config['collection'])
-                    ? absint($config['collection'])
-                    : 0;
                 $clean['multiple'] = !empty($config['multiple']);
                 break;
 
@@ -196,6 +251,36 @@ class SchemaModel
         }
 
         return $clean;
+    }
+
+    /**
+     * coerces a field's visibility condition.
+     *
+     * a condition names a SIBLING field — one at the same level, so a condition
+     * inside a repeater row reads that row's own values. anything else would
+     * need a path language, and "show the phone field once someone ticked
+     * Contactable" is the case that actually comes up.
+     *
+     * an empty field name means no condition, which is the normal state, so it
+     * is what a malformed value falls back to: a field that fails to parse its
+     * condition stays visible rather than disappearing.
+     *
+     * @param mixed $condition
+     *
+     * @return array{field: string, operator: string, value: string}
+     */
+    private static function normalizeCondition($condition)
+    {
+        $condition = is_array($condition) ? $condition : [];
+
+        $operators = ['filled', 'empty', 'equals', 'not_equals'];
+        $operator = isset($condition['operator']) ? sanitize_key($condition['operator']) : '';
+
+        return [
+            'field' => isset($condition['field']) ? sanitize_key($condition['field']) : '',
+            'operator' => in_array($operator, $operators, true) ? $operator : 'filled',
+            'value' => isset($condition['value']) ? sanitize_text_field($condition['value']) : '',
+        ];
     }
 
     /**

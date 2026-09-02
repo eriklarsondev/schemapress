@@ -103,6 +103,18 @@ function add_submenu_page() { return 'schemapress_page_docs'; }
 function admin_url($path = '') { return 'http://example.test/wp-admin/' . $path; }
 function rest_url($path = '') { return 'http://example.test/wp-json/' . $path; }
 function wp_json_encode($value) { return json_encode($value); }
+
+function wp_generate_uuid4()
+{
+    return sprintf(
+        '%04x%04x-%04x-4%03x-%04x-%04x%04x%04x',
+        random_int(0, 0xffff), random_int(0, 0xffff),
+        random_int(0, 0xffff),
+        random_int(0, 0x0fff),
+        random_int(0, 0x3fff) | 0x8000,
+        random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff)
+    );
+}
 function is_wp_error($value) { return $value instanceof WP_Error; }
 
 class WP_Error
@@ -132,6 +144,7 @@ function wp_insert_post($data, $wp_error = false)
         'ID' => $id,
         'post_type' => $data['post_type'] ?? 'post',
         'post_title' => $data['post_title'] ?? '',
+        'post_excerpt' => $data['post_excerpt'] ?? '',
         'post_name' => sanitize_title($data['post_title'] ?? ''),
         'post_status' => $data['post_status'] ?? 'publish',
         'post_modified_gmt' => '2026-09-02 00:00:00',
@@ -148,7 +161,7 @@ function wp_update_post($data, $wp_error = false)
         return new WP_Error('invalid_post', 'No such post');
     }
 
-    foreach (['post_title', 'post_status', 'post_type'] as $key) {
+    foreach (['post_title', 'post_excerpt', 'post_status', 'post_type'] as $key) {
         if (isset($data[$key])) {
             $GLOBALS['wp_posts'][$id]->$key = $data[$key];
         }
@@ -213,7 +226,20 @@ function get_posts($args = [])
             && (in_array('any', $statuses, true) || in_array($post->post_status, $statuses, true));
     }));
 
+    if (!empty($args['meta_key'])) {
+        $key = $args['meta_key'];
+        $want = $args['meta_value'] ?? '';
+
+        $found = array_values(array_filter($found, function ($post) use ($key, $want) {
+            return (string) get_post_meta($post->ID, $key, true) === (string) $want;
+        }));
+    }
+
     usort($found, function ($a, $b) { return strcmp($a->post_title, $b->post_title); });
+
+    if (!empty($args['numberposts']) && $args['numberposts'] > 0) {
+        $found = array_slice($found, 0, (int) $args['numberposts']);
+    }
 
     if (($args['fields'] ?? '') === 'ids') {
         return array_map(function ($post) { return $post->ID; }, $found);
@@ -334,15 +360,19 @@ new SchemaPress\FieldTypes();
  *
  * @return integer The type id.
  */
-function sp_test_type($title, array $fields = [])
+function sp_test_type($title, array $fields = [], array $settings = [], $description = '')
 {
     $id = wp_insert_post([
         'post_type' => SchemaPress\Schema::POST_TYPE,
         'post_title' => $title,
+        'post_excerpt' => $description,
         'post_status' => 'publish',
     ]);
 
-    SchemaPress\SchemaRepository::saveDefinition($id, ['fields' => $fields]);
+    SchemaPress\SchemaRepository::saveDefinition($id, [
+        'fields' => $fields,
+        'settings' => $settings,
+    ]);
     SchemaPress\ContentType::key($id);
     SchemaPress\ContentType::register($id);
 

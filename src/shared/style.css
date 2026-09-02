@@ -114,6 +114,23 @@
   min-height: 0;
 }
 
+/* the reset above needs its specificity to beat wp-admin, which means it also
+   beats Tailwind's single-class utilities — so `pl-8` and `w-72` on an input
+   silently do nothing. these are the escape hatches, written at the same
+   specificity so a utility class is not required to win an argument it cannot.
+
+   `sp-inset-icon` leaves room for an icon sitting inside the field.
+   `sp-auto-width` gives the width back to whatever the layout says. */
+.schemapress
+  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-inset-icon {
+  padding-left: 2.125rem;
+}
+
+.schemapress
+  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-auto-width {
+  width: auto;
+}
+
 .schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):focus,
 .schemapress textarea:focus,
 .schemapress select:focus {

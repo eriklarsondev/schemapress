@@ -25,7 +25,7 @@ function request(path, { method = 'GET', data } = {}) {
     url: `${root}${path}`,
     method,
     data,
-    headers: nonce ? { 'X-WP-Nonce': nonce } : {}
+    headers: nonce ? { 'X-WP-Nonce': nonce } : {},
   }).catch((error) => {
     throw new Error(error?.message || 'Request failed')
   })
@@ -39,7 +39,7 @@ function request(path, { method = 'GET', data } = {}) {
  */
 function query(args = {}) {
   const pairs = Object.entries(args).filter(
-    ([, value]) => value !== '' && value !== undefined && value !== null
+    ([, value]) => value !== '' && value !== undefined && value !== null,
   )
 
   return pairs.length ? `?${new URLSearchParams(pairs).toString()}` : ''
@@ -65,15 +65,18 @@ export const api = {
    * Creates a content type.
    *
    * @param {string} title
+   * @param {string} description
    * @return {Promise<{type: Object, definition: Object, types: Array}>} The new type.
    */
-  createType: (title) => request('/types', { method: 'POST', data: { title } }),
+  createType: (title, description = '') =>
+    request('/types', { method: 'POST', data: { title, description } }),
 
   /**
-   * Renames a type, replaces its definition, or both.
+   * Renames a type, rewrites its description, replaces its definition, or any
+   * combination. A description sent as an empty string clears it.
    *
    * @param {number} id
-   * @param {Object} data title and/or definition
+   * @param {Object} data title, description and/or definition
    * @return {Promise<{type: Object, definition: Object, types: Array}>} The stored type.
    */
   updateType: (id, data) => request(`/types/${id}`, { method: 'POST', data }),
@@ -116,8 +119,38 @@ export const api = {
   saveEntry: (id, entryId, data) =>
     request(entryId ? `/types/${id}/entries/${entryId}` : `/types/${id}/entries`, {
       method: 'POST',
-      data
+      data,
     }),
+
+  /**
+   * Moves the published copy up to the draft.
+   *
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{entry: Object}>} The entry.
+   */
+  publishEntry: (id, entryId) =>
+    request(`/types/${id}/entries/${entryId}/publish`, { method: 'POST' }),
+
+  /**
+   * Takes an entry off the front end, keeping its work.
+   *
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{entry: Object}>} The entry.
+   */
+  unpublishEntry: (id, entryId) =>
+    request(`/types/${id}/entries/${entryId}/unpublish`, { method: 'POST' }),
+
+  /**
+   * Throws the draft away, returning to what is published.
+   *
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{entry: Object}>} The entry.
+   */
+  discardDraft: (id, entryId) =>
+    request(`/types/${id}/entries/${entryId}/discard`, { method: 'POST' }),
 
   /**
    * Trashes an entry.
@@ -126,14 +159,5 @@ export const api = {
    * @param {number} entryId
    * @return {Promise<{deleted: boolean}>} Whether it went.
    */
-  deleteEntry: (id, entryId) =>
-    request(`/types/${id}/entries/${entryId}`, { method: 'DELETE' }),
-
-  /**
-   * Published posts, for the post relationship field's picker.
-   *
-   * @param {Object} args types, search
-   * @return {Promise<Array>} Matching posts.
-   */
-  posts: (args = {}) => request(`/posts${query(args)}`)
+  deleteEntry: (id, entryId) => request(`/types/${id}/entries/${entryId}`, { method: 'DELETE' }),
 }

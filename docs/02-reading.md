@@ -39,6 +39,16 @@ second.
 An unknown key returns an empty query rather than null. A typo renders nothing instead of
 fataling the page.
 
+A query returns **10 entries** unless `limit()` says otherwise, so a template that loops a
+collection without asking for a size does not accidentally render two thousand rows. Ask
+for what you need: `->limit(100)`, or page through with `->page($n)`.
+
+### Drafts
+
+A collection either keeps a draft separate from what it publishes, or it does not — the
+**Draft and publish** switch in its Settings tab. Either way, this API only ever returns
+what is published, so a template cannot render half-finished work by forgetting to ask.
+
 ### An entry
 
 Field values are read as properties, which is the form Twig reaches for first:
@@ -47,11 +57,19 @@ Field values are read as properties, which is the form Twig reaches for first:
 $person->name;            // a text field
 $person->photo['url'];    // an image resolves to its attachment array
 $person->website['url'];  // a link resolves to url, label, target
-$person->id();            // the entry's post id
+$person->id();            // a uuid, stable for the life of the entry
 $person->title();
-$person->status();        // 'publish' or 'draft'
+$person->state();         // 'published', 'modified' or 'draft'
 $person->isPublished();
 ```
+
+The id is a generated uuid rather than a row number, so putting it in a URL or a data
+attribute says nothing about how many entries exist or what order they were made in.
+
+A collection you read through this API only ever contains published entries, so `state()`
+is `published` unless you went looking for drafts. In a collection with **draft and
+publish** turned on, an entry that is live but has newer unpublished edits reads as
+`modified`; `hasUnpublishedChanges()` says the same thing as a boolean.
 
 Values arrive **resolved**. An image is its attachment array, not an id; a relation is the
 entries it points at, not their ids. A template never handles an id.
@@ -65,7 +83,7 @@ foreach ($person->rows('links') as $link) {
 ```
 
 A field key that collides with one of the accessor methods — `id`, `title`, `slug`,
-`status`, `rows` — resolves to the **method**. Read a field of that name with
+`state`, `rows` — resolves to the **method**. Read a field of that name with
 `get('id')` instead.
 
 ### In Twig

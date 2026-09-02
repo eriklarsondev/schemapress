@@ -188,6 +188,9 @@
 .schemapress .absolute {
   position: absolute;
 }
+.schemapress .\!relative {
+  position: relative !important;
+}
 .schemapress .relative {
   position: relative;
 }
@@ -201,9 +204,17 @@
   left: 0px;
   right: 0px;
 }
+.schemapress .inset-y-0 {
+  top: 0px;
+  bottom: 0px;
+}
 .schemapress .inset-y-1 {
   top: 0.25rem;
   bottom: 0.25rem;
+}
+.schemapress .inset-y-3 {
+  top: 0.75rem;
+  bottom: 0.75rem;
 }
 .schemapress .bottom-0 {
   bottom: 0px;
@@ -217,20 +228,14 @@
 .schemapress .left-2 {
   left: 0.5rem;
 }
-.schemapress .left-2\.5 {
-  left: 0.625rem;
+.schemapress .left-3 {
+  left: 0.75rem;
+}
+.schemapress .right-0 {
+  right: 0px;
 }
 .schemapress .top-1\/2 {
   top: 50%;
-}
-.schemapress .top-full {
-  top: 100%;
-}
-.schemapress .z-0 {
-  z-index: 0;
-}
-.schemapress .z-10 {
-  z-index: 10;
 }
 .schemapress .z-\[100000\] {
   z-index: 100000;
@@ -267,6 +272,9 @@
 }
 .schemapress .ml-1 {
   margin-left: 0.25rem;
+}
+.schemapress .ml-1\.5 {
+  margin-left: 0.375rem;
 }
 .schemapress .mt-0\.5 {
   margin-top: 0.125rem;
@@ -319,6 +327,10 @@
 .schemapress .hidden {
   display: none;
 }
+.schemapress .size-1\.5 {
+  width: 0.375rem;
+  height: 0.375rem;
+}
 .schemapress .size-12 {
   width: 3rem;
   height: 3rem;
@@ -362,6 +374,12 @@
 .schemapress .h-10 {
   height: 2.5rem;
 }
+.schemapress .h-14 {
+  height: 3.5rem;
+}
+.schemapress .h-16 {
+  height: 4rem;
+}
 .schemapress .h-32 {
   height: 8rem;
 }
@@ -374,14 +392,23 @@
 .schemapress .h-\[18px\] {
   height: 18px;
 }
-.schemapress .max-h-56 {
-  max-height: 14rem;
+.schemapress .h-full {
+  height: 100%;
 }
 .schemapress .max-h-72 {
   max-height: 18rem;
 }
 .schemapress .max-h-\[calc\(100vh-4rem\)\] {
   max-height: calc(100vh - 4rem);
+}
+.schemapress .min-h-\[3\.5rem\] {
+  min-height: 3.5rem;
+}
+.schemapress .min-h-\[3rem\] {
+  min-height: 3rem;
+}
+.schemapress .min-h-\[4\.5rem\] {
+  min-height: 4.5rem;
 }
 .schemapress .min-h-\[92px\] {
   min-height: 92px;
@@ -392,23 +419,20 @@
 .schemapress .w-0\.5 {
   width: 0.125rem;
 }
+.schemapress .w-1 {
+  width: 0.25rem;
+}
 .schemapress .w-20 {
   width: 5rem;
+}
+.schemapress .w-3 {
+  width: 0.75rem;
 }
 .schemapress .w-64 {
   width: 16rem;
 }
-.schemapress .w-72 {
-  width: 18rem;
-}
 .schemapress .w-8 {
   width: 2rem;
-}
-.schemapress .w-\[calc\(50\%-0\.25rem\)\] {
-  width: calc(50% - 0.25rem);
-}
-.schemapress .w-\[calc\(50\%-0\.5rem\)\] {
-  width: calc(50% - 0.5rem);
 }
 .schemapress .w-\[min\(28rem\2c calc\(100vw-2rem\)\)\] {
   width: min(28rem, calc(100vw - 2rem));
@@ -435,17 +459,32 @@
 .schemapress .min-w-0 {
   min-width: 0px;
 }
+.schemapress .min-w-36 {
+  min-width: 9rem;
+}
+.schemapress .min-w-40 {
+  min-width: 10rem;
+}
 .schemapress .min-w-\[var\(--radix-select-trigger-width\)\] {
   min-width: var(--radix-select-trigger-width);
 }
-.schemapress .max-w-3xl {
-  max-width: 48rem;
+.schemapress .max-w-56 {
+  max-width: 14rem;
+}
+.schemapress .max-w-\[16rem\] {
+  max-width: 16rem;
+}
+.schemapress .max-w-\[18rem\] {
+  max-width: 18rem;
 }
 .schemapress .max-w-full {
   max-width: 100%;
 }
 .schemapress .max-w-lg {
   max-width: 32rem;
+}
+.schemapress .max-w-prose {
+  max-width: 65ch;
 }
 .schemapress .max-w-sm {
   max-width: 24rem;
@@ -504,8 +543,14 @@
 .schemapress .animate-spin {
   animation: spin 1s linear infinite;
 }
-.schemapress .cursor-default {
-  cursor: default;
+.schemapress .cursor-col-resize {
+  cursor: col-resize;
+}
+.schemapress .cursor-grab {
+  cursor: grab;
+}
+.schemapress .cursor-grabbing {
+  cursor: grabbing;
 }
 .schemapress .cursor-pointer {
   cursor: pointer;
@@ -518,11 +563,17 @@
 .schemapress .resize-y {
   resize: vertical;
 }
+.schemapress .resize {
+  resize: both;
+}
 .schemapress .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 .schemapress .grid-cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.schemapress .grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .schemapress .flex-col {
   flex-direction: column;
@@ -569,12 +620,16 @@
 .schemapress .gap-4 {
   gap: 1rem;
 }
-.schemapress .gap-x-4 {
-  -moz-column-gap: 1rem;
-       column-gap: 1rem;
+.schemapress :is(.divide-y > :not([hidden]) ~ :not([hidden])) {
+  --tw-divide-y-reverse: 0;
+  border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+  border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
 }
-.schemapress .gap-y-4 {
-  row-gap: 1rem;
+.schemapress :is(.divide-border > :not([hidden]) ~ :not([hidden])) {
+  border-color: hsl(var(--sp-border));
+}
+.schemapress .self-start {
+  align-self: flex-start;
 }
 .schemapress .overflow-hidden {
   overflow: hidden;
@@ -592,6 +647,9 @@
 }
 .schemapress .whitespace-nowrap {
   white-space: nowrap;
+}
+.schemapress .break-all {
+  word-break: break-all;
 }
 .schemapress .rounded {
   border-radius: 0.25rem;
@@ -611,6 +669,10 @@
 .schemapress .rounded-xl {
   border-radius: 0.75rem;
 }
+.schemapress .rounded-r-lg {
+  border-top-right-radius: var(--sp-radius);
+  border-bottom-right-radius: var(--sp-radius);
+}
 .schemapress .border {
   border-width: 1px;
 }
@@ -625,6 +687,9 @@
 }
 .schemapress .border-l-2 {
   border-left-width: 2px;
+}
+.schemapress .border-r {
+  border-right-width: 1px;
 }
 .schemapress .border-t {
   border-top-width: 1px;
@@ -652,6 +717,9 @@
 .schemapress .border-input {
   border-color: hsl(var(--sp-input));
 }
+.schemapress .border-primary {
+  border-color: hsl(var(--sp-primary));
+}
 .schemapress .border-red-200 {
   --tw-border-opacity: 1;
   border-color: rgb(254 202 202 / var(--tw-border-opacity, 1));
@@ -662,6 +730,9 @@
 .schemapress .border-ring\/40 {
   border-color: hsl(var(--sp-ring) / 0.4);
 }
+.schemapress .border-ring\/50 {
+  border-color: hsl(var(--sp-ring) / 0.5);
+}
 .schemapress .border-sky-200 {
   --tw-border-opacity: 1;
   border-color: rgb(186 230 253 / var(--tw-border-opacity, 1));
@@ -669,8 +740,11 @@
 .schemapress .border-transparent {
   border-color: transparent;
 }
-.schemapress .border-white\/10 {
-  border-color: rgb(255 255 255 / 0.1);
+.schemapress .bg-accent {
+  background-color: hsl(var(--sp-accent));
+}
+.schemapress .bg-accent\/20 {
+  background-color: hsl(var(--sp-accent) / 0.2);
 }
 .schemapress .bg-amber-100 {
   --tw-bg-opacity: 1;
@@ -680,14 +754,9 @@
   --tw-bg-opacity: 1;
   background-color: rgb(255 251 235 / var(--tw-bg-opacity, 1));
 }
-.schemapress .bg-appbar {
-  background-color: hsl(var(--sp-appbar));
-}
-.schemapress .bg-appbar-active {
-  background-color: hsl(var(--sp-appbar-active));
-}
-.schemapress .bg-appbar-foreground {
-  background-color: hsl(var(--sp-appbar-foreground));
+.schemapress .bg-amber-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(245 158 11 / var(--tw-bg-opacity, 1));
 }
 .schemapress .bg-background {
   background-color: hsl(var(--sp-background));
@@ -712,8 +781,18 @@
   --tw-bg-opacity: 1;
   background-color: rgb(236 253 245 / var(--tw-bg-opacity, 1));
 }
+.schemapress .bg-emerald-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(16 185 129 / var(--tw-bg-opacity, 1));
+}
+.schemapress .bg-foreground {
+  background-color: hsl(var(--sp-foreground));
+}
 .schemapress .bg-muted {
   background-color: hsl(var(--sp-muted));
+}
+.schemapress .bg-muted-foreground\/40 {
+  background-color: hsl(var(--sp-muted-foreground) / 0.4);
 }
 .schemapress .bg-muted\/20 {
   background-color: hsl(var(--sp-muted) / 0.2);
@@ -730,6 +809,12 @@
 .schemapress .bg-primary {
   background-color: hsl(var(--sp-primary));
 }
+.schemapress .bg-primary\/15 {
+  background-color: hsl(var(--sp-primary) / 0.15);
+}
+.schemapress .bg-primary\/5 {
+  background-color: hsl(var(--sp-primary) / 0.05);
+}
 .schemapress .bg-red-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1));
@@ -745,9 +830,6 @@
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
-.schemapress .bg-white\/10 {
-  background-color: rgb(255 255 255 / 0.1);
-}
 .schemapress .bg-gradient-to-t {
   background-image: linear-gradient(to top, var(--tw-gradient-stops));
 }
@@ -759,9 +841,15 @@
 .schemapress .to-transparent {
   --tw-gradient-to: transparent var(--tw-gradient-to-position);
 }
+.schemapress .fill-foreground {
+  fill: hsl(var(--sp-foreground));
+}
 .schemapress .object-cover {
   -o-object-fit: cover;
      object-fit: cover;
+}
+.schemapress .p-0 {
+  padding: 0px;
 }
 .schemapress .p-0\.5 {
   padding: 0.125rem;
@@ -877,9 +965,6 @@
 .schemapress .pb-4 {
   padding-bottom: 1rem;
 }
-.schemapress .pb-5 {
-  padding-bottom: 1.25rem;
-}
 .schemapress .pl-2 {
   padding-left: 0.5rem;
 }
@@ -892,9 +977,6 @@
 .schemapress .pl-7 {
   padding-left: 1.75rem;
 }
-.schemapress .pl-8 {
-  padding-left: 2rem;
-}
 .schemapress .pr-1 {
   padding-right: 0.25rem;
 }
@@ -904,11 +986,17 @@
 .schemapress .pt-1\.5 {
   padding-top: 0.375rem;
 }
+.schemapress .pt-3 {
+  padding-top: 0.75rem;
+}
 .schemapress .text-left {
   text-align: left;
 }
 .schemapress .text-center {
   text-align: center;
+}
+.schemapress .text-right {
+  text-align: right;
 }
 .schemapress .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -949,6 +1037,9 @@
 .schemapress .font-medium {
   font-weight: 500;
 }
+.schemapress .font-normal {
+  font-weight: 400;
+}
 .schemapress .font-semibold {
   font-weight: 600;
 }
@@ -965,6 +1056,12 @@
 .schemapress .leading-none {
   line-height: 1;
 }
+.schemapress .leading-relaxed {
+  line-height: 1.625;
+}
+.schemapress .leading-snug {
+  line-height: 1.375;
+}
 .schemapress .leading-tight {
   line-height: 1.25;
 }
@@ -977,18 +1074,16 @@
 .schemapress .tracking-wider {
   letter-spacing: 0.05em;
 }
+.schemapress .text-amber-600 {
+  --tw-text-opacity: 1;
+  color: rgb(217 119 6 / var(--tw-text-opacity, 1));
+}
 .schemapress .text-amber-900 {
   --tw-text-opacity: 1;
   color: rgb(120 53 15 / var(--tw-text-opacity, 1));
 }
-.schemapress .text-appbar-foreground {
-  color: hsl(var(--sp-appbar-foreground));
-}
-.schemapress .text-appbar-muted {
-  color: hsl(var(--sp-appbar-muted));
-}
-.schemapress .text-appbar-muted\/70 {
-  color: hsl(var(--sp-appbar-muted) / 0.7);
+.schemapress .text-background {
+  color: hsl(var(--sp-background));
 }
 .schemapress .text-card-foreground {
   color: hsl(var(--sp-card-foreground));
@@ -998,6 +1093,10 @@
 }
 .schemapress .text-destructive-foreground {
   color: hsl(var(--sp-destructive-foreground));
+}
+.schemapress .text-emerald-600 {
+  --tw-text-opacity: 1;
+  color: rgb(5 150 105 / var(--tw-text-opacity, 1));
 }
 .schemapress .text-emerald-800 {
   --tw-text-opacity: 1;
@@ -1016,8 +1115,14 @@
 .schemapress .text-muted-foreground\/40 {
   color: hsl(var(--sp-muted-foreground) / 0.4);
 }
+.schemapress .text-muted-foreground\/50 {
+  color: hsl(var(--sp-muted-foreground) / 0.5);
+}
 .schemapress .text-muted-foreground\/60 {
   color: hsl(var(--sp-muted-foreground) / 0.6);
+}
+.schemapress .text-muted-foreground\/70 {
+  color: hsl(var(--sp-muted-foreground) / 0.7);
 }
 .schemapress .text-popover-foreground {
   color: hsl(var(--sp-popover-foreground));
@@ -1045,6 +1150,12 @@
 .schemapress .opacity-0 {
   opacity: 0;
 }
+.schemapress .opacity-100 {
+  opacity: 1;
+}
+.schemapress .opacity-40 {
+  opacity: 0.4;
+}
 .schemapress .opacity-50 {
   opacity: 0.5;
 }
@@ -1061,6 +1172,11 @@
 .schemapress .shadow-lg {
   --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.schemapress .shadow-md {
+  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .schemapress .shadow-sm {
@@ -1080,19 +1196,18 @@
 .schemapress .outline {
   outline-style: solid;
 }
-.schemapress .ring-1 {
-  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-}
-.schemapress .ring-inset {
-  --tw-ring-inset: inset;
-}
-.schemapress .ring-white\/15 {
-  --tw-ring-color: rgb(255 255 255 / 0.15);
-}
 .schemapress .filter {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+.schemapress .transition-\[width\] {
+  transition-property: width;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.schemapress .transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 .schemapress .transition-colors {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
@@ -1218,6 +1333,23 @@
   min-height: 0;
 }
 
+/* the reset above needs its specificity to beat wp-admin, which means it also
+   beats Tailwind's single-class utilities — so `pl-8` and `w-72` on an input
+   silently do nothing. these are the escape hatches, written at the same
+   specificity so a utility class is not required to win an argument it cannot.
+
+   `sp-inset-icon` leaves room for an icon sitting inside the field.
+   `sp-auto-width` gives the width back to whatever the layout says. */
+.schemapress
+  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-inset-icon {
+  padding-left: 2.125rem;
+}
+
+.schemapress
+  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-auto-width {
+  width: auto;
+}
+
 .schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):focus,
 .schemapress textarea:focus,
 .schemapress select:focus {
@@ -1325,6 +1457,14 @@ body.toplevel_page_schemapress #wpfooter {
   opacity: 1;
 }
 
+.schemapress .hover\:border-destructive\/50:hover {
+  border-color: hsl(var(--sp-destructive) / 0.5);
+}
+
+.schemapress .hover\:border-primary\/40:hover {
+  border-color: hsl(var(--sp-primary) / 0.4);
+}
+
 .schemapress .hover\:border-ring\/30:hover {
   border-color: hsl(var(--sp-ring) / 0.3);
 }
@@ -1339,6 +1479,14 @@ body.toplevel_page_schemapress #wpfooter {
 
 .schemapress .hover\:bg-accent\/40:hover {
   background-color: hsl(var(--sp-accent) / 0.4);
+}
+
+.schemapress .hover\:bg-accent\/60:hover {
+  background-color: hsl(var(--sp-accent) / 0.6);
+}
+
+.schemapress .hover\:bg-background:hover {
+  background-color: hsl(var(--sp-background));
 }
 
 .schemapress .hover\:bg-destructive\/10:hover {
@@ -1361,20 +1509,8 @@ body.toplevel_page_schemapress #wpfooter {
   background-color: hsl(var(--sp-secondary) / 0.8);
 }
 
-.schemapress .hover\:bg-white\/10:hover {
-  background-color: rgb(255 255 255 / 0.1);
-}
-
-.schemapress .hover\:bg-white\/5:hover {
-  background-color: rgb(255 255 255 / 0.05);
-}
-
 .schemapress .hover\:text-accent-foreground:hover {
   color: hsl(var(--sp-accent-foreground));
-}
-
-.schemapress .hover\:text-appbar-foreground:hover {
-  color: hsl(var(--sp-appbar-foreground));
 }
 
 .schemapress .hover\:text-destructive:hover {
@@ -1387,10 +1523,6 @@ body.toplevel_page_schemapress #wpfooter {
 
 .schemapress .hover\:underline:hover {
   text-decoration-line: underline;
-}
-
-.schemapress .focus\:border-ring:focus {
-  border-color: hsl(var(--sp-ring));
 }
 
 .schemapress .focus\:outline-none:focus {
@@ -1431,6 +1563,10 @@ body.toplevel_page_schemapress #wpfooter {
   --tw-ring-offset-width: 1px;
 }
 
+.schemapress .active\:cursor-grabbing:active {
+  cursor: grabbing;
+}
+
 .schemapress .disabled\:pointer-events-none:disabled {
   pointer-events: none;
 }
@@ -1441,6 +1577,10 @@ body.toplevel_page_schemapress #wpfooter {
 
 .schemapress .disabled\:opacity-50:disabled {
   opacity: 0.5;
+}
+
+.schemapress :is(.group:hover .group-hover\:text-foreground) {
+  color: hsl(var(--sp-foreground));
 }
 
 .schemapress :is(.group:hover .group-hover\:opacity-100) {
@@ -1523,8 +1663,64 @@ body.toplevel_page_schemapress #wpfooter {
 
 @media (min-width: 640px) {
 
+  .schemapress .sm\:col-span-1 {
+    grid-column: span 1 / span 1;
+  }
+
+  .schemapress .sm\:col-span-10 {
+    grid-column: span 10 / span 10;
+  }
+
+  .schemapress .sm\:col-span-11 {
+    grid-column: span 11 / span 11;
+  }
+
+  .schemapress .sm\:col-span-12 {
+    grid-column: span 12 / span 12;
+  }
+
+  .schemapress .sm\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+
+  .schemapress .sm\:col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+
+  .schemapress .sm\:col-span-4 {
+    grid-column: span 4 / span 4;
+  }
+
+  .schemapress .sm\:col-span-5 {
+    grid-column: span 5 / span 5;
+  }
+
+  .schemapress .sm\:col-span-6 {
+    grid-column: span 6 / span 6;
+  }
+
+  .schemapress .sm\:col-span-7 {
+    grid-column: span 7 / span 7;
+  }
+
+  .schemapress .sm\:col-span-8 {
+    grid-column: span 8 / span 8;
+  }
+
+  .schemapress .sm\:col-span-9 {
+    grid-column: span 9 / span 9;
+  }
+
+  .schemapress .sm\:w-72 {
+    width: 18rem;
+  }
+
   .schemapress .sm\:grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .schemapress .sm\:grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
   .schemapress .sm\:grid-cols-2 {
@@ -1538,12 +1734,32 @@ body.toplevel_page_schemapress #wpfooter {
 
 @media (min-width: 1024px) {
 
+  .schemapress .lg\:sticky {
+    position: sticky;
+  }
+
+  .schemapress .lg\:top-6 {
+    top: 1.5rem;
+  }
+
+  .schemapress .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .schemapress .lg\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .schemapress .lg\:grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .schemapress .lg\:grid-cols-\[minmax\(0\2c 1fr\)_18rem\] {
+    grid-template-columns: minmax(0,1fr) 18rem;
+  }
+
+  .schemapress .lg\:self-start {
+    align-self: flex-start;
   }
 }
 

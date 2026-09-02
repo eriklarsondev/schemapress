@@ -9,7 +9,6 @@
 import { __ } from '@wordpress/i18n'
 import { Plus, Trash2 } from 'lucide-react'
 import { removeAt, replaceAt } from '../utils'
-import { useCollections } from '../collections'
 import { Button, Input, Field, Switch, Heading, Select } from '../../ui'
 
 /**
@@ -85,42 +84,6 @@ export function FieldConfig({ field, onChange }) {
     case 'select':
       return <SelectOptions config={config} onChange={update} />
 
-    case 'post':
-      return (
-        <div className="flex items-end gap-4">
-          <Field
-            label={__('Post types', 'schemapress')}
-            help={__('Comma separated, e.g. page,post', 'schemapress')}
-            className="flex-1"
-          >
-            {(id) => (
-              <Input
-                id={id}
-                value={(config.post_types || ['page']).join(',')}
-                onChange={(event) =>
-                  update({
-                    post_types: event.target.value
-                      .split(',')
-                      .map((type) => type.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            )}
-          </Field>
-          <div className="pb-2">
-            <Switch
-              label={__('Allow multiple', 'schemapress')}
-              checked={Boolean(config.multiple)}
-              onChange={(multiple) => update({ multiple })}
-            />
-          </div>
-        </div>
-      )
-
-    case 'relation':
-      return <RelationSettings config={config} onChange={update} />
-
     case 'repeater':
       return (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -165,50 +128,6 @@ export function FieldConfig({ field, onChange }) {
     default:
       return null
   }
-}
-
-/**
- * Which collection a relation points at, and how many.
- *
- * @param {Object} props
- * @return {JSX.Element} The settings.
- */
-function RelationSettings({ config, onChange }) {
-  const collections = useCollections()
-
-  return (
-    <div className="flex items-end gap-4">
-      <Field
-        label={__('Points at', 'schemapress')}
-        help={__('Entries of this collection can be linked.', 'schemapress')}
-        className="flex-1"
-      >
-        {(id) => (
-          <Select
-            id={id}
-            value={config.collection ? String(config.collection) : ''}
-            placeholder={__('— Choose a collection —', 'schemapress')}
-            options={[
-              { value: '', label: __('— Choose a collection —', 'schemapress') },
-              ...collections.map((type) => ({
-                value: String(type.id),
-                label: type.pluralLabel || type.label,
-              })),
-            ]}
-            onChange={(next) => onChange({ collection: next === '' ? 0 : Number(next) })}
-          />
-        )}
-      </Field>
-
-      <div className="pb-2">
-        <Switch
-          label={__('Allow multiple', 'schemapress')}
-          checked={Boolean(config.multiple)}
-          onChange={(multiple) => onChange({ multiple })}
-        />
-      </div>
-    </div>
-  )
 }
 
 /**

@@ -22,9 +22,9 @@ import { cn } from '../ui'
  */
 export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSelect, onCreate }) {
   return (
-    <aside className="flex w-64 shrink-0 flex-col bg-appbar text-appbar-foreground">
+    <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-background">
       <header className="flex items-center gap-2.5 px-4 py-4">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-inset ring-white/15">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Boxes className="size-4" />
         </span>
 
@@ -32,7 +32,7 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
           <span className="block truncate text-[14px] font-semibold leading-tight tracking-tight">
             {__('SchemaPress', 'schemapress')}
           </span>
-          <span className="block truncate text-[11px] text-appbar-muted">
+          <span className="block truncate text-[11px] text-muted-foreground">
             {__('Content manager', 'schemapress')}
           </span>
         </span>
@@ -43,13 +43,11 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
         aria-label={__('Collections', 'schemapress')}
       >
         <div className="flex items-center gap-1 pr-1">
-          <p className="flex flex-1 items-center gap-1.5 px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-appbar-muted">
+          <p className="flex flex-1 items-center gap-1.5 px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             <Database className="size-3 shrink-0" />
             {__('Collection types', 'schemapress')}
             {!loading ? (
-              <span className="rounded bg-white/10 px-1 text-[10px] tabular-nums">
-                {types.length}
-              </span>
+              <span className="rounded bg-muted px-1 text-[10px] tabular-nums">{types.length}</span>
             ) : null}
           </p>
 
@@ -58,18 +56,18 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
             title={__('Create a collection type', 'schemapress')}
             aria-label={__('Create a collection type', 'schemapress')}
             onClick={onCreate}
-            className="flex size-5 shrink-0 items-center justify-center rounded text-appbar-muted transition-colors hover:bg-white/10 hover:text-appbar-foreground"
+            className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Plus className="size-3.5" />
           </button>
         </div>
 
         {loading ? (
-          <p className="px-2 py-1.5 text-[12px] italic text-appbar-muted/70">
+          <p className="px-2 py-1.5 text-[12px] italic text-muted-foreground/70">
             {__('Loading…', 'schemapress')}
           </p>
         ) : types.length === 0 ? (
-          <p className="px-2 py-1.5 text-[12px] italic text-appbar-muted/70">
+          <p className="px-2 py-1.5 text-[12px] italic text-muted-foreground/70">
             {__('No collections yet', 'schemapress')}
           </p>
         ) : (
@@ -86,14 +84,14 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
 
         {docsUrl ? (
           <>
-            <hr className="mx-2 my-3 border-0 border-t border-white/10" />
+            <hr className="mx-2 my-3 border-0 border-t border-border" />
             <Item label={__('Documentation', 'schemapress')} icon={BookOpen} href={docsUrl} />
           </>
         ) : null}
       </nav>
 
       {version ? (
-        <footer className="border-t border-white/10 px-4 py-2.5 text-[10px] text-appbar-muted">
+        <footer className="border-t border-border px-4 py-2.5 text-[10px] text-muted-foreground">
           {__('SchemaPress', 'schemapress')} {version}
         </footer>
       ) : null}
@@ -115,8 +113,8 @@ function Item({ label, icon: Icon, count, active, onClick, href }) {
   const className = cn(
     'relative flex w-full items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors',
     active
-      ? 'bg-appbar-active font-medium text-appbar-foreground'
-      : 'text-appbar-muted hover:bg-white/5 hover:text-appbar-foreground',
+      ? 'bg-accent font-medium text-foreground'
+      : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
   )
 
   const body = (
@@ -124,7 +122,7 @@ function Item({ label, icon: Icon, count, active, onClick, href }) {
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-appbar-foreground"
+          className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary"
         />
       ) : null}
 
@@ -132,7 +130,7 @@ function Item({ label, icon: Icon, count, active, onClick, href }) {
       <span className="min-w-0 flex-1 truncate">{label}</span>
 
       {typeof count === 'number' ? (
-        <span className="shrink-0 rounded-full bg-white/10 px-1.5 text-[10px] tabular-nums">
+        <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
           {count}
         </span>
       ) : null}

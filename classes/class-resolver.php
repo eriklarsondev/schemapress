@@ -8,23 +8,15 @@ if (!defined('ABSPATH')) {
 /**
  * expands stored values into the payload a template or a client consumes.
  *
- * stored values are deliberately thin — an image is an attachment id, a
- * relation is a post id, rich text is raw content. none of that is usable on
- * its own, so this class dereferences every one of them at read time. keeping
+ * stored values are deliberately thin — an image is an attachment id and rich
+ * text is raw content. neither is usable on its own, so this class dereferences
+ * them at read time. keeping
  * the expansion here (rather than at save time) means a resized image or a
  * renamed entry is reflected immediately, without re-saving everything that
  * refers to it.
  */
 class Resolver
 {
-    /**
-     * how deep relations may follow other relations.
-     *
-     * a bound is not optional: two entries can point at each other, and without
-     * one a cycle would recurse until it exhausted memory.
-     */
-    const MAX_RELATION_DEPTH = 2;
-
     /**
      * resolves a value bag against its field definitions.
      *
@@ -76,12 +68,6 @@ class Resolver
             case 'file':
                 return self::attachment($value);
 
-            case 'relation':
-                return self::relation($value, $field, $depth);
-
-            case 'post':
-                return self::relationship($value, $field);
-
             case 'link':
                 return self::link($value);
 
@@ -113,47 +99,6 @@ class Resolver
         }
 
         return $rows;
-    }
-
-    /**
-     * expands a relation into the entries it points at.
-     *
-     * an entry is returned as its own resolved data, so a template reading a
-     * Team Members relation gets people rather than ids — but only to a bounded
-     * depth, since two collections may reference each other.
-     *
-     * @param mixed   $value
-     * @param array   $field
-     * @param integer $depth
-     *
-     * @return array|null
-     */
-    private static function relation($value, array $field, $depth = 0)
-    {
-        $multiple = !empty($field['config']['multiple']);
-        $ids = array_values(array_filter(array_map('absint', (array) $value)));
-
-        if ($depth >= self::MAX_RELATION_DEPTH) {
-            // past the bound, say what it points at without following it
-            return $multiple ? $ids : (isset($ids[0]) ? $ids[0] : null);
-        }
-
-        $type_id = isset($field['config']['collection']) ? absint($field['config']['collection']) : 0;
-        $entries = [];
-
-        foreach ($ids as $id) {
-            $entry = Entries::get($type_id, $id, $depth + 1);
-
-            if ($entry) {
-                $entries[] = $entry;
-            }
-        }
-
-        if ($multiple) {
-            return $entries;
-        }
-
-        return isset($entries[0]) ? $entries[0] : null;
     }
 
     /**
@@ -221,44 +166,6 @@ class Resolver
         }
 
         return $attachment;
-    }
-
-    /**
-     * expands WordPress post ids into linkable references.
-     *
-     * @param mixed $value
-     * @param array $field
-     *
-     * @return array|null
-     */
-    private static function relationship($value, array $field)
-    {
-        $multiple = !empty($field['config']['multiple']);
-        $ids = array_filter(array_map('absint', (array) $value));
-
-        $posts = [];
-
-        foreach ($ids as $id) {
-            $post = get_post($id);
-
-            if (!$post || $post->post_status !== 'publish') {
-                continue;
-            }
-
-            $posts[] = [
-                'id' => (int) $post->ID,
-                'title' => get_the_title($post),
-                'slug' => $post->post_name,
-                'type' => $post->post_type,
-                'permalink' => get_permalink($post),
-            ];
-        }
-
-        if ($multiple) {
-            return $posts;
-        }
-
-        return isset($posts[0]) ? $posts[0] : null;
     }
 
     /**
