@@ -155,16 +155,6 @@ class Elements
                     'type' => 'number',
                 ],
             ],
-            [
-                'id' => 'post',
-                'label' => __('Post Link', 'schemapress'),
-                'icon' => 'post',
-                'field' => [
-                    'label' => __('Related', 'schemapress'),
-                    'type' => 'post',
-                    'config' => ['post_types' => ['page']],
-                ],
-            ],
         ];
 
         /**

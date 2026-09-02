@@ -7,6 +7,7 @@
 
 import { __ } from '@wordpress/i18n'
 import { Alert } from '../../ui'
+import { visibleFields } from '../conditions'
 import {
   TextField,
   TextareaField,
@@ -19,10 +20,8 @@ import {
 } from './BasicControls'
 import { ImageField, FileField } from './MediaControl'
 import { LinkField } from './LinkControl'
-import { PostField } from './PostControl'
 import { RichTextField } from './RichTextControl'
 import { RepeaterField, GroupField } from './RepeaterControl'
-import { RelationField } from './RelationControl'
 
 const CONTROLS = {
   text: TextField,
@@ -37,8 +36,6 @@ const CONTROLS = {
   image: ImageField,
   file: FileField,
   link: LinkField,
-  post: PostField,
-  relation: RelationField,
   group: GroupField,
   repeater: RepeaterField,
 }
@@ -81,7 +78,9 @@ export function FieldList({ fields = [], values = {}, onChange, context }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {fields.map((field) => (
+      {/* a condition names a sibling, so inside a repeater row it is evaluated
+          against that row's own values — which is what `values` already is */}
+      {visibleFields(fields, values).map((field) => (
         <FieldControl
           key={field.key}
           field={field}

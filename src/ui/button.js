@@ -17,6 +17,10 @@ const buttonVariants = cva(
         outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // reads as dangerous at rest rather than only under the cursor, for
+        // the deliberate destructive action you go looking for
+        'destructive-outline':
+          'border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:border-destructive/50',
         'destructive-ghost': 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
         link: 'text-primary underline-offset-4 hover:underline'
       },

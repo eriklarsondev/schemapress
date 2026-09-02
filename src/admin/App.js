@@ -16,7 +16,6 @@ import { Database, Plus } from 'lucide-react'
 import { useRoute } from './useRoute'
 import { Loading, Alert, Button } from '../ui'
 import { api } from '../shared/api'
-import { forgetCollections } from '../shared/collections'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { CreateTypeDialog } from './CreateTypeDialog'
@@ -46,9 +45,6 @@ export function App({ settings }) {
         .then((result) => {
           setTypes(result.types || [])
           setError('')
-
-          // relation settings pick from this list, and it is cached
-          forgetCollections()
         })
         .catch((failure) => {
           setTypes([])

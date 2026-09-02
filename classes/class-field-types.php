@@ -155,29 +155,6 @@ class FieldTypes
                     ];
                 },
             ],
-            'post' => [
-                'label' => __('Post Relationship', 'schemapress'),
-                'default' => null,
-                'sanitize' => function ($value, $field) {
-                    $multiple = !empty($field['config']['multiple']);
-                    $ids = array_filter(array_map('absint', (array) $value));
-                    $ids = array_values(array_filter($ids, function ($id) {
-                        return get_post_status($id) !== false;
-                    }));
-
-                    return $multiple ? $ids : (isset($ids[0]) ? $ids[0] : null);
-                },
-            ],
-            'relation' => [
-                'label' => __('Relation', 'schemapress'),
-                'default' => null,
-                'sanitize' => function ($value, $field) {
-                    $multiple = !empty($field['config']['multiple']);
-                    $ids = array_values(array_filter(array_map('absint', (array) $value)));
-
-                    return $multiple ? $ids : (isset($ids[0]) ? $ids[0] : null);
-                },
-            ],
             'group' => [
                 'label' => __('Group', 'schemapress'),
                 'default' => [],

@@ -44,6 +44,7 @@ class Rest
                 'permission_callback' => [$this, 'canEdit'],
                 'args' => [
                     'title' => ['type' => 'string', 'required' => true],
+                    'description' => ['type' => 'string'],
                 ],
             ],
         ]);
@@ -79,7 +80,7 @@ class Rest
             ],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/entries/(?P<entry>\d+)', [
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/entries/(?P<entry>[A-Za-z0-9-]+)', [
             [
                 'methods' => 'GET',
                 'callback' => [$this, 'entry'],
@@ -97,13 +98,18 @@ class Rest
             ],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/posts', [
+        // moving the published copy is its own act, not a flag on a save
+        register_rest_route(
+            self::NAMESPACE,
+            '/types/(?P<id>\d+)/entries/(?P<entry>[A-Za-z0-9-]+)/(?P<action>publish|unpublish|discard)',
             [
-                'methods' => 'GET',
-                'callback' => [$this, 'posts'],
-                'permission_callback' => [$this, 'canEdit'],
-            ],
-        ]);
+                [
+                    'methods' => 'POST',
+                    'callback' => [$this, 'transition'],
+                    'permission_callback' => [$this, 'canEditType'],
+                ],
+            ]
+        );
     }
 
     // --- content types -------------------------------------------------------
@@ -152,6 +158,8 @@ class Rest
         $id = wp_insert_post([
             'post_type' => Schema::POST_TYPE,
             'post_title' => $title,
+            // what the collection is for, kept where WordPress keeps a summary
+            'post_excerpt' => sanitize_textarea_field((string) $request['description']),
             'post_status' => 'publish',
         ], true);
 
@@ -182,11 +190,20 @@ class Rest
         $body = $request->get_json_params();
         $body = is_array($body) ? $body : [];
 
+        $post = ['ID' => $id];
+
         if (isset($body['title']) && trim((string) $body['title']) !== '') {
-            wp_update_post([
-                'ID' => $id,
-                'post_title' => sanitize_text_field($body['title']),
-            ]);
+            $post['post_title'] = sanitize_text_field($body['title']);
+        }
+
+        // present-but-empty clears it, which is the only way to take a
+        // description back off once it is written
+        if (array_key_exists('description', $body)) {
+            $post['post_excerpt'] = sanitize_textarea_field((string) $body['description']);
+        }
+
+        if (count($post) > 1) {
+            wp_update_post($post);
         }
 
         if (isset($body['definition'])) {
@@ -247,6 +264,8 @@ class Rest
             'search' => $request->get_param('search'),
             'orderby' => $request->get_param('orderby'),
             'order' => $request->get_param('order'),
+            // the builder works on drafts, so it reads that view
+            'view' => Entries::DRAFT,
         ]) + ['definition' => SchemaRepository::definition($id)]);
     }
 
@@ -259,7 +278,7 @@ class Rest
      */
     public function entry($request)
     {
-        $entry = Entries::get($request['id'], $request['entry']);
+        $entry = Entries::get($request['id'], $request['entry'], 0, Entries::DRAFT);
 
         if (!$entry) {
             return new \WP_Error('schemapress_no_entry', __('Entry not found.', 'schemapress'), [
@@ -295,6 +314,35 @@ class Rest
     public function saveEntry($request)
     {
         return $this->storeEntry($request['id'], $request['entry'], $request->get_json_params());
+    }
+
+    /**
+     * publishes, unpublishes or discards the draft.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function transition($request)
+    {
+        $actions = [
+            'publish' => [Entries::class, 'publish'],
+            'unpublish' => [Entries::class, 'unpublish'],
+            'discard' => [Entries::class, 'discard'],
+        ];
+
+        $action = (string) $request['action'];
+        $entry = call_user_func($actions[$action], $request['id'], $request['entry']);
+
+        if (!$entry) {
+            return new \WP_Error(
+                'schemapress_transition_failed',
+                __('That could not be done.', 'schemapress'),
+                ['status' => 400]
+            );
+        }
+
+        return rest_ensure_response(['entry' => $entry]);
     }
 
     /**
@@ -336,35 +384,6 @@ class Rest
     }
 
     // --- support -------------------------------------------------------------
-
-    /**
-     * published posts, for the post relationship field's picker.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function posts($request)
-    {
-        $types = $request->get_param('types');
-        $types = $types ? array_map('sanitize_key', explode(',', $types)) : ['page'];
-
-        $posts = get_posts([
-            'post_type' => $types,
-            'post_status' => 'publish',
-            'numberposts' => 20,
-            's' => sanitize_text_field((string) $request->get_param('search')),
-            'suppress_filters' => false,
-        ]);
-
-        return rest_ensure_response(array_map(function ($post) {
-            return [
-                'id' => (int) $post->ID,
-                'title' => get_the_title($post),
-                'type' => $post->post_type,
-            ];
-        }, $posts));
-    }
 
     /**
      * the response shape every type-returning route uses.

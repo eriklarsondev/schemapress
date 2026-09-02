@@ -111,8 +111,6 @@ export function emptyValue(type) {
     case 'number':
     case 'image':
     case 'file':
-    case 'post':
-    case 'relation':
       return null
     case 'link':
       return { url: '', label: '', target: '' }

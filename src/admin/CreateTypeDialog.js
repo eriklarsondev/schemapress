@@ -1,7 +1,9 @@
 /**
  * Making a collection type.
  *
- * One decision: what it is called. Type a name, press return.
+ * Two things: what it is called, and — optionally — what it is for. The name is
+ * load-bearing; the description is a note to whoever opens this in six months
+ * and finds two collections that both look like they might hold staff.
  *
  * A collection is named for ONE of the things in it — Team Member, not Team
  * Members — because everything else is derived from that: the machine key, the
@@ -17,7 +19,7 @@
 
 import { useEffect, useRef, useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
-import { Dialog, Button, Field, Input, Alert } from '../ui'
+import { Dialog, Button, Field, Input, Textarea, Alert } from '../ui'
 import { toKey } from '../shared/utils'
 import { lastWord, looksPlural, singularize } from '../shared/inflect'
 import { api } from '../shared/api'
@@ -30,6 +32,7 @@ import { api } from '../shared/api'
  */
 export function CreateTypeDialog({ onClose, onCreated }) {
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -58,7 +61,7 @@ export function CreateTypeDialog({ onClose, onCreated }) {
     setError('')
 
     api
-      .createType(name.trim())
+      .createType(name.trim(), description.trim())
       .then(onCreated)
       .catch((failure) => {
         setSaving(false)
@@ -108,6 +111,22 @@ export function CreateTypeDialog({ onClose, onCreated }) {
               placeholder={__('Team Member', 'schemapress')}
               onChange={(event) => setName(event.target.value)}
               onKeyDown={(event) => event.key === 'Enter' && create()}
+            />
+          )}
+        </Field>
+
+        <Field
+          label={__('Description', 'schemapress')}
+          hint={__('Optional', 'schemapress')}
+          help={__('Shown under the name, so it is clear what belongs here.', 'schemapress')}
+        >
+          {(id) => (
+            <Textarea
+              id={id}
+              rows={2}
+              value={description}
+              placeholder={__('The people we list on the about page.', 'schemapress')}
+              onChange={(event) => setDescription(event.target.value)}
             />
           )}
         </Field>

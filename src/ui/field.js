@@ -15,7 +15,7 @@ import { cn } from './utils'
  * @param {Object} props
  * @return {JSX.Element} The field.
  */
-export function Field({ label, help, error, required, className, children, htmlFor }) {
+export function Field({ label, help, hint, error, required, className, children, htmlFor }) {
   const generated = useId()
   const id = htmlFor || generated
 
@@ -24,10 +24,17 @@ export function Field({ label, help, error, required, className, children, htmlF
       {label ? (
         <label
           htmlFor={id}
-          className="text-[13px] font-medium leading-none text-foreground"
+          className="flex items-center justify-between gap-2 text-[13px] font-medium leading-none text-foreground"
         >
-          {label}
-          {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+          <span>
+            {label}
+            {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+          </span>
+
+          {/* "Optional" beside the label rather than in the help text below:
+              whether you have to fill something in is the first question, and
+              it should not be answered underneath the box */}
+          {hint ? <span className="font-normal text-muted-foreground">{hint}</span> : null}
         </label>
       ) : null}
 
