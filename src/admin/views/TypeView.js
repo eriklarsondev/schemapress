@@ -111,7 +111,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
   const tabs = [
     { value: 'entries', label: __('Entries', 'schemapress'), icon: Table2 },
     { value: 'fields', label: __('Fields', 'schemapress'), icon: Wrench },
-    { value: 'form', label: __('Form', 'schemapress'), icon: LayoutList }
+    { value: 'form', label: __('Form', 'schemapress'), icon: LayoutList },
   ]
 
   return (
@@ -119,11 +119,18 @@ export function TypeView({ type, onChanged, onDeleted }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[20px] font-semibold tracking-tight">{type.label}</h1>
-            <Badge variant="mono">{type.key}</Badge>
+            <h1 className="text-[20px] font-semibold tracking-tight">
+              {type.pluralLabel || type.label}
+            </h1>
           </div>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">
-            {__('Collection type', 'schemapress')}
+
+          {/* both machine names, because a template author needs to know what
+              to type and either form is accepted */}
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
+            <Badge variant="mono">{type.key}</Badge>
+            {type.plural && type.plural !== type.key ? (
+              <Badge variant="mono">{type.plural}</Badge>
+            ) : null}
           </p>
         </div>
 
@@ -154,7 +161,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
           title={__('Delete this collection type?', 'schemapress')}
           description={__(
             'Every entry in it is deleted too, permanently. This cannot be undone.',
-            'schemapress'
+            'schemapress',
           )}
           confirmLabel={__('Delete', 'schemapress')}
           onConfirm={() =>

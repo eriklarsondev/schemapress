@@ -40,7 +40,7 @@ function cell(field, value) {
         ? sprintf(
             /* translators: %d: number of items */
             __('%d items', 'schemapress'),
-            value.length
+            value.length,
           )
         : ''
 
@@ -56,7 +56,7 @@ function cell(field, value) {
         ? sprintf(
             /* translators: %d: number of linked entries */
             __('%d linked', 'schemapress'),
-            value.length
+            value.length,
           )
         : __('Linked', 'schemapress')
 
@@ -119,7 +119,7 @@ export function EntriesView({ type, fields, onOpenEntry }) {
           loading: false,
           entries: result.entries || [],
           total: result.total || 0,
-          pages: result.pages || 0
+          pages: result.pages || 0,
         })
       })
       .catch((failure) => {
@@ -157,7 +157,7 @@ export function EntriesView({ type, fields, onOpenEntry }) {
           setState((current) => ({
             ...current,
             entries: current.entries.filter((entry) => entry.id !== id),
-            total: Math.max(0, current.total - 1)
+            total: Math.max(0, current.total - 1),
           }))
         }
       })
@@ -186,13 +186,17 @@ export function EntriesView({ type, fields, onOpenEntry }) {
               : sprintf(
                   /* translators: %d: number of entries */
                   __('%d entries', 'schemapress'),
-                  state.total
+                  state.total,
                 )}
           </span>
 
           <Button size="sm" disabled={fields.length === 0} onClick={() => onOpenEntry(null)}>
             <Plus />
-            {__('Create entry', 'schemapress')}
+            {sprintf(
+              /* translators: %s: the singular name of the collection */
+              __('Create %s', 'schemapress'),
+              type.singularLabel || type.label,
+            )}
           </Button>
         </div>
       </div>
@@ -205,7 +209,7 @@ export function EntriesView({ type, fields, onOpenEntry }) {
           title={__('This collection has no fields yet', 'schemapress')}
           description={__(
             'Add some in the Fields tab, then you can create entries.',
-            'schemapress'
+            'schemapress',
           )}
           className="py-16"
         />
@@ -316,7 +320,7 @@ export function EntriesView({ type, fields, onOpenEntry }) {
               /* translators: 1: current page, 2: total pages */
               __('%1$d of %2$d', 'schemapress'),
               page,
-              state.pages
+              state.pages,
             )}
           </span>
 
@@ -340,7 +344,7 @@ export function EntriesView({ type, fields, onOpenEntry }) {
           description={sprintf(
             /* translators: %s: the entry's title */
             __('“%s” will be moved to the trash.', 'schemapress'),
-            removing.title
+            removing.title,
           )}
           confirmLabel={__('Delete', 'schemapress')}
           onConfirm={() => remove(removing.id)}
@@ -361,7 +365,7 @@ function Th({ children, className }) {
     <th
       className={cn(
         'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
-        className
+        className,
       )}
     >
       {children}

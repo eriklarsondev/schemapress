@@ -20,6 +20,7 @@ use SchemaPress\ContentType;
 use SchemaPress\Entries;
 use SchemaPress\Content;
 use SchemaPress\Entry;
+use SchemaPress\Inflector;
 use SchemaPress\SchemaRepository;
 
 $passed = 0;
@@ -333,6 +334,72 @@ check('resolves on read too', 'Ada', $reloadedStory['data']['author']['data']['n
 $orphan = Entries::save($page, null, ['title' => 'Orphan', 'values' => ['author' => 999999]]);
 
 check('a dangling relation resolves to null', null, $orphan['data']['author']);
+
+// --- naming ------------------------------------------------------------------
+
+echo "\nNaming\n";
+
+// a collection is named for one of the things in it, so the key is singular
+check('pluralizes a simple word', 'articles', Inflector::pluralize('article'));
+check('pluralizes a word ending in y', 'stories', Inflector::pluralize('story'));
+check('leaves a vowel + y alone', 'days', Inflector::pluralize('day'));
+check('pluralizes a sibilant', 'boxes', Inflector::pluralize('box'));
+check('pluralizes an f ending', 'shelves', Inflector::pluralize('shelf'));
+check('handles an irregular', 'people', Inflector::pluralize('person'));
+check('leaves an uncountable alone', 'news', Inflector::pluralize('news'));
+check('does not double-pluralize', 'articles', Inflector::pluralize('articles'));
+
+check('singularizes a simple word', 'article', Inflector::singularize('articles'));
+check('singularizes a y plural', 'story', Inflector::singularize('stories'));
+check('singularizes a sibilant', 'box', Inflector::singularize('boxes'));
+check('singularizes an irregular', 'person', Inflector::singularize('people'));
+check('leaves status alone', 'status', Inflector::singularize('status'));
+
+check('spots a plural', true, Inflector::isPlural('members'));
+check('spots a singular', false, Inflector::isPlural('member'));
+check('does not call status plural', false, Inflector::isPlural('status'));
+
+// only the head noun changes in a multi-word name
+check(
+    'pluralizes the last word only',
+    'Team Members',
+    Inflector::lastWord('Team Member', [Inflector::class, 'pluralize'])
+);
+check(
+    'singularizes the last word only',
+    'News Article',
+    Inflector::lastWord('News Articles', [Inflector::class, 'singularize'])
+);
+
+sp_test_reset();
+
+// typing the plural must not name the post type after it
+$plural = sp_test_type('Team Members', [['label' => 'Name', 'type' => 'text']]);
+
+check('stores a singular key from a plural name', 'team_member', ContentType::key($plural));
+check('derives the plural key', 'team_members', ContentType::plural($plural));
+check('names the post type singularly', 'spc_team_member', ContentType::postType($plural));
+
+$labels = ContentType::labels($plural);
+
+check('offers a singular label', 'Team Member', $labels['singular']);
+check('offers a plural label', 'Team Members', $labels['plural']);
+
+// both machine names reach the same collection: which one a template author
+// reaches for depends on the sentence they are writing
+check('finds it by the singular key', 1, count(Content::collection('team_member')->fields()));
+check('finds it by the plural key', 1, count(Content::collection('team_members')->fields()));
+check('still misses a real typo', 0, count(Content::collection('team_membrs')->fields()));
+
+// two types whose plurals would collide must stay distinct
+$person = sp_test_type('Person', []);
+$people = sp_test_type('People', []);
+
+check(
+    'keeps colliding plurals distinct',
+    true,
+    ContentType::plural($person) !== ContentType::plural($people)
+);
 
 // --- result ------------------------------------------------------------------
 

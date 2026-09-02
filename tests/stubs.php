@@ -292,6 +292,7 @@ function get_permalink($post) { return 'http://example.test/?p=' . (is_object($p
 
 // --- the plugin --------------------------------------------------------------
 
+require_once SCHEMAPRESS_PATH . 'classes/class-inflector.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-field-types.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema-model.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema.php';
