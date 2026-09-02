@@ -10,19 +10,26 @@ import { Alert } from '../../ui'
 import {
   TextField,
   TextareaField,
+  EmailField,
+  UrlField,
+  PhoneField,
   NumberField,
   ToggleField,
-  SelectField
+  SelectField,
 } from './BasicControls'
 import { ImageField, FileField } from './MediaControl'
 import { LinkField } from './LinkControl'
 import { PostField } from './PostControl'
 import { RichTextField } from './RichTextControl'
 import { RepeaterField, GroupField } from './RepeaterControl'
+import { RelationField } from './RelationControl'
 
 const CONTROLS = {
   text: TextField,
   textarea: TextareaField,
+  email: EmailField,
+  url: UrlField,
+  phone: PhoneField,
   wysiwyg: RichTextField,
   number: NumberField,
   toggle: ToggleField,
@@ -31,8 +38,9 @@ const CONTROLS = {
   file: FileField,
   link: LinkField,
   post: PostField,
+  relation: RelationField,
   group: GroupField,
-  repeater: RepeaterField
+  repeater: RepeaterField,
 }
 
 /**

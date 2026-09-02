@@ -177,6 +177,9 @@ class SchemaModel
 
             case 'text':
             case 'textarea':
+            case 'email':
+            case 'url':
+            case 'phone':
                 $clean['placeholder'] = isset($config['placeholder'])
                     ? sanitize_text_field($config['placeholder'])
                     : '';

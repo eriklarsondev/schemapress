@@ -62,6 +62,36 @@ class FieldTypes
                     return wp_kses_post($value);
                 },
             ],
+            'email' => [
+                'label' => __('Email', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    $email = sanitize_email((string) $value);
+
+                    // an address that will not validate is stored as nothing
+                    // rather than as text that only looks like an address
+                    return is_email($email) ? $email : '';
+                },
+            ],
+            'url' => [
+                'label' => __('URL', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    return esc_url_raw(trim((string) $value));
+                },
+            ],
+            'phone' => [
+                'label' => __('Phone', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    // there is no universal phone format, so this keeps the
+                    // characters a phone number is written with and drops the
+                    // rest rather than trying to impose one
+                    $clean = preg_replace('/[^0-9+()\-.\s]/', '', (string) $value);
+
+                    return trim(preg_replace('/\s+/', ' ', $clean));
+                },
+            ],
             'number' => [
                 'label' => __('Number', 'schemapress'),
                 'default' => null,
