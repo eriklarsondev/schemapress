@@ -54,7 +54,22 @@ function sanitize_textarea_field($value) { return trim(strip_tags((string) $valu
 function sanitize_key($value) { return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $value)); }
 function sanitize_title($value) { return sanitize_key(str_replace(' ', '-', (string) $value)); }
 function wp_kses_post($value) { return (string) $value; }
-function esc_url_raw($value) { return (string) $value; }
+function sanitize_email($value) { return trim((string) $value); }
+function is_email($value) { return (bool) filter_var((string) $value, FILTER_VALIDATE_EMAIL); }
+
+function esc_url_raw($value)
+{
+    $value = trim((string) $value);
+
+    // enough of WordPress's behaviour to matter here: a scheme it does not
+    // allow yields an empty string rather than a stored javascript: payload
+    if ($value !== '' && preg_match('#^\s*(javascript|data|vbscript):#i', $value)) {
+        return '';
+    }
+
+    return $value;
+}
+
 function esc_url($value) { return (string) $value; }
 function esc_attr($value) { return htmlspecialchars((string) $value, ENT_QUOTES); }
 function esc_html($value) { return htmlspecialchars((string) $value, ENT_QUOTES); }

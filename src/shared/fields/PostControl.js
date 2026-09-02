@@ -23,7 +23,7 @@ function usePostOptions(postTypes) {
     let cancelled = false
 
     api
-      .posts('', key)
+      .posts({ types: key })
       .then((results) => {
         if (!cancelled) {
           setPosts(results)

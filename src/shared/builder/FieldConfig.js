@@ -9,6 +9,7 @@
 import { __ } from '@wordpress/i18n'
 import { Plus, Trash2 } from 'lucide-react'
 import { removeAt, replaceAt } from '../utils'
+import { useCollections } from '../collections'
 import { Button, Input, Field, Switch, Heading, Select } from '../../ui'
 
 /**
@@ -31,6 +32,9 @@ export function FieldConfig({ field, onChange }) {
   switch (field.type) {
     case 'text':
     case 'textarea':
+    case 'email':
+    case 'url':
+    case 'phone':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={__('Placeholder', 'schemapress')}>
@@ -68,7 +72,7 @@ export function FieldConfig({ field, onChange }) {
                   value={config[bound] ?? ''}
                   onChange={(event) =>
                     update({
-                      [bound]: event.target.value === '' ? '' : Number(event.target.value)
+                      [bound]: event.target.value === '' ? '' : Number(event.target.value),
                     })
                   }
                 />
@@ -98,7 +102,7 @@ export function FieldConfig({ field, onChange }) {
                     post_types: event.target.value
                       .split(',')
                       .map((type) => type.trim())
-                      .filter(Boolean)
+                      .filter(Boolean),
                   })
                 }
               />
@@ -114,25 +118,12 @@ export function FieldConfig({ field, onChange }) {
         </div>
       )
 
+    case 'relation':
+      return <RelationSettings config={config} onChange={update} />
+
     case 'repeater':
       return (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field
-            label={__('Display', 'schemapress')}
-            help={__('Grid tiles follow the section’s columns', 'schemapress')}
-          >
-            {(id) => (
-              <Select
-                id={id}
-                value={config.display || 'grid'}
-                options={[
-                  { value: 'grid', label: __('Grid of tiles', 'schemapress') },
-                  { value: 'list', label: __('Stacked list', 'schemapress') }
-                ]}
-                onChange={(display) => update({ display })}
-              />
-            )}
-          </Field>
+        <div className="grid gap-3 sm:grid-cols-3">
           <Field label={__('Min rows', 'schemapress')}>
             {(id) => (
               <Input
@@ -177,6 +168,50 @@ export function FieldConfig({ field, onChange }) {
 }
 
 /**
+ * Which collection a relation points at, and how many.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The settings.
+ */
+function RelationSettings({ config, onChange }) {
+  const collections = useCollections()
+
+  return (
+    <div className="flex items-end gap-4">
+      <Field
+        label={__('Points at', 'schemapress')}
+        help={__('Entries of this collection can be linked.', 'schemapress')}
+        className="flex-1"
+      >
+        {(id) => (
+          <Select
+            id={id}
+            value={config.collection ? String(config.collection) : ''}
+            placeholder={__('— Choose a collection —', 'schemapress')}
+            options={[
+              { value: '', label: __('— Choose a collection —', 'schemapress') },
+              ...collections.map((type) => ({
+                value: String(type.id),
+                label: type.pluralLabel || type.label,
+              })),
+            ]}
+            onChange={(next) => onChange({ collection: next === '' ? 0 : Number(next) })}
+          />
+        )}
+      </Field>
+
+      <div className="pb-2">
+        <Switch
+          label={__('Allow multiple', 'schemapress')}
+          checked={Boolean(config.multiple)}
+          onChange={(multiple) => onChange({ multiple })}
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
  * Editor for a select field's option list.
  *
  * @param {Object} props
@@ -206,7 +241,7 @@ function SelectOptions({ config, onChange }) {
                   value={option.value}
                   onChange={(event) =>
                     onChange({
-                      options: replaceAt(options, index, { ...option, value: event.target.value })
+                      options: replaceAt(options, index, { ...option, value: event.target.value }),
                     })
                   }
                 />
@@ -219,7 +254,7 @@ function SelectOptions({ config, onChange }) {
                   value={option.label}
                   onChange={(event) =>
                     onChange({
-                      options: replaceAt(options, index, { ...option, label: event.target.value })
+                      options: replaceAt(options, index, { ...option, label: event.target.value }),
                     })
                   }
                 />

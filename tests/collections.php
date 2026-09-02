@@ -335,6 +335,52 @@ $orphan = Entries::save($page, null, ['title' => 'Orphan', 'values' => ['author'
 
 check('a dangling relation resolves to null', null, $orphan['data']['author']);
 
+// --- contact field types -----------------------------------------------------
+
+echo "\nEmail, URL and phone\n";
+
+$contact = SchemaModel::normalize([
+    'fields' => [
+        ['label' => 'Email', 'type' => 'email'],
+        ['label' => 'Website', 'type' => 'url'],
+        ['label' => 'Phone', 'type' => 'phone'],
+    ],
+])['fields'];
+
+check('registers email', 'email', $contact[0]['type']);
+check('registers url', 'url', $contact[1]['type']);
+check('registers phone', 'phone', $contact[2]['type']);
+check('gives them a placeholder setting', '', $contact[0]['config']['placeholder']);
+
+$contactValues = ContentSanitizer::values([
+    'email' => '  ada@example.com  ',
+    'website' => 'https://example.com/x',
+    'phone' => '+1 (555) 010-0100',
+], $contact);
+
+check('trims an email', 'ada@example.com', $contactValues['email']);
+check('keeps a url', 'https://example.com/x', $contactValues['website']);
+check('keeps phone punctuation', '+1 (555) 010-0100', $contactValues['phone']);
+
+// an address that will not validate is stored as nothing rather than as text
+// that only looks like an address
+$rejected = ContentSanitizer::values([
+    'email' => 'not an address',
+    'website' => 'javascript:alert(1)',
+    'phone' => 'call me maybe 555',
+], $contact);
+
+check('drops an invalid email', '', $rejected['email']);
+check('drops a dangerous url scheme', '', $rejected['website']);
+check('strips letters from a phone', '555', $rejected['phone']);
+
+// they default to empty strings, like any other single line of text
+$emptyContact = ContentSanitizer::values([], $contact);
+
+check('defaults email to empty', '', $emptyContact['email']);
+check('defaults url to empty', '', $emptyContact['website']);
+check('defaults phone to empty', '', $emptyContact['phone']);
+
 // --- naming ------------------------------------------------------------------
 
 echo "\nNaming\n";

@@ -16,6 +16,7 @@ import { Database, Plus } from 'lucide-react'
 import { useRoute } from './useRoute'
 import { Loading, Alert, Button } from '../ui'
 import { api } from '../shared/api'
+import { forgetCollections } from '../shared/collections'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { CreateTypeDialog } from './CreateTypeDialog'
@@ -45,12 +46,15 @@ export function App({ settings }) {
         .then((result) => {
           setTypes(result.types || [])
           setError('')
+
+          // relation settings pick from this list, and it is cached
+          forgetCollections()
         })
         .catch((failure) => {
           setTypes([])
           setError(failure.message)
         }),
-    []
+    [],
   )
 
   useEffect(() => {
@@ -135,7 +139,7 @@ function Welcome({ types, onCreate, onSelect }) {
         {types.length === 0
           ? __(
               'A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries.',
-              'schemapress'
+              'schemapress',
             )
           : __('Choose one from the sidebar, or create another.', 'schemapress')}
       </p>

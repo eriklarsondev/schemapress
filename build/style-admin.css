@@ -223,6 +223,15 @@
 .schemapress .top-1\/2 {
   top: 50%;
 }
+.schemapress .top-full {
+  top: 100%;
+}
+.schemapress .z-0 {
+  z-index: 0;
+}
+.schemapress .z-10 {
+  z-index: 10;
+}
 .schemapress .z-\[100000\] {
   z-index: 100000;
 }
@@ -365,6 +374,9 @@
 .schemapress .h-\[18px\] {
   height: 18px;
 }
+.schemapress .max-h-56 {
+  max-height: 14rem;
+}
 .schemapress .max-h-72 {
   max-height: 18rem;
 }
@@ -491,6 +503,9 @@
 }
 .schemapress .animate-spin {
   animation: spin 1s linear infinite;
+}
+.schemapress .cursor-default {
+  cursor: default;
 }
 .schemapress .cursor-pointer {
   cursor: pointer;
