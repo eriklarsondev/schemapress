@@ -1,9 +1,0 @@
-{# A link. Classes land on the anchor: styling a button means styling the thing people click. #}
-<p {% include 'fields/_attrs.twig' with { field: field } only %}>
-	<a
-		class="sp-button{% if field.classes %} {{ field.classes }}{% endif %}"
-		href="{{ field.value.url }}"
-		{% if field.value.target == '_blank' %}target="_blank" rel="noopener"{% endif %}>
-		{{ field.value.label|default(field.value.url) }}
-	</a>
-</p>

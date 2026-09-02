@@ -6,228 +6,45 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * expands stored content into the payload a headless client consumes.
+ * expands stored values into the payload a template or a client consumes.
  *
  * stored values are deliberately thin — an image is an attachment id, a
- * relationship is a post id, rich text is raw post content. none of that is
- * usable by a front-end on its own, so this class dereferences every one of
- * them at delivery time. keeping the expansion here (rather than at save time)
- * means a resized image or a renamed post is reflected immediately, without
- * re-saving every page that references it.
- *
- * the emitted shape is uniform: any node carrying identity is
- * { "id": …, "data": { … } }. a field key can therefore never collide with
- * structural keys, whatever an author names it.
+ * relation is a post id, rich text is raw content. none of that is usable on
+ * its own, so this class dereferences every one of them at read time. keeping
+ * the expansion here (rather than at save time) means a resized image or a
+ * renamed entry is reflected immediately, without re-saving everything that
+ * refers to it.
  */
 class Resolver
 {
     /**
-     * the full delivery payload for a post.
+     * how deep relations may follow other relations.
      *
-     * @param integer $post_id
-     *
-     * @return array|null null when the post does not exist
+     * a bound is not optional: two entries can point at each other, and without
+     * one a cycle would recurse until it exhausted memory.
      */
-    public static function page($post_id)
-    {
-        $post = get_post(absint($post_id));
-
-        if (!$post) {
-            return null;
-        }
-
-        $schema_id = Binding::schemaId($post->ID);
-
-        $payload = [
-            'id' => (int) $post->ID,
-            'slug' => $post->post_name,
-            'title' => get_the_title($post),
-            'status' => $post->post_status,
-            'type' => $post->post_type,
-            'template' => Binding::template($post->ID),
-            'schema' => $schema_id ? get_the_title($schema_id) : null,
-            'permalink' => get_permalink($post),
-            'modified' => $post->post_modified_gmt,
-            'excerpt' => $post->post_excerpt,
-            'featured_image' => self::attachment(get_post_thumbnail_id($post->ID)),
-            'sections' => self::sections($post->ID),
-        ];
-
-        /**
-         * filters the delivered page payload.
-         *
-         * @param array    $payload
-         * @param \WP_Post $post
-         */
-        return apply_filters('schemapress/page', $payload, $post);
-    }
-
-    /**
-     * the resolved sections for a post.
-     *
-     * @param integer $post_id
-     *
-     * @return array
-     */
-    public static function sections($post_id)
-    {
-        return self::resolve(Content::get($post_id), Binding::definition($post_id));
-    }
-
-    /**
-     * resolves arbitrary content against a definition, without reading or
-     * writing anything stored.
-     *
-     * this is what lets the admin preview unsaved edits through exactly the
-     * same path a delivered page takes — the preview cannot drift from the
-     * payload, because it is the payload.
-     *
-     * @param mixed $content
-     * @param array $definition
-     *
-     * @return array
-     */
-    public static function resolve($content, array $definition)
-    {
-        $clean = ContentSanitizer::sanitize(Content::shape($content), $definition);
-
-        return self::resolveSections($clean['sections'], $definition);
-    }
-
-    /**
-     * resolves a list of sanitized sections, recursing into containers.
-     *
-     * @param array $sections
-     * @param array $definition
-     *
-     * @return array
-     */
-    private static function resolveSections(array $sections, array $definition)
-    {
-        $resolved = [];
-
-        foreach ($sections as $placed) {
-            $type = SchemaModel::section($definition, $placed['type']);
-
-            if (!$type) {
-                continue;
-            }
-
-            $resolved[] = [
-                'id' => $placed['id'],
-                'type' => $placed['type'],
-                // tokens, not classes — the client maps them to its own markup
-                'layout' => $placed['layout'],
-                // role => field key, so a client can compose without walking
-                // the schema to find which field is the backdrop
-                'roles' => self::roles($type['fields']),
-                // field key => field type. a filled value announces its own
-                // shape, but an empty one does not - and the editor still has
-                // to know whether the gap is a heading or an image
-                'types' => self::types($type['fields']),
-                // field key => class string, so a client can apply the same
-                // classes the reference renderer does
-                'classes' => self::classes($type['fields']),
-                'data' => self::values($placed['values'], $type['fields']),
-                'children' => self::resolveSections(
-                    $placed['children'] ?? [],
-                    $definition
-                ),
-            ];
-        }
-
-        return $resolved;
-    }
-
-    /**
-     * maps each declared role to the field key that carries it.
-     *
-     * only the first field claiming a role wins - two backgrounds would leave
-     * a renderer with no way to choose, so the schema order decides.
-     *
-     * @param array $fields
-     *
-     * @return array<string, string>
-     */
-    public static function roles(array $fields)
-    {
-        $roles = [];
-
-        foreach ($fields as $field) {
-            $role = $field['role'] ?? '';
-
-            if ($role !== '' && !isset($roles[$role])) {
-                $roles[$role] = $field['key'];
-            }
-        }
-
-        return $roles;
-    }
-
-    /**
-     * maps field keys to their declared type, at any depth.
-     *
-     * @param array $fields
-     *
-     * @return array<string, string>
-     */
-    public static function types(array $fields)
-    {
-        $types = [];
-
-        foreach ($fields as $field) {
-            $types[$field['key']] = $field['type'];
-
-            if (!empty($field['fields'])) {
-                $types += self::types($field['fields']);
-            }
-        }
-
-        return $types;
-    }
-
-    /**
-     * maps field keys to their author-defined classes, skipping fields that
-     * have none so the payload stays small.
-     *
-     * @param array $fields
-     *
-     * @return array<string, string>
-     */
-    public static function classes(array $fields)
-    {
-        $classes = [];
-
-        foreach ($fields as $field) {
-            if (!empty($field['classes'])) {
-                $classes[$field['key']] = $field['classes'];
-            }
-
-            if (!empty($field['fields'])) {
-                $classes += self::classes($field['fields']);
-            }
-        }
-
-        return $classes;
-    }
+    const MAX_RELATION_DEPTH = 2;
 
     /**
      * resolves a value bag against its field definitions.
      *
-     * @param array $values
-     * @param array $fields
+     * @param mixed   $values
+     * @param array   $fields
+     * @param integer $depth
      *
      * @return array
      */
-    public static function values($values, array $fields)
+    public static function values($values, array $fields, $depth = 0)
     {
+        $values = is_array($values) ? $values : [];
         $resolved = [];
 
         foreach ($fields as $field) {
             $key = $field['key'];
             $resolved[$key] = self::value(
                 array_key_exists($key, $values) ? $values[$key] : null,
-                $field
+                $field,
+                $depth
             );
         }
 
@@ -237,19 +54,20 @@ class Resolver
     /**
      * resolves one value according to its field type.
      *
-     * @param mixed $value
-     * @param array $field
+     * @param mixed   $value
+     * @param array   $field
+     * @param integer $depth
      *
      * @return mixed
      */
-    public static function value($value, array $field)
+    public static function value($value, array $field, $depth = 0)
     {
         switch ($field['type']) {
             case 'repeater':
-                return self::rows($value, $field);
+                return self::rows($value, $field, $depth);
 
             case 'group':
-                return self::values(is_array($value) ? $value : [], $field['fields']);
+                return self::values(is_array($value) ? $value : [], $field['fields'], $depth);
 
             case 'wysiwyg':
                 return self::richText($value);
@@ -257,6 +75,9 @@ class Resolver
             case 'image':
             case 'file':
                 return self::attachment($value);
+
+            case 'relation':
+                return self::relation($value, $field, $depth);
 
             case 'post':
                 return self::relationship($value, $field);
@@ -272,12 +93,13 @@ class Resolver
     /**
      * resolves repeater rows, preserving order and row identity.
      *
-     * @param mixed $value
-     * @param array $field
+     * @param mixed   $value
+     * @param array   $field
+     * @param integer $depth
      *
      * @return array
      */
-    private static function rows($value, array $field)
+    private static function rows($value, array $field, $depth = 0)
     {
         $rows = [];
 
@@ -285,8 +107,8 @@ class Resolver
             $values = isset($row['values']) && is_array($row['values']) ? $row['values'] : [];
 
             $rows[] = [
-                'id' => isset($row['id']) ? $row['id'] : Content::id('r'),
-                'data' => self::values($values, $field['fields']),
+                'id' => isset($row['id']) ? $row['id'] : ContentSanitizer::id(),
+                'data' => self::values($values, $field['fields'], $depth),
             ];
         }
 
@@ -294,10 +116,50 @@ class Resolver
     }
 
     /**
+     * expands a relation into the entries it points at.
+     *
+     * an entry is returned as its own resolved data, so a template reading a
+     * Team Members relation gets people rather than ids — but only to a bounded
+     * depth, since two collections may reference each other.
+     *
+     * @param mixed   $value
+     * @param array   $field
+     * @param integer $depth
+     *
+     * @return array|null
+     */
+    private static function relation($value, array $field, $depth = 0)
+    {
+        $multiple = !empty($field['config']['multiple']);
+        $ids = array_values(array_filter(array_map('absint', (array) $value)));
+
+        if ($depth >= self::MAX_RELATION_DEPTH) {
+            // past the bound, say what it points at without following it
+            return $multiple ? $ids : (isset($ids[0]) ? $ids[0] : null);
+        }
+
+        $type_id = isset($field['config']['collection']) ? absint($field['config']['collection']) : 0;
+        $entries = [];
+
+        foreach ($ids as $id) {
+            $entry = Entries::get($type_id, $id, $depth + 1);
+
+            if ($entry) {
+                $entries[] = $entry;
+            }
+        }
+
+        if ($multiple) {
+            return $entries;
+        }
+
+        return isset($entries[0]) ? $entries[0] : null;
+    }
+
+    /**
      * runs stored rich text through shortcodes and paragraph formatting so the
      * client receives display-ready HTML. the_content is deliberately not
-     * applied — it invites unrelated plugins to inject markup into an API
-     * response.
+     * applied — it invites unrelated plugins to inject markup into a response.
      *
      * @param mixed $value
      *
@@ -362,7 +224,7 @@ class Resolver
     }
 
     /**
-     * expands post ids into linkable references.
+     * expands WordPress post ids into linkable references.
      *
      * @param mixed $value
      * @param array $field

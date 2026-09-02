@@ -1,177 +1,139 @@
 /**
- * REST transport for the admin application.
+ * The admin transport.
  *
- * Targets the admin namespace, not the public delivery namespace — these
- * routes exist to serve this UI and require an authenticated editor. apiFetch
- * is preconfigured by WordPress with the logged-in nonce, so the bootstrapped
- * root path is all this needs.
+ * One thin wrapper over the plugin's REST namespace. Every call returns a
+ * promise of parsed JSON, or rejects with an Error carrying the server's
+ * message — screens show that message rather than inventing their own, because
+ * the server is the only thing that knows what actually went wrong.
  */
 
 import apiFetch from '@wordpress/api-fetch'
+import { settings } from './settings'
 
-const settings = window.SchemaPress || {}
-const root = (settings.rest && settings.rest.root) || ''
+const root = settings.rest?.root || ''
+const nonce = settings.rest?.nonce || ''
 
 /**
- * Issues a request against the plugin's admin REST namespace.
+ * Performs one request.
  *
  * @param {string} path
- * @param {Object} options
- * @return {Promise<*>} The decoded response body.
+ * @param {Object} options method, data
+ * @return {Promise<*>} The parsed response.
  */
-function request(path, options = {}) {
-  return apiFetch({ url: `${root}${path}`, ...options })
+function request(path, { method = 'GET', data } = {}) {
+  return apiFetch({
+    url: `${root}${path}`,
+    method,
+    data,
+    headers: nonce ? { 'X-WP-Nonce': nonce } : {}
+  }).catch((error) => {
+    throw new Error(error?.message || 'Request failed')
+  })
+}
+
+/**
+ * Builds a query string from defined values only.
+ *
+ * @param {Object} args
+ * @return {string} The query string, with leading ? or empty.
+ */
+function query(args = {}) {
+  const pairs = Object.entries(args).filter(
+    ([, value]) => value !== '' && value !== undefined && value !== null
+  )
+
+  return pairs.length ? `?${new URLSearchParams(pairs).toString()}` : ''
 }
 
 export const api = {
   /**
-   * Lists every schema with its bindings.
+   * Every content type, for the sidebar.
    *
-   * @return {Promise<Array>} Schema summaries.
+   * @return {Promise<{types: Array}>} The types.
    */
-  schemas: () => request('/schemas'),
+  types: () => request('/types'),
 
   /**
-   * Loads one schema with its definition and bindings.
+   * One content type with its definition.
    *
    * @param {number} id
-   * @return {Promise<Object>} The schema payload.
+   * @return {Promise<{type: Object, definition: Object, types: Array}>} The type.
    */
-  schema: (id) => request(`/schemas/${id}`),
+  type: (id) => request(`/types/${id}`),
 
   /**
-   * Creates an empty schema.
+   * Creates a content type.
    *
    * @param {string} title
-   * @return {Promise<Object>} The created schema.
+   * @return {Promise<{type: Object, definition: Object, types: Array}>} The new type.
    */
-  createSchema: (title) => request('/schemas', { method: 'POST', data: { title } }),
+  createType: (title) => request('/types', { method: 'POST', data: { title } }),
 
   /**
-   * Persists a schema. Returns the normalized server state, which may differ
-   * from what was sent — keys are slugified and deduplicated server-side.
+   * Renames a type, replaces its definition, or both.
    *
    * @param {number} id
-   * @param {Object} data
-   * @return {Promise<Object>} The stored schema payload.
+   * @param {Object} data title and/or definition
+   * @return {Promise<{type: Object, definition: Object, types: Array}>} The stored type.
    */
-  saveSchema: (id, data) => request(`/schemas/${id}`, { method: 'POST', data }),
+  updateType: (id, data) => request(`/types/${id}`, { method: 'POST', data }),
 
   /**
-   * Trashes a schema.
+   * Deletes a type and every entry in it.
    *
    * @param {number} id
-   * @return {Promise<Object>} The deletion result.
+   * @return {Promise<{deleted: boolean, types: Array}>} What remains.
    */
-  deleteSchema: (id) => request(`/schemas/${id}`, { method: 'DELETE' }),
+  deleteType: (id) => request(`/types/${id}`, { method: 'DELETE' }),
 
   /**
-   * Every registered template with its binding and usage count.
+   * A page of a collection's entries, with the definition its columns and form
+   * are built from.
    *
-   * @return {Promise<Array>} Template descriptors.
+   * @param {number} id
+   * @param {Object} args page, perPage, search, orderby, order
+   * @return {Promise<{entries: Array, total: number, pages: number, definition: Object}>} The page.
    */
-  templates: () => request('/templates'),
+  entries: (id, args = {}) => request(`/types/${id}/entries${query(args)}`),
 
   /**
-   * Replaces the plugin-defined template list.
+   * One entry, with the definition it was saved against.
    *
-   * @param {Array} templates
-   * @return {Promise<Array>} The stored templates.
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{entry: Object, definition: Object}>} The entry.
    */
-  saveTemplates: (templates) =>
-    request('/templates', { method: 'POST', data: { templates } }),
+  entry: (id, entryId) => request(`/types/${id}/entries/${entryId}`),
 
   /**
-   * Lists pages, bound or not.
+   * Creates or updates an entry. A null entryId creates.
    *
-   * @param {string} search
-   * @return {Promise<Array>} Page summaries.
+   * @param {number}      id
+   * @param {number|null} entryId
+   * @param {Object}      data    title, status, values
+   * @return {Promise<{entry: Object}>} The stored entry.
    */
-  pages: (search = '') => request(`/pages?search=${encodeURIComponent(search)}`),
+  saveEntry: (id, entryId, data) =>
+    request(entryId ? `/types/${id}/entries/${entryId}` : `/types/${id}/entries`, {
+      method: 'POST',
+      data
+    }),
 
   /**
-   * Assigns a template to a page, which is what binds it to a schema.
+   * Trashes an entry.
    *
-   * @param {number} postId
-   * @param {string} template
-   * @return {Promise<Object>} The new binding.
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{deleted: boolean}>} Whether it went.
    */
-  assignTemplate: (postId, template) =>
-    request(`/pages/${postId}/template`, { method: 'POST', data: { template } }),
+  deleteEntry: (id, entryId) =>
+    request(`/types/${id}/entries/${entryId}`, { method: 'DELETE' }),
 
   /**
-   * Assigns a schema straight to a page, bypassing the template. Passing 0
-   * clears it so the template's schema applies again.
+   * Published posts, for the post relationship field's picker.
    *
-   * @param {number} postId
-   * @param {number} schemaId
-   * @return {Promise<Object>} The new binding.
-   */
-  assignSchema: (postId, schemaId) =>
-    request(`/pages/${postId}/schema`, { method: 'POST', data: { schema: schemaId } }),
-
-  /**
-   * The site's design tokens.
-   *
-   * @return {Promise<{tokens: Array}>} The tokens.
-   */
-  settings: () => request('/settings'),
-
-  /**
-   * Stores design tokens. Returns what was kept — a malformed value falls back
-   * to its default rather than being stored.
-   *
-   * @param {Object} tokens
-   * @return {Promise<{tokens: Array}>} The stored tokens.
-   */
-  saveSettings: (tokens) => request('/settings', { method: 'POST', data: { tokens } }),
-
-  /**
-   * Renders unsaved content through the reference renderer. Persists nothing.
-   *
-   * @param {number} postId
-   * @param {Object} payload definition and content
-   * @return {Promise<{html: string, stylesheet: string}>} The rendered page.
-   */
-  preview: (postId, payload) =>
-    request(`/preview/${postId}`, { method: 'POST', data: payload }),
-
-  /**
-   * Everything the guided editor needs for one page: its template, schema,
-   * content, and which step to open on.
-   *
-   * @param {number} postId
-   * @return {Promise<Object>} The workflow payload.
-   */
-  workflow: (postId) => request(`/pages/${postId}/workflow`),
-
-  /**
-   * Loads a page's schema definition and its current section content.
-   *
-   * @param {number} postId
-   * @return {Promise<Object>} The content payload.
-   */
-  content: (postId) => request(`/content/${postId}`),
-
-  /**
-   * Persists a page's section content.
-   *
-   * @param {number} postId
-   * @param {Object} content
-   * @return {Promise<Object>} The sanitized stored content.
-   */
-  saveContent: (postId, content) =>
-    request(`/content/${postId}`, { method: 'POST', data: { content } }),
-
-  /**
-   * Searches posts for the relationship field picker.
-   *
-   * @param {string} search
-   * @param {string} postType
+   * @param {Object} args types, search
    * @return {Promise<Array>} Matching posts.
    */
-  posts: (search, postType = 'page') =>
-    request(
-      `/posts?search=${encodeURIComponent(search)}&post_type=${encodeURIComponent(postType)}`
-    )
+  posts: (args = {}) => request(`/posts${query(args)}`)
 }

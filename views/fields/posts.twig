@@ -1,6 +1,0 @@
-{# Several related posts. #}
-<ul class="sp-field sp-field--{{ field.key }} sp-posts{% if field.classes %} {{ field.classes }}{% endif %}">
-	{% for post in field.value %}
-		<li><a href="{{ post.permalink }}">{{ post.title }}</a></li>
-	{% endfor %}
-</ul>

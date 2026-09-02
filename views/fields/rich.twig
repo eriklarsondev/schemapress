@@ -1,6 +1,0 @@
-{#
-  Rich text. The value is HTML the editor produced and the server has already
-  run through wp_kses_post, so it is printed raw rather than escaped - escaping
-  it here would show the author their own markup as text.
-#}
-<div {% include 'fields/_attrs.twig' with { field: field, extra: 'sp-rich' } only %}>{{ field.value|raw }}</div>

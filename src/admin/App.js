@@ -1,30 +1,25 @@
 /**
  * The SchemaPress application shell.
  *
- * A full-bleed dark app bar over a light canvas, so the screen reads as one
- * tool rather than a plugin page bolted into wp-admin. Pages lead, because
- * that is where the work starts: pick a page and the guided editor walks it
- * through template → schema → content. Schemas and Templates remain as
- * libraries for managing those objects directly once they exist.
+ * A permanent sidebar beside one content pane. The sidebar is the map — every
+ * collection, always on screen — and the pane is whatever you picked. There is
+ * no "back to the list of lists", because the list never went away.
+ *
+ * One kind of thing exists here: a collection type. You define its fields, you
+ * arrange its entry form, and you fill in entries. Everything else this plugin
+ * used to do has been taken out until that works properly.
  */
 
+import { useCallback, useEffect, useState } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
-import { FileText, Layers, LayoutTemplate, Boxes, Code2, Settings } from 'lucide-react'
+import { Database, Plus } from 'lucide-react'
 import { useRoute } from './useRoute'
-import { cn } from '../ui'
-import { PagesView } from './views/PagesView'
-import { WorkflowView } from './views/WorkflowView'
-import { SchemasView } from './views/SchemasView'
-import { SchemaView } from './views/SchemaView'
-import { TemplatesView } from './views/TemplatesView'
-import { SettingsView } from './views/SettingsView'
-
-const TABS = [
-  { view: 'pages', label: __('Pages', 'schemapress'), icon: FileText },
-  { view: 'schemas', label: __('Schemas', 'schemapress'), icon: Layers },
-  { view: 'templates', label: __('Templates', 'schemapress'), icon: LayoutTemplate },
-  { view: 'settings', label: __('Settings', 'schemapress'), icon: Settings }
-]
+import { Loading, Alert, Button } from '../ui'
+import { api } from '../shared/api'
+import { Sidebar } from './Sidebar'
+import { ErrorBoundary } from './ErrorBoundary'
+import { CreateTypeDialog } from './CreateTypeDialog'
+import { TypeView } from './views/TypeView'
 
 /**
  * Root component.
@@ -34,110 +29,138 @@ const TABS = [
  */
 export function App({ settings }) {
   const [route, navigate] = useRoute()
+  const [types, setTypes] = useState(null)
+  const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  /**
+   * Reloads the sidebar, which carries live entry counts.
+   *
+   * @return {Promise<void>} Resolves once loaded.
+   */
+  const reload = useCallback(
+    () =>
+      api
+        .types()
+        .then((result) => {
+          setTypes(result.types || [])
+          setError('')
+        })
+        .catch((failure) => {
+          setTypes([])
+          setError(failure.message)
+        }),
+    []
+  )
+
+  useEffect(() => {
+    reload()
+  }, [reload])
+
+  const selected = types?.find((type) => type.id === Number(route.id)) || null
 
   return (
     // `.schemapress` is the scope every Tailwind utility is prefixed with, and
     // that prefix is a descendant selector — so this element carries the class
     // alone, and all layout utilities go on the child inside it
     <div className="schemapress">
-      <div className="flex min-h-[calc(100vh-32px)] flex-col bg-muted/40">
-        <AppBar route={route} navigate={navigate} settings={settings} />
+      <div className="flex min-h-[calc(100vh-32px)] bg-muted/30">
+        <Sidebar
+          types={types || []}
+          activeId={selected?.id}
+          loading={types === null}
+          docsUrl={settings.docsUrl}
+          version={settings.version}
+          onSelect={(id) => navigate('type', id)}
+          onCreate={() => setCreating(true)}
+        />
 
-        <main className="flex-1 px-6 py-6 xl:px-8">
-          <Route route={route} navigate={navigate} settings={settings} />
+        <main className="min-w-0 flex-1 px-6 py-6 xl:px-8">
+          {types === null ? (
+            <Loading label={__('Loading…', 'schemapress')} />
+          ) : error ? (
+            <Alert variant="warning">{error}</Alert>
+          ) : (
+            // remounted per type, so a crash in one does not persist when you
+            // navigate to another
+            <ErrorBoundary key={selected?.id || 'none'}>
+              {selected ? (
+                <TypeView type={selected} onChanged={reload} onDeleted={() => navigate('')} />
+              ) : (
+                <Welcome
+                  types={types}
+                  onCreate={() => setCreating(true)}
+                  onSelect={(id) => navigate('type', id)}
+                />
+              )}
+            </ErrorBoundary>
+          )}
         </main>
       </div>
+
+      {creating ? (
+        <CreateTypeDialog
+          onClose={() => setCreating(false)}
+          onCreated={(result) => {
+            setCreating(false)
+            setTypes(result.types || [])
+            navigate('type', result.type.id)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
 
 /**
- * The full-width dark bar carrying the brand and primary navigation.
+ * What the screen says before a collection is picked.
  *
  * @param {Object} props
- * @return {JSX.Element} The app bar.
+ * @return {JSX.Element} The welcome pane.
  */
-function AppBar({ route, navigate, settings }) {
+function Welcome({ types, onCreate, onSelect }) {
   return (
-    <header className="flex items-center gap-5 bg-appbar px-4 py-2.5 text-appbar-foreground">
-      <span className="flex items-center gap-2.5 pr-1">
-        <span className="flex size-8 items-center justify-center rounded-md bg-white/10 ring-1 ring-inset ring-white/15">
-          <Boxes className="size-4" />
-        </span>
-        <span className="text-[14px] font-semibold tracking-tight">
-          {__('SchemaPress', 'schemapress')}
-        </span>
+    <div className="mx-auto max-w-lg py-16 text-center">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <Database className="size-5" />
       </span>
 
-      <nav className="flex items-center gap-1" aria-label={__('Sections', 'schemapress')}>
-        {TABS.map((tab) => {
-          const active = route.view === tab.view
+      <h1 className="mt-4 text-[20px] font-semibold tracking-tight">
+        {types.length === 0
+          ? __('No collections yet', 'schemapress')
+          : __('Pick a collection', 'schemapress')}
+      </h1>
 
-          return (
+      <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-muted-foreground">
+        {types.length === 0
+          ? __(
+              'A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries.',
+              'schemapress'
+            )
+          : __('Choose one from the sidebar, or create another.', 'schemapress')}
+      </p>
+
+      {types.length > 0 ? (
+        <div className="mt-5 flex flex-wrap justify-center gap-1.5">
+          {types.map((type) => (
             <button
-              key={tab.view}
+              key={type.id}
               type="button"
-              aria-current={active ? 'page' : undefined}
-              onClick={() => navigate(tab.view)}
-              className={cn(
-                'flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
-                active
-                  ? 'bg-appbar-active text-appbar-foreground'
-                  : 'text-appbar-muted hover:bg-white/5 hover:text-appbar-foreground'
-              )}
+              onClick={() => onSelect(type.id)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-accent"
             >
-              <tab.icon className="size-4" />
-              {tab.label}
+              {type.label}
             </button>
-          )
-        })}
-      </nav>
-
-      {settings.contractUrl ? (
-        <a
-          href={settings.contractUrl}
-          target="_blank"
-          rel="noreferrer"
-          title={__('The structural contract your front-end consumes', 'schemapress')}
-          className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-appbar-muted transition-colors hover:bg-white/5 hover:text-appbar-foreground"
-        >
-          <Code2 className="size-3.5" />
-          {__('API contract', 'schemapress')}
-        </a>
+          ))}
+        </div>
       ) : null}
-    </header>
+
+      <div className="mt-6">
+        <Button onClick={onCreate}>
+          <Plus />
+          {__('Create a collection type', 'schemapress')}
+        </Button>
+      </div>
+    </div>
   )
-}
-
-/**
- * Renders the view for the active route.
- *
- * @param {Object} props
- * @return {JSX.Element} The active view.
- */
-function Route({ route, navigate, settings }) {
-  switch (route.view) {
-    case 'schemas':
-      return route.id ? (
-        <SchemaView schemaId={route.id} navigate={navigate} settings={settings} />
-      ) : (
-        <SchemasView navigate={navigate} />
-      )
-
-    case 'templates':
-      return <TemplatesView navigate={navigate} />
-
-    case 'settings':
-      return <SettingsView />
-
-    case 'pages':
-      return route.id ? (
-        <WorkflowView postId={route.id} navigate={navigate} settings={settings} />
-      ) : (
-        <PagesView navigate={navigate} />
-      )
-
-    default:
-      return <PagesView navigate={navigate} />
-  }
 }

@@ -1,6 +1,6 @@
 /**
- * Two admin bundles, built with the WordPress toolchain so that React and the
- * @wordpress/* packages resolve to the copies WordPress already ships. Each
+ * One admin bundle, built with the WordPress toolchain so that React and the
+ * @wordpress/* packages resolve to the copies WordPress already ships. The
  * entry emits a sibling .asset.php declaring its script dependencies, which
  * SchemaPress\Assets reads at enqueue time.
  */
@@ -11,10 +11,8 @@ const defaultConfig = require('@wordpress/scripts/config/webpack.config')
 module.exports = {
   ...defaultConfig,
   entry: {
-    // the SchemaPress screen: schema building and content editing in one app
-    admin: path.resolve(__dirname, 'src/admin/index.js'),
-    // the section editor mounted on a bound page's own edit screen
-    'page-editor': path.resolve(__dirname, 'src/page-editor/index.js')
+    // one screen: the content-type builder and the content manager
+    admin: path.resolve(__dirname, 'src/admin/index.js')
   },
   output: {
     ...defaultConfig.output,
