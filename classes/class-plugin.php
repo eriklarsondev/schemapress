@@ -62,23 +62,19 @@ class Plugin
     private function registerServices()
     {
         $services = [
-            // schema domain — definition storage and template binding
+            // the model: field types must be registered before any definition
+            // is parsed, and the schema post type before content types query it
             'FieldTypes' => FieldTypes::class,
             'Schema' => Schema::class,
-            'Binding' => Binding::class,
+            'ContentType' => ContentType::class,
 
-            // rendering domain — Twig, via Timber
+            // reading: Twig functions for themes that use Timber
             'Timber' => Timber::class,
 
-            // delivery domain — the resolved payload, which the renderer
-            // consumes and a client may fetch directly
-            'Delivery' => Delivery::class,
-            'Tailwind' => Tailwind::class,
-
-            // admin domain — screens, editor mounts, transport
+            // admin: screens and transport
             'Rest' => Rest::class,
             'Admin' => Admin::class,
-            'ContentEditor' => ContentEditor::class,
+            'Docs' => Docs::class,
         ];
 
         foreach ($services as $name => $class) {

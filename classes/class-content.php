@@ -6,184 +6,75 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * reads and writes a post's section content.
+ * the public API.
  *
- * content is one JSON blob in a single meta row:
+ * aliased to the global `Content`, so a theme reaches it with no import:
  *
- *   [
- *     'version'  => 1,
- *     'sections' => [
- *       [ 'id' => 's_a1b2', 'type' => 'hero', 'values' => [ 'heading' => 'Hi' ] ],
- *     ],
- *   ]
+ *   Content::collection('team_members')->get();
+ *   Content::collection('team_members')->find(12);
  *
- * the blob is the source of truth. it is never trusted on read — Render
- * reconciles it against the current schema so a definition change cannot
- * produce undefined access in a template.
+ * the point of it is that nothing above this line knows how WordPress stores
+ * any of this. entries happen to be posts and values happen to be one meta row,
+ * and neither fact is visible from here — which is what lets the storage change
+ * without every template changing with it.
  */
 class Content
 {
-    const META_KEY = '_schemapress_content';
-
     /**
-     * how deep containers may nest.
+     * a collection, by its machine key.
      *
-     * a bound is not optional: containers can hold containers, and without one
-     * a malformed payload could recurse until it exhausts memory. three levels
-     * covers a section holding a row holding a block, which is past the point
-     * where a page stops being legible anyway.
-     */
-    const MAX_DEPTH = 3;
-
-    /**
-     * @var array<int, array>
-     */
-    private static $cache = [];
-
-    /**
-     * the raw stored content for a post, shape-checked but not reconciled
-     * against the schema.
+     *   Content::collection('team_members')
      *
-     * @param integer $post_id
+     * an unknown key still returns a Collection rather than null: templates
+     * iterate what they are given, and one that renders nothing beats one that
+     * fatals on a typo.
      *
-     * @return array
+     * @param string $key
+     *
+     * @return Collection
      */
-    public static function get($post_id)
+    public static function collection($key)
     {
-        $post_id = absint($post_id);
-
-        if (isset(self::$cache[$post_id])) {
-            return self::$cache[$post_id];
-        }
-
-        $raw = get_post_meta($post_id, self::META_KEY, true);
-        $decoded = is_string($raw) && $raw !== '' ? json_decode($raw, true) : $raw;
-
-        self::$cache[$post_id] = self::shape($decoded);
-
-        return self::$cache[$post_id];
+        return new Collection(self::idFor($key));
     }
 
     /**
-     * sanitizes incoming content against the post's schema and stores it.
+     * every collection's key, for discovery.
      *
-     * @param integer $post_id
-     * @param mixed   $content
-     *
-     * @return array
+     * @return string[]
      */
-    public static function save($post_id, $content)
+    public static function collections()
     {
-        $post_id = absint($post_id);
-        $definition = Binding::definition($post_id);
-
-        $clean = ContentSanitizer::sanitize(self::shape($content), $definition);
-
-        update_post_meta($post_id, self::META_KEY, wp_slash(wp_json_encode($clean)));
-        self::$cache[$post_id] = $clean;
-
-        return $clean;
+        return array_column(ContentType::collections(), 'key');
     }
 
     /**
-     * removes all schema content from a post.
+     * whether a collection exists.
      *
-     * @param integer $post_id
+     * @param string $key
      *
-     * @return void
+     * @return boolean
      */
-    public static function delete($post_id)
+    public static function has($key)
     {
-        delete_post_meta(absint($post_id), self::META_KEY);
-        unset(self::$cache[absint($post_id)]);
+        return self::idFor($key) > 0;
     }
 
     /**
-     * coerces a decoded payload into the expected envelope. entries missing an
-     * id are given one so React keys and row identity survive a round trip.
+     * resolves a collection key to its content type id.
      *
-     * @param mixed $content
+     * @param string $key
      *
-     * @return array
+     * @return integer 0 when nothing matches
      */
-    public static function shape($content)
+    private static function idFor($key)
     {
-        $content = is_array($content) ? $content : [];
-        $sections = isset($content['sections']) && is_array($content['sections'])
-            ? $content['sections']
-            : [];
-
-        return [
-            'version' => SchemaModel::VERSION,
-            'sections' => self::shapeSections($sections),
-        ];
-    }
-
-    /**
-     * shapes a list of placed sections, recursing into nested children.
-     *
-     * @param mixed   $sections
-     * @param integer $depth
-     *
-     * @return array
-     */
-    public static function shapeSections($sections, $depth = 0)
-    {
-        if (!is_array($sections) || $depth > self::MAX_DEPTH) {
-            return [];
-        }
-
-        $shaped = [];
-
-        foreach ($sections as $section) {
-            if (!is_array($section) || empty($section['type'])) {
-                continue;
+        foreach (ContentType::collections() as $type) {
+            if ($type['key'] === $key) {
+                return $type['id'];
             }
-
-            $shaped[] = [
-                'id' => !empty($section['id']) ? sanitize_key($section['id']) : self::id('s'),
-                'type' => sanitize_key($section['type']),
-                'layout' => isset($section['layout']) && is_array($section['layout'])
-                    ? $section['layout']
-                    : [],
-                'values' => isset($section['values']) && is_array($section['values'])
-                    ? $section['values']
-                    : [],
-                'children' => isset($section['children'])
-                    ? self::shapeSections($section['children'], $depth + 1)
-                    : [],
-            ];
         }
 
-        return $shaped;
-    }
-
-    /**
-     * generates a short, collision-resistant node id.
-     *
-     * @param string $prefix
-     *
-     * @return string
-     */
-    public static function id($prefix = 'n')
-    {
-        return $prefix . '_' . substr(md5(uniqid((string) wp_rand(), true)), 0, 10);
-    }
-
-    /**
-     * clears the in-request content cache.
-     *
-     * @param integer|null $post_id
-     *
-     * @return void
-     */
-    public static function flush($post_id = null)
-    {
-        if ($post_id === null) {
-            self::$cache = [];
-            return;
-        }
-
-        unset(self::$cache[absint($post_id)]);
+        return 0;
     }
 }

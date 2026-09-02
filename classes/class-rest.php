@@ -6,12 +6,12 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * REST surface for the admin application.
+ * the admin transport.
  *
- * deliberately a separate namespace from Delivery: the public contract at
- * schemapress/v1 is consumed by a front-end build and must stay stable, while
- * these routes exist only to serve this plugin's own UI and are free to change
- * with it. every route here requires an authenticated editor.
+ * every screen in the builder talks to these routes and nothing else. they are
+ * deliberately not the public delivery API — they are namespaced under /admin/
+ * and gated on editing capabilities, because they return draft content and
+ * accept schema changes.
  */
 class Rest
 {
@@ -22,7 +22,7 @@ class Rest
      */
     public function __construct()
     {
-        add_action('rest_api_init', [$this, 'registerRoutes']);
+        add_action('rest_api_init', [$this, 'routes']);
     }
 
     /**
@@ -30,17 +30,17 @@ class Rest
      *
      * @return void
      */
-    public function registerRoutes()
+    public function routes()
     {
-        register_rest_route(self::NAMESPACE, '/schemas', [
+        register_rest_route(self::NAMESPACE, '/types', [
             [
                 'methods' => 'GET',
-                'callback' => [$this, 'index'],
+                'callback' => [$this, 'types'],
                 'permission_callback' => [$this, 'canEdit'],
             ],
             [
                 'methods' => 'POST',
-                'callback' => [$this, 'create'],
+                'callback' => [$this, 'createType'],
                 'permission_callback' => [$this, 'canEdit'],
                 'args' => [
                     'title' => ['type' => 'string', 'required' => true],
@@ -48,458 +48,110 @@ class Rest
             ],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/schemas/(?P<id>\d+)', [
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)', [
             [
                 'methods' => 'GET',
-                'callback' => [$this, 'show'],
-                'permission_callback' => [$this, 'canEditSchema'],
+                'callback' => [$this, 'type'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
             [
                 'methods' => 'POST',
-                'callback' => [$this, 'update'],
-                'permission_callback' => [$this, 'canEditSchema'],
+                'callback' => [$this, 'updateType'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
             [
                 'methods' => 'DELETE',
-                'callback' => [$this, 'destroy'],
-                'permission_callback' => [$this, 'canEditSchema'],
+                'callback' => [$this, 'deleteType'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/pages', [
-            'methods' => 'GET',
-            'callback' => [$this, 'pages'],
-            'permission_callback' => [$this, 'canEdit'],
-            'args' => [
-                'search' => ['type' => 'string', 'default' => ''],
-            ],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/pages/(?P<post>\d+)/schema', [
-            'methods' => 'POST',
-            'callback' => [$this, 'assignSchema'],
-            'permission_callback' => [$this, 'canEditContent'],
-            'args' => [
-                'schema' => ['type' => 'integer', 'default' => 0],
-            ],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/settings', [
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/entries', [
             [
                 'methods' => 'GET',
-                'callback' => [$this, 'settings'],
-                'permission_callback' => [$this, 'canEdit'],
+                'callback' => [$this, 'entries'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
             [
                 'methods' => 'POST',
-                'callback' => [$this, 'saveSettings'],
-                'permission_callback' => [$this, 'canManage'],
+                'callback' => [$this, 'createEntry'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/preview/(?P<post>\d+)', [
-            'methods' => 'POST',
-            'callback' => [$this, 'preview'],
-            'permission_callback' => [$this, 'canEditContent'],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/pages/(?P<post>\d+)/workflow', [
-            'methods' => 'GET',
-            'callback' => [$this, 'workflow'],
-            'permission_callback' => [$this, 'canEditContent'],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/content/(?P<post>\d+)', [
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/entries/(?P<entry>\d+)', [
             [
                 'methods' => 'GET',
-                'callback' => [$this, 'content'],
-                'permission_callback' => [$this, 'canEditContent'],
+                'callback' => [$this, 'entry'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
             [
                 'methods' => 'POST',
-                'callback' => [$this, 'saveContent'],
-                'permission_callback' => [$this, 'canEditContent'],
-            ],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/templates', [
-            [
-                'methods' => 'GET',
-                'callback' => [$this, 'templates'],
-                'permission_callback' => [$this, 'canEdit'],
+                'callback' => [$this, 'saveEntry'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
             [
-                'methods' => 'POST',
-                'callback' => [$this, 'saveTemplates'],
-                'permission_callback' => [$this, 'canManage'],
-            ],
-        ]);
-
-        register_rest_route(self::NAMESPACE, '/pages/(?P<post>\d+)/template', [
-            'methods' => 'POST',
-            'callback' => [$this, 'assignTemplate'],
-            'permission_callback' => [$this, 'canEditContent'],
-            'args' => [
-                'template' => ['type' => 'string', 'default' => ''],
+                'methods' => 'DELETE',
+                'callback' => [$this, 'deleteEntry'],
+                'permission_callback' => [$this, 'canEditType'],
             ],
         ]);
 
         register_rest_route(self::NAMESPACE, '/posts', [
-            'methods' => 'GET',
-            'callback' => [$this, 'posts'],
-            'permission_callback' => [$this, 'canEdit'],
-            'args' => [
-                'search' => ['type' => 'string', 'default' => ''],
-                'post_type' => ['type' => 'string', 'default' => 'page'],
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'posts'],
+                'permission_callback' => [$this, 'canEdit'],
             ],
         ]);
     }
 
-    /**
-     * whether the current user may manage schemas at all.
-     *
-     * @return boolean
-     */
-    public function canEdit()
-    {
-        return current_user_can('edit_pages');
-    }
+    // --- content types -------------------------------------------------------
 
     /**
-     * whether the current user may change site-wide configuration such as the
-     * template registry. a higher bar than editing an individual schema.
-     *
-     * @return boolean
-     */
-    public function canManage()
-    {
-        return current_user_can('manage_options');
-    }
-
-    /**
-     * whether the current user may edit a specific schema.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return boolean
-     */
-    public function canEditSchema($request)
-    {
-        $id = absint($request['id']);
-
-        return get_post_type($id) === Schema::POST_TYPE && current_user_can('edit_post', $id);
-    }
-
-    /**
-     * whether the current user may edit a specific post's content.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return boolean
-     */
-    public function canEditContent($request)
-    {
-        $post_id = absint($request['post']);
-
-        return get_post_status($post_id) !== false && current_user_can('edit_post', $post_id);
-    }
-
-    /**
-     * every page, whether bound or not.
-     *
-     * unbound pages are included deliberately — assigning a template is done
-     * from this list, so hiding them would make the binding unreachable.
-     *
-     * @param \WP_REST_Request $request
+     * every content type, for the sidebar.
      *
      * @return \WP_REST_Response
      */
-    public function pages($request)
+    public function types()
     {
-        $posts = get_posts([
-            'post_type' => 'page',
-            'post_status' => ['publish', 'draft', 'pending', 'private', 'future'],
-            'numberposts' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-            's' => sanitize_text_field((string) $request['search']),
-            'suppress_filters' => false,
-        ]);
+        ContentType::flush();
 
-        $results = array_map(function ($post) {
-            $template = Binding::template($post->ID);
-            $schema_id = Binding::schemaId($post->ID);
-
-            return [
-                'id' => (int) $post->ID,
-                'title' => $post->post_title !== '' ? $post->post_title : __('(no title)', 'schemapress'),
-                'slug' => $post->post_name,
-                'status' => $post->post_status,
-                'template' => $template,
-                'edit_link' => get_edit_post_link($post->ID, 'raw'),
-                'view_link' => get_permalink($post->ID),
-                'schema' => $schema_id
-                    ? ['id' => $schema_id, 'title' => get_the_title($schema_id)]
-                    : null,
-                'source' => Binding::source($post->ID),
-                'section_count' => count(Content::get($post->ID)['sections']),
-            ];
-        }, $posts);
-
-        return rest_ensure_response($results);
+        return rest_ensure_response(['types' => ContentType::all()]);
     }
 
     /**
-     * assigns a schema directly to a page, bypassing the template. passing 0
-     * clears it so the template's schema applies again.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function assignSchema($request)
-    {
-        $post_id = absint($request['post']);
-        $body = $request->get_json_params();
-        $schema_id = isset($body['schema']) ? $body['schema'] : $request['schema'];
-
-        Binding::setSchema($post_id, $schema_id);
-
-        return rest_ensure_response([
-            'id' => $post_id,
-            'schema' => Binding::schemaId($post_id),
-            'source' => Binding::source($post_id),
-        ]);
-    }
-
-    /**
-     * the site's design tokens.
-     *
-     * @return \WP_REST_Response
-     */
-    public function settings()
-    {
-        return rest_ensure_response(['tokens' => Settings::forClient()]);
-    }
-
-    /**
-     * stores design tokens, returning what was actually kept - a malformed
-     * length or colour falls back to its default rather than being stored.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function saveSettings($request)
-    {
-        $body = $request->get_json_params();
-
-        Settings::save(isset($body['tokens']) ? $body['tokens'] : []);
-
-        return $this->settings();
-    }
-
-    /**
-     * renders unsaved content through the reference renderer.
-     *
-     * the definition is taken from the request rather than storage, so a
-     * component invented seconds ago previews correctly. nothing is persisted:
-     * this is a pure function of the payload, which is what makes it safe to
-     * call on every edit.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function preview($request)
-    {
-        $body = $request->get_json_params();
-
-        $definition = SchemaModel::normalize(
-            isset($body['definition']) ? $body['definition'] : []
-        );
-
-        $sections = Resolver::resolve(
-            isset($body['content']) ? $body['content'] : [],
-            $definition
-        );
-
-        // per-section markup as well as the whole page: the build canvas shows
-        // each section inside its own card, and slicing the page apart on the
-        // client would mean parsing HTML to find the boundaries
-        // the builder renders with sample content and clickable field markers;
-        // the preview tab renders exactly what a visitor would get
-        $options = ['editing' => !empty($body['editing'])];
-
-        $parts = [];
-
-        foreach ($sections as $section) {
-            $parts[$section['id']] = Renderer::section($section, $options);
-        }
-
-        $stylesheet = SCHEMAPRESS_PATH . 'assets/css/render.css';
-
-        return rest_ensure_response([
-            'html' => Renderer::sections($sections, $options),
-            'sections' => $parts,
-            // the canvas renders each section in a shadow root, which needs the
-            // CSS as text rather than as a link - and the tokens with it, since
-            // a shadow root does not inherit custom properties declared on :root
-            'css' => Settings::cssVariables()
-                . (file_exists($stylesheet) ? file_get_contents($stylesheet) : ''),
-            'stylesheet' => esc_url_raw(SCHEMAPRESS_URL . 'assets/css/render.css'),
-        ]);
-    }
-
-    /**
-     * everything the guided editor needs for one page, in a single call.
-     *
-     * deliberately tolerant of an incomplete setup: a page with no template,
-     * or a template with no schema, is a normal state part-way through the
-     * workflow rather than an error. the `step` it reports is what the client
-     * opens on.
+     * one content type, with its definition.
      *
      * @param \WP_REST_Request $request
      *
      * @return \WP_REST_Response|\WP_Error
      */
-    public function workflow($request)
+    public function type($request)
     {
-        $post_id = absint($request['post']);
-        $post = get_post($post_id);
-
-        if (!$post) {
-            return new \WP_Error(
-                'schemapress_not_found',
-                __('That page no longer exists.', 'schemapress'),
-                ['status' => 404]
-            );
-        }
-
-        $template = Binding::template($post_id);
-        $schema_id = Binding::schemaId($post_id);
-
-        if ($template !== '' && !Templates::exists($template)) {
-            // the template was deleted out from under the page
-            $template = '';
-        }
-
-        return rest_ensure_response([
-            'post' => [
-                'id' => $post_id,
-                'title' => get_the_title($post_id),
-                'slug' => $post->post_name,
-                'status' => $post->post_status,
-                'edit_link' => get_edit_post_link($post_id, 'raw'),
-                'view_link' => get_permalink($post_id),
-            ],
-            'template' => $template !== '' ? Templates::get($template) : null,
-            'schema' => $schema_id
-                ? [
-                    'id' => $schema_id,
-                    'title' => get_the_title($schema_id),
-                    'definition' => SchemaRepository::definition($schema_id),
-                    'templates' => SchemaRepository::templates($schema_id),
-                ]
-                : null,
-            'content' => Content::get($post_id),
-            'source' => Binding::source($post_id),
-            // a schema resolved by either route means the setup is done, so a
-            // directly bound page skips the template step rather than being
-            // sent back to a decision it has already opted out of
-            'step' => $schema_id ? 'content' : ($template === '' ? 'template' : 'schema'),
-        ]);
+        return $this->typePayload(absint($request['id']));
     }
 
     /**
-     * a post's schema and its current section content.
+     * creates a content type.
      *
      * @param \WP_REST_Request $request
      *
      * @return \WP_REST_Response|\WP_Error
      */
-    public function content($request)
+    public function createType($request)
     {
-        $post_id = absint($request['post']);
-        $schema_id = Binding::schemaId($post_id);
+        $title = sanitize_text_field($request['title']);
 
-        if (!$schema_id) {
-            return new \WP_Error(
-                'schemapress_unbound',
-                __('This page is not using a template bound to a schema.', 'schemapress'),
-                ['status' => 400]
-            );
+        if (trim($title) === '') {
+            return new \WP_Error('schemapress_no_title', __('A name is required.', 'schemapress'), [
+                'status' => 400,
+            ]);
         }
 
-        return rest_ensure_response([
-            'post' => [
-                'id' => $post_id,
-                'title' => get_the_title($post_id),
-                'edit_link' => get_edit_post_link($post_id, 'raw'),
-                'view_link' => get_permalink($post_id),
-            ],
-            'schema' => [
-                'id' => $schema_id,
-                'title' => get_the_title($schema_id),
-            ],
-            'definition' => SchemaRepository::definition($schema_id),
-            'content' => Content::get($post_id),
-        ]);
-    }
-
-    /**
-     * persists a post's section content, returning the sanitized result so the
-     * client adopts whatever the schema actually permitted.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function saveContent($request)
-    {
-        $post_id = absint($request['post']);
-        $body = $request->get_json_params();
-
-        $saved = Content::save($post_id, isset($body['content']) ? $body['content'] : []);
-
-        return rest_ensure_response(['content' => $saved]);
-    }
-
-    /**
-     * lists every schema with its bindings.
-     *
-     * @return \WP_REST_Response
-     */
-    public function index()
-    {
-        $schemas = array_map(function ($post) {
-            $definition = SchemaRepository::definition($post->ID);
-
-            return [
-                'id' => (int) $post->ID,
-                'title' => $post->post_title,
-                'status' => $post->post_status,
-                'templates' => SchemaRepository::templates($post->ID),
-                'section_count' => count($definition['sections']),
-                'modified' => $post->post_modified_gmt,
-            ];
-        }, SchemaRepository::all());
-
-        return rest_ensure_response($schemas);
-    }
-
-    /**
-     * creates an empty schema.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response|\WP_Error
-     */
-    public function create($request)
-    {
         $id = wp_insert_post([
             'post_type' => Schema::POST_TYPE,
-            'post_title' => sanitize_text_field($request['title']),
+            'post_title' => $title,
             'post_status' => 'publish',
         ], true);
 
@@ -507,143 +159,186 @@ class Rest
             return $id;
         }
 
-        SchemaRepository::saveDefinition($id, ['sections' => []]);
+        SchemaRepository::saveDefinition($id, ['fields' => []]);
 
-        return rest_ensure_response($this->payload($id));
+        // the key names the post type entries are stored against, so it is
+        // claimed now and never follows a later rename
+        ContentType::key($id);
+        ContentType::register($id);
+
+        return $this->typePayload($id);
     }
 
     /**
-     * returns one schema with its definition and bindings.
+     * renames a type or replaces its fields.
      *
      * @param \WP_REST_Request $request
      *
-     * @return \WP_REST_Response
+     * @return \WP_REST_Response|\WP_Error
      */
-    public function show($request)
-    {
-        return rest_ensure_response($this->payload(absint($request['id'])));
-    }
-
-    /**
-     * persists a schema's title, definition and template bindings. the stored
-     * (normalized) result is returned so the client can adopt any key
-     * rewriting the server performed.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function update($request)
+    public function updateType($request)
     {
         $id = absint($request['id']);
         $body = $request->get_json_params();
+        $body = is_array($body) ? $body : [];
 
-        if (isset($body['title'])) {
+        if (isset($body['title']) && trim((string) $body['title']) !== '') {
             wp_update_post([
                 'ID' => $id,
                 'post_title' => sanitize_text_field($body['title']),
             ]);
         }
 
-        if (array_key_exists('definition', $body)) {
+        if (isset($body['definition'])) {
             SchemaRepository::saveDefinition($id, $body['definition']);
         }
 
-        if (array_key_exists('templates', $body)) {
-            SchemaRepository::saveTemplates($id, $body['templates']);
-        }
+        ContentType::flush();
 
-        return rest_ensure_response($this->payload($id));
+        return $this->typePayload($id);
     }
 
     /**
-     * trashes a schema. bound pages keep their stored content — rebinding the
-     * template restores it — so deletion is non-destructive to page data.
+     * deletes a type. its entries go with it, which is why this asks.
      *
      * @param \WP_REST_Request $request
      *
      * @return \WP_REST_Response
      */
-    public function destroy($request)
+    public function deleteType($request)
     {
         $id = absint($request['id']);
-        wp_trash_post($id);
+        $type = ContentType::get($id);
 
-        return rest_ensure_response(['deleted' => true, 'id' => $id]);
-    }
-
-    /**
-     * every registered template, annotated with the schema that claims it and
-     * how many pages use it — enough for the app to warn before a rebinding
-     * changes what those pages deliver.
-     *
-     * @return \WP_REST_Response
-     */
-    public function templates()
-    {
-        $bound = [];
-
-        foreach (SchemaRepository::all() as $schema) {
-            foreach (SchemaRepository::templates($schema->ID) as $template) {
-                $bound[$template] = [
-                    'id' => (int) $schema->ID,
-                    'title' => $schema->post_title,
-                ];
+        if ($type && $type['postType']) {
+            foreach (get_posts([
+                'post_type' => $type['postType'],
+                'post_status' => 'any',
+                'numberposts' => -1,
+                'fields' => 'ids',
+                'suppress_filters' => false,
+            ]) as $entry_id) {
+                wp_delete_post($entry_id, true);
             }
         }
 
-        $templates = [];
+        wp_delete_post($id, true);
+        ContentType::flush();
 
-        foreach (Templates::all() as $slug => $template) {
-            $templates[] = array_merge($template, [
-                'schema' => isset($bound[$slug]) ? $bound[$slug] : null,
-                'page_count' => count(Binding::postsForTemplates([$slug], ['fields' => 'ids'])),
+        return rest_ensure_response(['deleted' => true, 'types' => ContentType::all()]);
+    }
+
+    // --- entries -------------------------------------------------------------
+
+    /**
+     * a page of a collection's entries.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function entries($request)
+    {
+        $id = absint($request['id']);
+
+        return rest_ensure_response(Entries::all($id, [
+            'page' => $request->get_param('page'),
+            'perPage' => $request->get_param('perPage'),
+            'search' => $request->get_param('search'),
+            'orderby' => $request->get_param('orderby'),
+            'order' => $request->get_param('order'),
+        ]) + ['definition' => SchemaRepository::definition($id)]);
+    }
+
+    /**
+     * one entry.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function entry($request)
+    {
+        $entry = Entries::get($request['id'], $request['entry']);
+
+        if (!$entry) {
+            return new \WP_Error('schemapress_no_entry', __('Entry not found.', 'schemapress'), [
+                'status' => 404,
             ]);
         }
 
-        return rest_ensure_response($templates);
-    }
-
-    /**
-     * replaces the plugin-defined template list.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function saveTemplates($request)
-    {
-        $body = $request->get_json_params();
-
-        Templates::save(isset($body['templates']) ? $body['templates'] : []);
-
-        return $this->templates();
-    }
-
-    /**
-     * assigns a template to a page, which is what binds it to a schema.
-     *
-     * @param \WP_REST_Request $request
-     *
-     * @return \WP_REST_Response
-     */
-    public function assignTemplate($request)
-    {
-        $post_id = absint($request['post']);
-        $body = $request->get_json_params();
-        $slug = isset($body['template']) ? $body['template'] : (string) $request['template'];
-
-        $stored = Binding::setTemplate($post_id, $slug);
-
         return rest_ensure_response([
-            'id' => $post_id,
-            'template' => $stored,
-            'schema' => Binding::schemaId($post_id),
+            'entry' => $entry,
+            'definition' => SchemaRepository::definition(absint($request['id'])),
         ]);
     }
 
     /**
-     * searches posts for the relationship field's picker.
+     * creates an entry.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function createEntry($request)
+    {
+        return $this->storeEntry($request['id'], null, $request->get_json_params());
+    }
+
+    /**
+     * updates an entry.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function saveEntry($request)
+    {
+        return $this->storeEntry($request['id'], $request['entry'], $request->get_json_params());
+    }
+
+    /**
+     * trashes an entry.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function deleteEntry($request)
+    {
+        return rest_ensure_response([
+            'deleted' => Entries::delete($request['id'], $request['entry']),
+        ]);
+    }
+
+    /**
+     * shared write path for create and update.
+     *
+     * @param integer      $type_id
+     * @param integer|null $entry_id
+     * @param mixed        $body
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    private function storeEntry($type_id, $entry_id, $body)
+    {
+        $entry = Entries::save($type_id, $entry_id, is_array($body) ? $body : []);
+
+        if (!$entry) {
+            return new \WP_Error(
+                'schemapress_entry_failed',
+                __('Could not save that entry.', 'schemapress'),
+                ['status' => 400]
+            );
+        }
+
+        return rest_ensure_response(['entry' => $entry]);
+    }
+
+    // --- support -------------------------------------------------------------
+
+    /**
+     * published posts, for the post relationship field's picker.
      *
      * @param \WP_REST_Request $request
      *
@@ -651,39 +346,75 @@ class Rest
      */
     public function posts($request)
     {
-        $post_types = array_filter(array_map('sanitize_key', explode(',', (string) $request['post_type'])));
+        $types = $request->get_param('types');
+        $types = $types ? array_map('sanitize_key', explode(',', $types)) : ['page'];
 
-        $results = get_posts([
-            'post_type' => $post_types ?: ['page'],
+        $posts = get_posts([
+            'post_type' => $types,
             'post_status' => 'publish',
             'numberposts' => 20,
-            's' => sanitize_text_field((string) $request['search']),
+            's' => sanitize_text_field((string) $request->get_param('search')),
             'suppress_filters' => false,
         ]);
 
         return rest_ensure_response(array_map(function ($post) {
             return [
                 'id' => (int) $post->ID,
-                'title' => $post->post_title !== '' ? $post->post_title : __('(no title)', 'schemapress'),
+                'title' => get_the_title($post),
                 'type' => $post->post_type,
             ];
-        }, $results));
+        }, $posts));
     }
 
     /**
-     * the wire representation of a schema.
+     * the response shape every type-returning route uses.
      *
      * @param integer $id
      *
-     * @return array
+     * @return \WP_REST_Response|\WP_Error
      */
-    private function payload($id)
+    private function typePayload($id)
     {
-        return [
-            'id' => (int) $id,
-            'title' => get_the_title($id),
+        ContentType::flush();
+
+        $type = ContentType::get($id);
+
+        if (!$type) {
+            return new \WP_Error('schemapress_no_type', __('Content type not found.', 'schemapress'), [
+                'status' => 404,
+            ]);
+        }
+
+        return rest_ensure_response([
+            'type' => $type,
             'definition' => SchemaRepository::definition($id),
-            'templates' => SchemaRepository::templates($id),
-        ];
+            'types' => ContentType::all(),
+        ]);
+    }
+
+    // --- permissions ---------------------------------------------------------
+
+    /**
+     * whether the current user may use the builder at all.
+     *
+     * @return boolean
+     */
+    public function canEdit()
+    {
+        return current_user_can(Admin::CAPABILITY);
+    }
+
+    /**
+     * whether the current user may edit a specific content type.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return boolean
+     */
+    public function canEditType($request)
+    {
+        $id = absint($request['id']);
+
+        return get_post_type($id) === Schema::POST_TYPE && current_user_can('edit_post', $id);
     }
 }

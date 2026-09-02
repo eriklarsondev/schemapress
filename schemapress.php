@@ -37,6 +37,15 @@ define('SCHEMAPRESS_URL', plugin_dir_url(__FILE__));
  * @return void
  */
 spl_autoload_register(function ($class) {
+    // the reading API is reachable as a bare `Content::` from a theme, which
+    // needs a global name. aliasing it here rather than at load time keeps the
+    // class unloaded until something asks for it
+    if ($class === 'Content') {
+        class_alias(Content::class, 'Content');
+
+        return;
+    }
+
     if (strpos($class, __NAMESPACE__ . '\\') !== 0) {
         return;
     }

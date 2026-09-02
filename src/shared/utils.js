@@ -1,6 +1,6 @@
 /**
- * Small helpers shared by both admin apps. Kept dependency-free and pure so
- * they can be reasoned about (and tested) in isolation.
+ * Small shared helpers. Kept dependency-free and pure so they can be reasoned
+ * about (and tested) in isolation.
  */
 
 /**
@@ -95,175 +95,6 @@ export function uniqueKey(candidate, taken) {
 }
 
 /**
- * Assigns a key to every field in a preset's field list, recursing into
- * nesting types. Keys are derived from labels and deduplicated among siblings,
- * matching what SchemaModel::normalize would produce server-side — so a
- * preset's stored shape is the same whether it round-trips or not.
- *
- * @param {Array} fields
- * @return {Array} Fields with keys.
- */
-function assignFieldKeys(fields = []) {
-  const taken = []
-
-  return fields.map((field) => {
-    const key = uniqueKey(toKey(field.label), taken)
-    taken.push(key)
-
-    const assigned = {
-      key,
-      label: field.label,
-      type: field.type,
-      help: field.help || '',
-      required: Boolean(field.required),
-      config: field.config || {}
-    }
-
-    if (Array.isArray(field.fields)) {
-      assigned.fields = assignFieldKeys(field.fields)
-    }
-
-    return assigned
-  })
-}
-
-/**
- * Turns a component preset into a section type definition ready to place.
- *
- * @param {Object}   preset
- * @param {string[]} takenKeys keys already used by sibling section types
- * @return {Object} The section type definition.
- */
-export function presetToSection(preset, takenKeys = []) {
-  return {
-    key: uniqueKey(toKey(preset.label), takenKeys),
-    label: preset.label,
-    description: preset.description || '',
-    icon: preset.icon || 'layout',
-    max: 0,
-    container: Boolean(preset.container),
-    layout: preset.layout || [],
-    // a preset can start an option somewhere other than its registry default:
-    // a hero is full width to begin with, a columns row is two across
-    layoutDefaults: preset.layout_defaults || {},
-    fields: assignFieldKeys(preset.fields)
-  }
-}
-
-/**
- * Turns a palette element into a field definition ready to add.
- *
- * @param {Object}   element
- * @param {string[]} takenKeys keys already used by sibling fields
- * @return {Object} The field definition.
- */
-export function elementToField(element, takenKeys = []) {
-  const source = element.field
-
-  const field = {
-    key: uniqueKey(toKey(source.label), takenKeys),
-    label: source.label,
-    type: source.type,
-    help: '',
-    required: false,
-    role: source.role || '',
-    classes: '',
-    config: source.config || {}
-  }
-
-  if (Array.isArray(source.fields)) {
-    field.fields = assignFieldKeys(source.fields)
-  }
-
-  return field
-}
-
-/**
- * Reads the section list at a path of child indices. An empty path is the
- * page's own top-level list.
- *
- * @param {Array} sections
- * @param {Array} path
- * @return {Array} The list at that path.
- */
-export function listAt(sections, path = []) {
-  return path.reduce((list, index) => list[index]?.children || [], sections)
-}
-
-/**
- * Returns a copy of the tree with the list at a path replaced.
- *
- * @param {Array} sections
- * @param {Array} path
- * @param {Array} next
- * @return {Array} The updated tree.
- */
-export function setListAt(sections, path = [], next) {
-  if (path.length === 0) {
-    return next
-  }
-
-  const [index, ...rest] = path
-
-  return sections.map((section, i) =>
-    i === index
-      ? { ...section, children: setListAt(section.children || [], rest, next) }
-      : section
-  )
-}
-
-/**
- * Reads the section at an address - the full list of child indices that
- * reaches it, so [1, 0] is the first child of the second section.
- *
- * @param {Array} sections
- * @param {Array} address
- * @return {Object|null} The section, or null if the address is stale.
- */
-export function nodeAt(sections, address = []) {
-  return address.reduce(
-    (node, index, depth) => (depth === 0 ? sections[index] : node?.children?.[index]) || null,
-    null
-  )
-}
-
-/**
- * Returns a copy of the tree with the section at an address replaced.
- *
- * @param {Array}  sections
- * @param {Array}  address
- * @param {Object} next
- * @return {Array} The updated tree.
- */
-export function setNodeAt(sections, address, next) {
-  const [index, ...rest] = address
-
-  return sections.map((section, i) => {
-    if (i !== index) {
-      return section
-    }
-
-    return rest.length === 0
-      ? next
-      : { ...section, children: setNodeAt(section.children || [], rest, next) }
-  })
-}
-
-/**
- * Whether one path is the same as, or inside, another.
- *
- * Used to stop a container being dropped into itself, which would detach the
- * whole branch from the tree.
- *
- * @param {Array} path
- * @param {Array} ancestor
- * @return {boolean} True when path is at or below ancestor.
- */
-export function isWithin(path, ancestor) {
-  return ancestor.every((step, index) => path[index] === step)
-}
-
-/**
  * The empty value for a field type, matching FieldTypes::defaultValue on the
  * server so a freshly added row round-trips without shape drift.
  *
@@ -281,6 +112,7 @@ export function emptyValue(type) {
     case 'image':
     case 'file':
     case 'post':
+    case 'relation':
       return null
     case 'link':
       return { url: '', label: '', target: '' }

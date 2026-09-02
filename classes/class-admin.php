@@ -88,19 +88,10 @@ class Admin
         Assets::enqueue('admin', [
             'rest' => Assets::restContext(),
             'fieldTypes' => $this->fieldTypesForClient(),
-            'layoutOptions' => Layout::forClient(),
-            'presets' => Presets::all(),
             'elements' => Elements::all(),
-            // a role decides where a field is composed, so it has to be
-            // changeable — otherwise an image added as an image can never
-            // become the backdrop it was meant to be
-            'roles' => Roles::forClient(),
-            // site-wide configuration is administrator-only, so the screens
-            // that write it must know before offering a form that cannot save
-            'canManage' => current_user_can('manage_options'),
-            'safelistPath' => Tailwind::relativePath(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
-            'contractUrl' => esc_url_raw(rest_url(Delivery::NAMESPACE . '/contract')),
+            'docsUrl' => esc_url_raw(admin_url('admin.php?page=' . Docs::PAGE_SLUG)),
+            'version' => SCHEMAPRESS_VERSION,
         ]);
     }
 

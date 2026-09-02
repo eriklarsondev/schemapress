@@ -11,8 +11,22 @@ if (!defined('ABSPATH')) {
  * this is what templates actually touch. it always answers — a key the schema
  * does not declare returns the supplied default rather than a notice — so
  * markup never needs isset() guards around content access.
+ *
+ * values are resolved, not stored: an image is the attachment array, not its
+ * id. that is what lets `{{ hero.image.url }}` work in Twig without the
+ * template knowing anything about how the value was persisted.
+ *
+ * field keys are readable as properties, which is the form Twig reaches for
+ * first:
+ *
+ *   {{ hero.heading }}          {# same as hero.get('heading') #}
+ *   {{ hero.image.url }}
+ *
+ * a key that collides with one of this class's own methods — `type`, `layout`,
+ * `rows` — resolves to the method, so `{{ section.type }}` is always the
+ * section type. reach a field of that name with `get('type')`.
  */
-class Fields
+class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
 {
     /**
      * @var array
@@ -90,6 +104,10 @@ class Fields
      *     echo $card->get('title');
      *   }
      *
+     * a row arrives as { id, data } once resolved and { id, values } when it
+     * came straight from storage. both are accepted so the same accessor works
+     * either side of resolution.
+     *
      * @param string $path
      *
      * @return Fields[]
@@ -106,8 +124,19 @@ class Fields
         $bags = [];
 
         foreach ((array) $rows as $row) {
-            $values = isset($row['values']) && is_array($row['values']) ? $row['values'] : [];
-            $bags[] = new self($values, $field['fields']);
+            if (!is_array($row)) {
+                continue;
+            }
+
+            foreach (['data', 'values'] as $key) {
+                if (isset($row[$key]) && is_array($row[$key])) {
+                    $bags[] = new self($row[$key], $field['fields']);
+
+                    continue 2;
+                }
+            }
+
+            $bags[] = new self([], $field['fields']);
         }
 
         return $bags;
@@ -165,5 +194,133 @@ class Fields
     public function all()
     {
         return $this->values;
+    }
+
+    /**
+     * the field definitions this bag was built against.
+     *
+     * @return array
+     */
+    public function schema()
+    {
+        return $this->fields;
+    }
+
+    /**
+     * the keys this bag declares, in schema order.
+     *
+     * @return string[]
+     */
+    public function keys()
+    {
+        return array_column($this->fields, 'key');
+    }
+
+    // --- property access -----------------------------------------------------
+
+    /**
+     * reads a field as a property, which is the form Twig tries first.
+     *
+     * @param string $key
+     *
+     * @return mixed
+     */
+    public function __get($key)
+    {
+        return $this->get($key);
+    }
+
+    /**
+     * whether a field is readable as a property.
+     *
+     * a key naming one of this class's own methods is deliberately reported as
+     * unset, so `{{ section.type }}` reaches type() rather than a field that
+     * happens to be called `type`. such a field is still readable through
+     * get('type').
+     *
+     * @param string $key
+     *
+     * @return boolean
+     */
+    public function __isset($key)
+    {
+        return !method_exists($this, $key) && $this->has($key);
+    }
+
+    // --- ArrayAccess ---------------------------------------------------------
+
+    /**
+     * @param mixed $offset
+     *
+     * @return boolean
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetExists($offset)
+    {
+        return $this->has($offset);
+    }
+
+    /**
+     * @param mixed $offset
+     *
+     * @return mixed
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset)
+    {
+        return $this->get($offset);
+    }
+
+    /**
+     * content is read-only at render time.
+     *
+     * @param mixed $offset
+     * @param mixed $value
+     *
+     * @return void
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetSet($offset, $value)
+    {
+    }
+
+    /**
+     * @param mixed $offset
+     *
+     * @return void
+     */
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($offset)
+    {
+    }
+
+    // --- iteration -----------------------------------------------------------
+
+    /**
+     * iterates declared fields as key => value, in schema order.
+     *
+     * @return \ArrayIterator
+     */
+    #[\ReturnTypeWillChange]
+    public function getIterator()
+    {
+        $pairs = [];
+
+        foreach ($this->keys() as $key) {
+            $pairs[$key] = $this->get($key);
+        }
+
+        return new \ArrayIterator($pairs);
+    }
+
+    /**
+     * how many fields the schema declares.
+     *
+     * @return integer
+     */
+    #[\ReturnTypeWillChange]
+    public function count()
+    {
+        return count($this->fields);
     }
 }
