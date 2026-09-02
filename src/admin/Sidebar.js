@@ -20,15 +20,7 @@ import { cn } from '../ui'
  * @param {Object} props
  * @return {JSX.Element} The sidebar.
  */
-export function Sidebar({
-  types = [],
-  activeId,
-  loading,
-  docsUrl,
-  version,
-  onSelect,
-  onCreate
-}) {
+export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSelect, onCreate }) {
   return (
     <aside className="flex w-64 shrink-0 flex-col bg-appbar text-appbar-foreground">
       <header className="flex items-center gap-2.5 px-4 py-4">
@@ -84,7 +76,7 @@ export function Sidebar({
           types.map((type) => (
             <Item
               key={type.id}
-              label={type.label}
+              label={type.pluralLabel || type.label}
               count={type.entries}
               active={type.id === activeId}
               onClick={() => onSelect(type.id)}
@@ -124,7 +116,7 @@ function Item({ label, icon: Icon, count, active, onClick, href }) {
     'relative flex w-full items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors',
     active
       ? 'bg-appbar-active font-medium text-appbar-foreground'
-      : 'text-appbar-muted hover:bg-white/5 hover:text-appbar-foreground'
+      : 'text-appbar-muted hover:bg-white/5 hover:text-appbar-foreground',
   )
 
   const body = (

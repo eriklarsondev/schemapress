@@ -19,6 +19,7 @@ if (!defined('ABSPATH')) {
 class ContentType
 {
     const META_KEY = '_schemapress_key';
+    const META_PLURAL = '_schemapress_plural';
 
     /**
      * post types are capped at 20 characters, and the prefix takes four.
@@ -42,8 +43,12 @@ class ContentType
     }
 
     /**
-     * a type's machine key, derived from its title on first use and stable
-     * afterwards — it names the post type entries are stored against.
+     * a type's machine key: the SINGULAR form, derived from its title on first
+     * use and stable afterwards — it names the post type entries are stored
+     * against, so it cannot follow a later rename.
+     *
+     * singular because everything downstream reads as one of the things: the
+     * post type holds one entry per row, and "New Team Member" is the button.
      *
      * @param integer $type_id
      *
@@ -66,7 +71,57 @@ class ContentType
     }
 
     /**
-     * slugifies a title into a key unique among content types.
+     * a type's plural key, used where a plural genuinely reads better — the
+     * sidebar, a listing heading, a REST route.
+     *
+     * derived from the singular key rather than from the title, so the two can
+     * never disagree about what the noun is.
+     *
+     * @param integer $type_id
+     *
+     * @return string
+     */
+    public static function plural($type_id)
+    {
+        $type_id = absint($type_id);
+        $stored = get_post_meta($type_id, self::META_PLURAL, true);
+
+        if (is_string($stored) && $stored !== '') {
+            return $stored;
+        }
+
+        $plural = self::uniquePlural(
+            Inflector::lastWord(self::key($type_id), [Inflector::class, 'pluralize']),
+            $type_id
+        );
+
+        update_post_meta($type_id, self::META_PLURAL, $plural);
+
+        return $plural;
+    }
+
+    /**
+     * the human labels, singular and plural.
+     *
+     * these follow the title, not the frozen key, so renaming a type renames
+     * what people read while leaving what the database uses alone.
+     *
+     * @param integer $type_id
+     *
+     * @return array{singular: string, plural: string}
+     */
+    public static function labels($type_id)
+    {
+        $title = get_the_title($type_id);
+
+        return [
+            'singular' => Inflector::lastWord($title, [Inflector::class, 'singularize']),
+            'plural' => Inflector::lastWord($title, [Inflector::class, 'pluralize']),
+        ];
+    }
+
+    /**
+     * slugifies a title into a singular key unique among content types.
      *
      * @param string  $title
      * @param integer $type_id the type being keyed, excluded from the clash check
@@ -75,7 +130,11 @@ class ContentType
      */
     private static function deriveKey($title, $type_id = 0)
     {
-        $base = substr(sanitize_key(str_replace([' ', '-'], '_', (string) $title)), 0, self::KEY_LIMIT);
+        // "Team Members" typed where "Team Member" was meant would otherwise
+        // name the post type spc_team_members and every button after it
+        $singular = Inflector::lastWord((string) $title, [Inflector::class, 'singularize']);
+
+        $base = substr(sanitize_key(str_replace([' ', '-'], '_', $singular)), 0, self::KEY_LIMIT);
 
         if ($base === '') {
             $base = 'type';
@@ -107,6 +166,44 @@ class ContentType
     }
 
     /**
+     * guarantees a plural key does not collide with another type's.
+     *
+     * two types named Person and People would otherwise pluralize to the same
+     * thing, and a route keyed on the plural would be ambiguous.
+     *
+     * @param string  $base
+     * @param integer $type_id
+     *
+     * @return string
+     */
+    private static function uniquePlural($base, $type_id)
+    {
+        $taken = [];
+
+        foreach (SchemaRepository::all() as $post) {
+            if ((int) $post->ID === absint($type_id)) {
+                continue;
+            }
+
+            $plural = get_post_meta($post->ID, self::META_PLURAL, true);
+
+            if (is_string($plural) && $plural !== '') {
+                $taken[] = $plural;
+            }
+        }
+
+        $plural = $base;
+        $suffix = 2;
+
+        while (in_array($plural, $taken, true)) {
+            $plural = $base . '_' . $suffix;
+            $suffix++;
+        }
+
+        return $plural;
+    }
+
+    /**
      * the post type a collection's entries are stored as.
      *
      * @param integer $type_id
@@ -133,11 +230,17 @@ class ContentType
 
         foreach (SchemaRepository::all() as $post) {
             $definition = SchemaRepository::definition($post->ID);
+            $labels = self::labels($post->ID);
 
             $types[] = [
                 'id' => (int) $post->ID,
+                // what was typed, and the two forms read from it
                 'label' => get_the_title($post),
+                'singularLabel' => $labels['singular'],
+                'pluralLabel' => $labels['plural'],
+                // the machine names: singular identifies, plural addresses
                 'key' => self::key($post->ID),
+                'plural' => self::plural($post->ID),
                 'postType' => self::postType($post->ID),
                 'fields' => count($definition['fields']),
                 'entries' => null,
