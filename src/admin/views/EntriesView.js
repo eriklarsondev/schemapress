@@ -21,7 +21,6 @@ import { useEffect, useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
 import {
   Plus,
-  Pencil,
   Trash2,
   ChevronLeft,
   ChevronRight,
@@ -272,7 +271,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
           icon={Table2}
           title={__('This collection has no fields yet', 'schemapress')}
           description={__(
-            'Add some in the Fields tab, then you can create entries.',
+            'Add some in the Schema tab, then you can create entries.',
             'schemapress',
           )}
           className="py-16"
@@ -327,9 +326,13 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
 
             <tbody>
               {state.entries.map((entry) => (
+                // the whole row opens the entry. the first cell is still a
+                // button, so the row is reachable by keyboard and reads as a
+                // link rather than as a surface that happens to respond
                 <tr
                   key={entry.id}
-                  className="group border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40"
+                  onClick={() => onOpenEntry(entry.id)}
+                  className="group cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40"
                 >
                   {columns.length === 0 ? (
                     <td className="whitespace-nowrap px-3 py-2.5">
@@ -371,21 +374,19 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                     </td>
                   ) : null}
 
+                  {/* the row already opens the entry, so only delete is left
+                      here — and it stops the click reaching the row, or
+                      confirming a deletion would also open what you deleted */}
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <span className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label={__('Edit', 'schemapress')}
-                        onClick={() => onOpenEntry(entry.id)}
-                      >
-                        <Pencil />
-                      </Button>
+                    <span className="flex items-center justify-end opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                       <Button
                         size="icon-sm"
                         variant="destructive-ghost"
                         aria-label={__('Delete', 'schemapress')}
-                        onClick={() => setRemoving(entry)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setRemoving(entry)
+                        }}
                       >
                         <Trash2 />
                       </Button>
@@ -484,7 +485,12 @@ function Open({ entry, onOpen, children }) {
   return (
     <button
       type="button"
-      onClick={() => onOpen(entry.id)}
+      // the row handles the click too; without this the same entry is opened
+      // twice, and it exists mainly so the row is reachable by keyboard
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpen(entry.id)
+      }}
       className="block max-w-[18rem] truncate text-left font-medium text-foreground hover:underline"
     >
       {children}

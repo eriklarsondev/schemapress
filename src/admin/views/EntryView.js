@@ -34,19 +34,8 @@ import { FieldControl } from '../../shared/fields'
 import { emptyValues } from '../../shared/utils'
 import { Ago } from '../../shared/time'
 import { visibleFields } from '../../shared/conditions'
+import { cellClass, gridClass } from '../../shared/layout'
 import { api } from '../../shared/api'
-
-/**
- * The column span for each width the Form tab can set. Written out because
- * Tailwind cannot see a computed class name; unknown or unset falls back to
- * full, so a field never disappears because its width was mis-set.
- */
-const SPANS = {
-  third: 'sm:col-span-4',
-  half: 'sm:col-span-6',
-  'two-thirds': 'sm:col-span-8',
-  full: 'sm:col-span-12'
-}
 
 /**
  * The entry editor.
@@ -198,15 +187,12 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
           <CardBody>
             {fields.length === 0 ? (
               <Alert variant="warning">
-                {__('This collection has no fields yet. Add some in the Fields tab.', 'schemapress')}
+                {__('This collection has no fields yet. Add some in the Schema tab.', 'schemapress')}
               </Alert>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+              <div className={gridClass()}>
                 {visible.map((field) => (
-                  <div
-                    key={field.key}
-                    className={cn('min-w-0', SPANS[field.config?.width] || SPANS.full)}
-                  >
+                  <div key={field.key} className={cellClass(field)}>
                     <FieldControl
                       field={field}
                       value={entry.values?.[field.key]}
@@ -316,9 +302,13 @@ function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
       key: 'publish',
       icon: CloudUpload,
       variant: 'default',
+      wide: true,
       enabled: entry.state !== 'published',
       onClick: onPublish,
-      label: __('Publish changes', 'schemapress'),
+      label: entry.isPublished
+        ? __('Publish changes', 'schemapress')
+        : __('Publish', 'schemapress'),
+      unavailable: __('Nothing new to publish', 'schemapress'),
       confirm: {
         destructive: false,
         title: __('Publish changes?', 'schemapress'),
@@ -335,7 +325,8 @@ function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
       variant: 'outline',
       enabled: entry.ahead > 0,
       onClick: onDiscard,
-      label: __('Discard changes', 'schemapress'),
+      label: __('Discard', 'schemapress'),
+      unavailable: __('No unpublished changes', 'schemapress'),
       confirm: {
         destructive: true,
         title: __('Discard changes?', 'schemapress'),
@@ -359,6 +350,7 @@ function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
       enabled: entry.isPublished,
       onClick: onUnpublish,
       label: __('Unpublish', 'schemapress'),
+      unavailable: __('Not published', 'schemapress'),
       confirm: {
         destructive: true,
         title: __('Unpublish this entry?', 'schemapress'),
@@ -401,19 +393,34 @@ function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
           </p>
         ) : null}
 
-        <div className="grid grid-cols-3 gap-1.5">
+        {/* publishing is the act you came here for, so it gets the full width
+            and reads as a sentence; the two that undo it share the row below */}
+        <div className="grid grid-cols-2 gap-1.5">
           {actions.map((action) => (
-            <Tooltip key={action.key} label={action.label} disabled={busy || !action.enabled}>
-              <Button
-                variant={action.variant}
-                className="w-full"
+            // the span lives on a wrapper, not on the button: a disabled
+            // button is wrapped again by the tooltip, and the grid only sees
+            // its own direct children
+            <div key={action.key} className={cn('min-w-0', action.wide && 'col-span-2')}>
+              <Tooltip
+                stretch
+                label={action.enabled ? '' : action.unavailable}
                 disabled={busy || !action.enabled}
-                onClick={() => setConfirming(action.key)}
-                aria-label={action.label}
               >
-                <action.icon />
-              </Button>
-            </Tooltip>
+                {/* the tooltip wraps a disabled button in a span of its own,
+                    so that span has to stretch too or the button inside it
+                    only fills the text it contains */}
+                <Button
+                  variant={action.variant}
+                  size="sm"
+                  className="w-full"
+                  disabled={busy || !action.enabled}
+                  onClick={() => setConfirming(action.key)}
+                >
+                  <action.icon />
+                  {action.label}
+                </Button>
+              </Tooltip>
+            </div>
           ))}
         </div>
       </CardBody>

@@ -173,6 +173,9 @@
 .schemapress .pointer-events-none {
   pointer-events: none;
 }
+.schemapress .pointer-events-auto {
+  pointer-events: auto;
+}
 .schemapress .visible {
   visibility: visible;
 }
@@ -212,9 +215,8 @@
   top: 0.25rem;
   bottom: 0.25rem;
 }
-.schemapress .inset-y-3 {
-  top: 0.75rem;
-  bottom: 0.75rem;
+.schemapress .-left-px {
+  left: -1px;
 }
 .schemapress .bottom-0 {
   bottom: 0px;
@@ -222,17 +224,11 @@
 .schemapress .left-0 {
   left: 0px;
 }
-.schemapress .left-1\/2 {
-  left: 50%;
-}
 .schemapress .left-2 {
   left: 0.5rem;
 }
 .schemapress .left-3 {
   left: 0.75rem;
-}
-.schemapress .right-0 {
-  right: 0px;
 }
 .schemapress .top-1\/2 {
   top: 50%;
@@ -252,6 +248,16 @@
 .schemapress .z-\[100100\] {
   z-index: 100100;
 }
+.schemapress .col-span-2 {
+  grid-column: span 2 / span 2;
+}
+.schemapress .col-start-1 {
+  grid-column-start: 1;
+}
+.schemapress .-mx-3 {
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+}
 .schemapress .mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
@@ -260,9 +266,9 @@
   margin-left: auto;
   margin-right: auto;
 }
-.schemapress .my-3 {
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+.schemapress .my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 .schemapress .mb-2 {
   margin-bottom: 0.5rem;
@@ -276,6 +282,9 @@
 .schemapress .ml-1\.5 {
   margin-left: 0.375rem;
 }
+.schemapress .mr-auto {
+  margin-right: auto;
+}
 .schemapress .mt-0\.5 {
   margin-top: 0.125rem;
 }
@@ -284,9 +293,6 @@
 }
 .schemapress .mt-1\.5 {
   margin-top: 0.375rem;
-}
-.schemapress .mt-2 {
-  margin-top: 0.5rem;
 }
 .schemapress .mt-3 {
   margin-top: 0.75rem;
@@ -299,12 +305,6 @@
 }
 .schemapress .mt-6 {
   margin-top: 1.5rem;
-}
-.schemapress .line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 .schemapress .block {
   display: block;
@@ -324,12 +324,19 @@
 .schemapress .grid {
   display: grid;
 }
+.schemapress .contents {
+  display: contents;
+}
 .schemapress .hidden {
   display: none;
 }
 .schemapress .size-1\.5 {
   width: 0.375rem;
   height: 0.375rem;
+}
+.schemapress .size-10 {
+  width: 2.5rem;
+  height: 2.5rem;
 }
 .schemapress .size-12 {
   width: 3rem;
@@ -371,17 +378,17 @@
   width: 14px;
   height: 14px;
 }
+.schemapress .h-0\.5 {
+  height: 0.125rem;
+}
 .schemapress .h-10 {
   height: 2.5rem;
 }
-.schemapress .h-14 {
-  height: 3.5rem;
-}
-.schemapress .h-16 {
-  height: 4rem;
-}
 .schemapress .h-32 {
   height: 8rem;
+}
+.schemapress .h-5 {
+  height: 1.25rem;
 }
 .schemapress .h-8 {
   height: 2rem;
@@ -392,26 +399,14 @@
 .schemapress .h-\[18px\] {
   height: 18px;
 }
-.schemapress .h-full {
-  height: 100%;
-}
 .schemapress .max-h-72 {
   max-height: 18rem;
 }
 .schemapress .max-h-\[calc\(100vh-4rem\)\] {
   max-height: calc(100vh - 4rem);
 }
-.schemapress .min-h-\[3\.5rem\] {
-  min-height: 3.5rem;
-}
-.schemapress .min-h-\[3rem\] {
-  min-height: 3rem;
-}
-.schemapress .min-h-\[4\.5rem\] {
-  min-height: 4.5rem;
-}
-.schemapress .min-h-\[92px\] {
-  min-height: 92px;
+.schemapress .min-h-\[5rem\] {
+  min-height: 5rem;
 }
 .schemapress .min-h-\[calc\(100vh-32px\)\] {
   min-height: calc(100vh - 32px);
@@ -419,20 +414,23 @@
 .schemapress .w-0\.5 {
   width: 0.125rem;
 }
-.schemapress .w-1 {
-  width: 0.25rem;
+.schemapress .w-12 {
+  width: 3rem;
 }
 .schemapress .w-20 {
   width: 5rem;
 }
-.schemapress .w-3 {
-  width: 0.75rem;
+.schemapress .w-24 {
+  width: 6rem;
 }
 .schemapress .w-64 {
   width: 16rem;
 }
 .schemapress .w-8 {
   width: 2rem;
+}
+.schemapress .w-\[3px\] {
+  width: 3px;
 }
 .schemapress .w-\[min\(28rem\2c calc\(100vw-2rem\)\)\] {
   width: min(28rem, calc(100vw - 2rem));
@@ -459,11 +457,8 @@
 .schemapress .min-w-0 {
   min-width: 0px;
 }
-.schemapress .min-w-36 {
-  min-width: 9rem;
-}
-.schemapress .min-w-40 {
-  min-width: 10rem;
+.schemapress .min-w-\[1\.75rem\] {
+  min-width: 1.75rem;
 }
 .schemapress .min-w-\[var\(--radix-select-trigger-width\)\] {
   min-width: var(--radix-select-trigger-width);
@@ -504,10 +499,6 @@
 .schemapress .border-collapse {
   border-collapse: collapse;
 }
-.schemapress .-translate-x-1\/2 {
-  --tw-translate-x: -50%;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
 .schemapress .-translate-y-1\/2 {
   --tw-translate-y: -50%;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
@@ -543,9 +534,6 @@
 .schemapress .animate-spin {
   animation: spin 1s linear infinite;
 }
-.schemapress .cursor-col-resize {
-  cursor: col-resize;
-}
 .schemapress .cursor-grab {
   cursor: grab;
 }
@@ -562,9 +550,6 @@
 }
 .schemapress .resize-y {
   resize: vertical;
-}
-.schemapress .resize {
-  resize: both;
 }
 .schemapress .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -628,9 +613,6 @@
 .schemapress :is(.divide-border > :not([hidden]) ~ :not([hidden])) {
   border-color: hsl(var(--sp-border));
 }
-.schemapress .self-start {
-  align-self: flex-start;
-}
 .schemapress .overflow-hidden {
   overflow: hidden;
 }
@@ -647,9 +629,6 @@
 }
 .schemapress .whitespace-nowrap {
   white-space: nowrap;
-}
-.schemapress .break-all {
-  word-break: break-all;
 }
 .schemapress .rounded {
   border-radius: 0.25rem;
@@ -669,10 +648,6 @@
 .schemapress .rounded-xl {
   border-radius: 0.75rem;
 }
-.schemapress .rounded-r-lg {
-  border-top-right-radius: var(--sp-radius);
-  border-bottom-right-radius: var(--sp-radius);
-}
 .schemapress .border {
   border-width: 1px;
 }
@@ -684,9 +659,6 @@
 }
 .schemapress .border-b {
   border-bottom-width: 1px;
-}
-.schemapress .border-l-2 {
-  border-left-width: 2px;
 }
 .schemapress .border-r {
   border-right-width: 1px;
@@ -707,6 +679,9 @@
 .schemapress .border-border\/60 {
   border-color: hsl(var(--sp-border) / 0.6);
 }
+.schemapress .border-border\/70 {
+  border-color: hsl(var(--sp-border) / 0.7);
+}
 .schemapress .border-destructive\/30 {
   border-color: hsl(var(--sp-destructive) / 0.3);
 }
@@ -724,14 +699,11 @@
   --tw-border-opacity: 1;
   border-color: rgb(254 202 202 / var(--tw-border-opacity, 1));
 }
-.schemapress .border-ring\/30 {
-  border-color: hsl(var(--sp-ring) / 0.3);
-}
 .schemapress .border-ring\/40 {
   border-color: hsl(var(--sp-ring) / 0.4);
 }
-.schemapress .border-ring\/50 {
-  border-color: hsl(var(--sp-ring) / 0.5);
+.schemapress .border-ring\/60 {
+  border-color: hsl(var(--sp-ring) / 0.6);
 }
 .schemapress .border-sky-200 {
   --tw-border-opacity: 1;
@@ -745,6 +717,9 @@
 }
 .schemapress .bg-accent\/20 {
   background-color: hsl(var(--sp-accent) / 0.2);
+}
+.schemapress .bg-accent\/40 {
+  background-color: hsl(var(--sp-accent) / 0.4);
 }
 .schemapress .bg-amber-100 {
   --tw-bg-opacity: 1;
@@ -763,6 +738,9 @@
 }
 .schemapress .bg-black\/40 {
   background-color: rgb(0 0 0 / 0.4);
+}
+.schemapress .bg-border {
+  background-color: hsl(var(--sp-border));
 }
 .schemapress .bg-card {
   background-color: hsl(var(--sp-card));
@@ -794,14 +772,17 @@
 .schemapress .bg-muted-foreground\/40 {
   background-color: hsl(var(--sp-muted-foreground) / 0.4);
 }
-.schemapress .bg-muted\/20 {
-  background-color: hsl(var(--sp-muted) / 0.2);
-}
 .schemapress .bg-muted\/30 {
   background-color: hsl(var(--sp-muted) / 0.3);
 }
 .schemapress .bg-muted\/40 {
   background-color: hsl(var(--sp-muted) / 0.4);
+}
+.schemapress .bg-muted\/50 {
+  background-color: hsl(var(--sp-muted) / 0.5);
+}
+.schemapress .bg-muted\/60 {
+  background-color: hsl(var(--sp-muted) / 0.6);
 }
 .schemapress .bg-popover {
   background-color: hsl(var(--sp-popover));
@@ -809,11 +790,8 @@
 .schemapress .bg-primary {
   background-color: hsl(var(--sp-primary));
 }
-.schemapress .bg-primary\/15 {
-  background-color: hsl(var(--sp-primary) / 0.15);
-}
-.schemapress .bg-primary\/5 {
-  background-color: hsl(var(--sp-primary) / 0.05);
+.schemapress .bg-primary\/10 {
+  background-color: hsl(var(--sp-primary) / 0.1);
 }
 .schemapress .bg-red-50 {
   --tw-bg-opacity: 1;
@@ -948,6 +926,10 @@
   padding-top: 1rem;
   padding-bottom: 1rem;
 }
+.schemapress .py-5 {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
 .schemapress .py-6 {
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
@@ -956,14 +938,11 @@
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
-.schemapress .pb-1 {
-  padding-bottom: 0.25rem;
-}
 .schemapress .pb-2 {
   padding-bottom: 0.5rem;
 }
-.schemapress .pb-4 {
-  padding-bottom: 1rem;
+.schemapress .pb-6 {
+  padding-bottom: 1.5rem;
 }
 .schemapress .pl-2 {
   padding-left: 0.5rem;
@@ -983,8 +962,8 @@
 .schemapress .pr-2 {
   padding-right: 0.5rem;
 }
-.schemapress .pt-1\.5 {
-  padding-top: 0.375rem;
+.schemapress .pt-2 {
+  padding-top: 0.5rem;
 }
 .schemapress .pt-3 {
   padding-top: 0.75rem;
@@ -1115,9 +1094,6 @@
 .schemapress .text-muted-foreground\/40 {
   color: hsl(var(--sp-muted-foreground) / 0.4);
 }
-.schemapress .text-muted-foreground\/50 {
-  color: hsl(var(--sp-muted-foreground) / 0.5);
-}
 .schemapress .text-muted-foreground\/60 {
   color: hsl(var(--sp-muted-foreground) / 0.6);
 }
@@ -1143,6 +1119,9 @@
 .schemapress .text-sky-900 {
   --tw-text-opacity: 1;
   color: rgb(12 74 110 / var(--tw-text-opacity, 1));
+}
+.schemapress .text-transparent {
+  color: transparent;
 }
 .schemapress .underline-offset-4 {
   text-underline-offset: 4px;
@@ -1196,18 +1175,20 @@
 .schemapress .outline {
   outline-style: solid;
 }
+.schemapress .outline-dashed {
+  outline-style: dashed;
+}
+.schemapress .outline-2 {
+  outline-width: 2px;
+}
+.schemapress .-outline-offset-2 {
+  outline-offset: -2px;
+}
+.schemapress .outline-ring\/50 {
+  outline-color: hsl(var(--sp-ring) / 0.5);
+}
 .schemapress .filter {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.schemapress .transition-\[width\] {
-  transition-property: width;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.schemapress .transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
 }
 .schemapress .transition-colors {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
@@ -1281,6 +1262,14 @@
 .schemapress *::before,
 .schemapress *::after {
   box-sizing: border-box;
+  /* Tailwind's preflight is off, and preflight is what normally declares this.
+     without it `border` sets a width and nothing else, so the browser default
+     applies: `none` on most elements — a border that does not draw — and
+     `outset` on a button, which draws a 1px bevel that is light on the top
+     left and dark on the bottom right. declaring it once here is what makes
+     every border utility in the app mean what it says */
+  border-style: solid;
+  border-width: 0;
 }
 
 .schemapress h1,
@@ -1294,10 +1283,14 @@
   color: inherit;
 }
 
+/* no `border: 0` here. an element selector outranks a single class, so it
+   silently beat every `border border-input` utility — which is how the select
+   trigger and every outline button lost the border they asked for. the
+   zero width is declared once, on `*` above, where a utility can win against
+   it */
 .schemapress button {
   margin: 0;
   padding: 0;
-  border: 0;
   background: none;
   font: inherit;
   color: inherit;
@@ -1465,6 +1458,10 @@ body.toplevel_page_schemapress #wpfooter {
   border-color: hsl(var(--sp-primary) / 0.4);
 }
 
+.schemapress .hover\:border-primary\/50:hover {
+  border-color: hsl(var(--sp-primary) / 0.5);
+}
+
 .schemapress .hover\:border-ring\/30:hover {
   border-color: hsl(var(--sp-ring) / 0.3);
 }
@@ -1563,10 +1560,6 @@ body.toplevel_page_schemapress #wpfooter {
   --tw-ring-offset-width: 1px;
 }
 
-.schemapress .active\:cursor-grabbing:active {
-  cursor: grabbing;
-}
-
 .schemapress .disabled\:pointer-events-none:disabled {
   pointer-events: none;
 }
@@ -1579,12 +1572,16 @@ body.toplevel_page_schemapress #wpfooter {
   opacity: 0.5;
 }
 
-.schemapress :is(.group:hover .group-hover\:text-foreground) {
-  color: hsl(var(--sp-foreground));
+.schemapress :is(.group:hover .group-hover\:border-primary\/40) {
+  border-color: hsl(var(--sp-primary) / 0.4);
 }
 
 .schemapress :is(.group:hover .group-hover\:opacity-100) {
   opacity: 1;
+}
+
+.schemapress :is(.group:hover .group-hover\:opacity-60) {
+  opacity: 0.6;
 }
 
 .schemapress .data-\[state\=checked\]\:translate-x-3\.5[data-state="checked"] {
@@ -1711,12 +1708,48 @@ body.toplevel_page_schemapress #wpfooter {
     grid-column: span 9 / span 9;
   }
 
+  .schemapress .sm\:col-start-1 {
+    grid-column-start: 1;
+  }
+
+  .schemapress .sm\:col-start-2 {
+    grid-column-start: 2;
+  }
+
+  .schemapress .sm\:col-start-3 {
+    grid-column-start: 3;
+  }
+
+  .schemapress .sm\:col-start-4 {
+    grid-column-start: 4;
+  }
+
+  .schemapress .sm\:col-start-5 {
+    grid-column-start: 5;
+  }
+
+  .schemapress .sm\:col-start-6 {
+    grid-column-start: 6;
+  }
+
+  .schemapress .sm\:col-start-7 {
+    grid-column-start: 7;
+  }
+
+  .schemapress .sm\:col-start-8 {
+    grid-column-start: 8;
+  }
+
+  .schemapress .sm\:col-start-9 {
+    grid-column-start: 9;
+  }
+
   .schemapress .sm\:w-72 {
     width: 18rem;
   }
 
-  .schemapress .sm\:grid-cols-1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+  .schemapress .sm\:max-w-40 {
+    max-width: 10rem;
   }
 
   .schemapress .sm\:grid-cols-12 {
@@ -1746,14 +1779,6 @@ body.toplevel_page_schemapress #wpfooter {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .schemapress .lg\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .schemapress .lg\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .schemapress .lg\:grid-cols-\[minmax\(0\2c 1fr\)_18rem\] {
     grid-template-columns: minmax(0,1fr) 18rem;
   }
@@ -1775,6 +1800,10 @@ body.toplevel_page_schemapress #wpfooter {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.schemapress :is(.\[\&_\*\]\:invisible *) {
+  visibility: hidden;
 }
 
 .schemapress :is(.\[\&_svg\]\:pointer-events-none svg) {

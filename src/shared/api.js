@@ -82,6 +82,48 @@ export const api = {
   updateType: (id, data) => request(`/types/${id}`, { method: 'POST', data }),
 
   /**
+   * Every component, for the sidebar and the field picker.
+   *
+   * @return {Promise<{components: Array}>} The components.
+   */
+  components: () => request('/components'),
+
+  /**
+   * One component, with the fields it holds.
+   *
+   * @param {number} id
+   * @return {Promise<{component: Object}>} The component.
+   */
+  component: (id) => request(`/components/${id}`),
+
+  /**
+   * Creates a component.
+   *
+   * @param {string} title
+   * @param {string} description
+   * @return {Promise<{component: Object, components: Array}>} The new one.
+   */
+  createComponent: (title, description = '') =>
+    request('/components', { method: 'POST', data: { title, description } }),
+
+  /**
+   * Renames a component, rewrites its description, or replaces its fields.
+   *
+   * @param {number} id
+   * @param {Object} data title, description and/or fields
+   * @return {Promise<{component: Object, components: Array}>} The stored one.
+   */
+  updateComponent: (id, data) => request(`/components/${id}`, { method: 'POST', data }),
+
+  /**
+   * Deletes a component. Collections that imported it keep their copy.
+   *
+   * @param {number} id
+   * @return {Promise<{deleted: boolean, components: Array}>} What remains.
+   */
+  deleteComponent: (id) => request(`/components/${id}`, { method: 'DELETE' }),
+
+  /**
    * Deletes a type and every entry in it.
    *
    * @param {number} id

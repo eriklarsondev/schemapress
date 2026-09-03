@@ -62,6 +62,14 @@
 .schemapress *::before,
 .schemapress *::after {
   box-sizing: border-box;
+  /* Tailwind's preflight is off, and preflight is what normally declares this.
+     without it `border` sets a width and nothing else, so the browser default
+     applies: `none` on most elements — a border that does not draw — and
+     `outset` on a button, which draws a 1px bevel that is light on the top
+     left and dark on the bottom right. declaring it once here is what makes
+     every border utility in the app mean what it says */
+  border-style: solid;
+  border-width: 0;
 }
 
 .schemapress h1,
@@ -75,10 +83,14 @@
   color: inherit;
 }
 
+/* no `border: 0` here. an element selector outranks a single class, so it
+   silently beat every `border border-input` utility — which is how the select
+   trigger and every outline button lost the border they asked for. the
+   zero width is declared once, on `*` above, where a utility can win against
+   it */
 .schemapress button {
   margin: 0;
   padding: 0;
-  border: 0;
   background: none;
   font: inherit;
   color: inherit;

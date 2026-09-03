@@ -11,7 +11,7 @@
  */
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
-import { portalContainer } from './utils'
+import { portalContainer, cn } from './utils'
 
 /**
  * Wraps the app so tooltips share one open-delay timer: once any tooltip has
@@ -44,7 +44,7 @@ export function TooltipProvider({ children, ...props }) {
  * @param {JSX.Element} props.children The control being labelled.
  * @return {JSX.Element} The tooltip.
  */
-export function Tooltip({ label, side = 'top', disabled = false, children }) {
+export function Tooltip({ label, side = 'top', disabled = false, stretch = false, children }) {
   if (!label) {
     return children
   }
@@ -52,7 +52,14 @@ export function Tooltip({ label, side = 'top', disabled = false, children }) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>
-        {disabled ? <span className="inline-flex">{children}</span> : children}
+        {/* the wrapper is only there so a disabled control can still be
+            hovered — but it becomes the layout child in its parent's place,
+            so a full-width control needs it to stretch too */}
+        {disabled ? (
+          <span className={cn('inline-flex', stretch && 'w-full')}>{children}</span>
+        ) : (
+          children
+        )}
       </TooltipPrimitive.Trigger>
 
       <TooltipPrimitive.Portal container={portalContainer()}>

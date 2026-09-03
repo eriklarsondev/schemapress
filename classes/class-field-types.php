@@ -107,13 +107,13 @@ class FieldTypes
                 },
             ],
             'select' => [
-                'label' => __('Select', 'schemapress'),
+                'label' => __('Dropdown', 'schemapress'),
                 'default' => '',
                 'sanitize' => function ($value, $field) {
-                    $allowed = wp_list_pluck(
-                        isset($field['config']['options']) ? $field['config']['options'] : [],
-                        'value'
-                    );
+                    // whichever source the field names — a hand-written list or
+                    // a dataset. asking Datasets keeps the sanitizer from
+                    // disagreeing with what the control offered
+                    $allowed = wp_list_pluck(Datasets::forField($field), 'value');
 
                     if (!empty($field['config']['multiple'])) {
                         $values = is_array($value) ? $value : [];
@@ -155,10 +155,14 @@ class FieldTypes
                     ];
                 },
             ],
+            // not offered in the picker: a group is what a component becomes
+            // when you import one, and "Group" on its own was a container with
+            // no reason to exist until you had already decided what went in it
             'group' => [
                 'label' => __('Group', 'schemapress'),
                 'default' => [],
                 'children' => true,
+                'internal' => true,
             ],
             'repeater' => [
                 'label' => __('Repeater', 'schemapress'),

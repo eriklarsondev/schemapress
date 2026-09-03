@@ -1,37 +1,16 @@
 /**
  * Repeater and group controls — the two nesting field types.
  *
- * A repeater renders as a grid of tiles by default, laid out to match the
- * section's column setting, so a row of three cards looks like a row of three
- * cards. Each tile opens its own fields in a dialog. That keeps the shape of
- * the page visible while editing it, instead of presenting a stack of
- * identical forms.
- *
- * Rows carry their own id, so the React key and the row identity the server
- * stores are the same value — reordering never re-keys a row or drops focus.
+ * Both render their children on the same twelve columns the rest of the form
+ * uses, so a component or a repeater row keeps whatever layout it was given.
  */
 
 import { useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
-import {
-  ChevronUp,
-  ChevronDown,
-  Trash2,
-  Plus,
-  GripVertical,
-  Pencil,
-  ArrowLeft
-} from 'lucide-react'
-import { Field, Button, Empty, Badge, cn } from '../../ui'
+import { ChevronRight, Trash2, Plus } from 'lucide-react'
+import { Field, Button, cn } from '../../ui'
 import { nodeId, move, removeAt, replaceAt, emptyValues } from '../utils'
 import { FieldList } from './index'
-
-const COLUMN_CLASSES = {
-  1: 'sm:grid-cols-1',
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-2 lg:grid-cols-3',
-  4: 'sm:grid-cols-2 lg:grid-cols-4'
-}
 
 /**
  * Derives a row's heading. When the repeater configures a row_label naming one
@@ -70,36 +49,60 @@ function rowLabel(field, row, index) {
 }
 
 /**
- * Ordered list of repeatable rows.
+ * A repeater: an ordered list of rows, each a small form of its own.
+ *
+ * Rows stack vertically and open in place. The previous version drew them as a
+ * grid of tiles sized to a SECTION COLUMN COUNT — a page-builder idea that no
+ * longer exists here — and padded the grid with "Add" placeholders, so an empty
+ * repeater showed three dashed boxes offering to add the same thing three
+ * times. Nothing chose that shape; it was left over.
+ *
+ * A row carries its own id, so the React key and the identity the server stores
+ * are the same value: reordering never re-keys a row or drops a caret.
  *
  * @param {Object} props
  * @return {JSX.Element} The control.
  */
 export function RepeaterField({ field, value, onChange, context }) {
   const rows = Array.isArray(value) ? value : []
-  const [editing, setEditing] = useState(null)
+
+  const [open, setOpen] = useState(() => new Set())
+  const [dragging, setDragging] = useState(-1)
 
   const max = field.config?.max || 0
   const min = field.config?.min || 0
-  const grid = (field.config?.display || 'grid') === 'grid'
-
-  // the section's column setting is what makes a row of three cards look like
-  // one; without it the tiles fall back to a sensible three-up
-  const columns = Number(context?.columns) || 3
 
   /**
-   * Appends an empty row and returns its index.
+   * Appends an empty row and opens it.
    *
-   * @return {number} The new row's index.
+   * @return {void}
    */
   const addRow = () => {
-    onChange([...rows, { id: nodeId('r'), values: emptyValues(field.fields) }])
+    const row = { id: nodeId('r'), values: emptyValues(field.fields) }
 
-    return rows.length
+    onChange([...rows, row])
+    setOpen((current) => new Set(current).add(row.id))
   }
 
   /**
-   * Replaces one row's values.
+   * Shows or hides one row's fields.
+   *
+   * @param {string} id
+   * @return {void}
+   */
+  const toggle = (id) =>
+    setOpen((current) => {
+      const next = new Set(current)
+
+      if (!next.delete(id)) {
+        next.add(id)
+      }
+
+      return next
+    })
+
+  /**
+   * Replaces one value inside a row.
    *
    * @param {number} index
    * @param {string} key
@@ -114,249 +117,129 @@ export function RepeaterField({ field, value, onChange, context }) {
       })
     )
 
-  // placeholders make the configured shape visible before anything is filled
-  // in: a three-column section shows three slots, not an empty box
-  const placeholders = grid ? Math.max(0, Math.min(columns, max || columns) - rows.length) : 0
+  /**
+   * Reorders as a dragged row passes over another.
+   *
+   * @param {number} over
+   * @return {void}
+   */
+  const dragOver = (over) => {
+    if (dragging === -1 || dragging === over) {
+      return
+    }
 
-  const current = editing !== null && rows[editing] ? rows[editing] : null
-
-  // a row opens in place rather than in a dialog. the repeater is already
-  // inside one, and a dialog on top of a dialog leaves no obvious way back
-  if (current) {
-    return (
-      <Field label={field.label} help={field.help} required={field.required}>
-        <div className="rounded-lg border border-border">
-          <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label={__('Back', 'schemapress')}
-              onClick={() => setEditing(null)}
-            >
-              <ArrowLeft />
-            </Button>
-
-            <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-              {rowLabel(field, current, editing)}
-            </span>
-
-            <Badge variant="outline">
-              {sprintf(
-                /* translators: 1: current item number, 2: total items */
-                __('%1$d of %2$d', 'schemapress'),
-                editing + 1,
-                rows.length
-              )}
-            </Badge>
-
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label={__('Previous', 'schemapress')}
-              disabled={editing === 0}
-              onClick={() => setEditing(editing - 1)}
-            >
-              <ChevronUp />
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label={__('Next', 'schemapress')}
-              disabled={editing === rows.length - 1}
-              onClick={() => setEditing(editing + 1)}
-            >
-              <ChevronDown />
-            </Button>
-          </div>
-
-          <div className="p-3">
-            <FieldList
-              fields={field.fields}
-              values={current.values}
-              onChange={(key, next) => updateRow(editing, key, next)}
-            />
-          </div>
-        </div>
-      </Field>
-    )
+    onChange(move(rows, dragging, over))
+    setDragging(over)
   }
 
   return (
     <Field label={field.label} help={field.help} required={field.required}>
-      <div className="flex flex-col gap-3">
-        {grid ? (
-          <div className={cn('grid grid-cols-1 gap-2', COLUMN_CLASSES[columns] || COLUMN_CLASSES[3])}>
-            {rows.map((row, index) => (
-              <Tile
-                key={row.id}
-                label={rowLabel(field, row, index)}
-                index={index}
-                total={rows.length}
-                filled={Object.values(row.values || {}).some(
-                  (entry) => entry !== '' && entry !== null && entry !== undefined
-                )}
-                onOpen={() => setEditing(index)}
-                onMove={(to) => onChange(move(rows, index, to))}
-                onRemove={rows.length > min ? () => onChange(removeAt(rows, index)) : undefined}
-              />
-            ))}
-
-            {Array.from({ length: placeholders }).map((_, offset) => (
-              <button
-                key={`placeholder-${offset}`}
-                type="button"
-                onClick={() => setEditing(addRow())}
-                className="flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-ring/40 hover:bg-accent/40"
-              >
-                <Plus className="size-4" />
-                <span className="text-[12px] font-medium">
-                  {__('Add', 'schemapress')} {field.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {rows.map((row, index) => (
-              <Row
-                key={row.id}
-                label={rowLabel(field, row, index)}
-                index={index}
-                total={rows.length}
-                onOpen={() => setEditing(index)}
-                onMove={(to) => onChange(move(rows, index, to))}
-                onRemove={rows.length > min ? () => onChange(removeAt(rows, index)) : undefined}
-              />
-            ))}
-          </div>
-        )}
-
-        {rows.length === 0 && placeholders === 0 ? (
-          <Empty title={__('Nothing here yet', 'schemapress')} className="py-6" />
+      <div className="flex flex-col gap-2">
+        {rows.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
+            {__('No rows yet.', 'schemapress')}
+          </p>
         ) : null}
+
+        {rows.map((row, index) => {
+          const expanded = open.has(row.id)
+
+          return (
+            <div
+              key={row.id}
+              draggable={!expanded}
+              onDragStart={(event) => {
+                event.stopPropagation()
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('text/plain', row.id)
+                setDragging(index)
+              }}
+              onDragOver={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                event.dataTransfer.dropEffect = 'move'
+                dragOver(index)
+              }}
+              onDrop={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setDragging(-1)
+              }}
+              onDragEnd={() => setDragging(-1)}
+              className={cn(
+                'overflow-hidden rounded-md border transition-colors',
+                expanded ? 'border-ring/40 bg-background' : 'border-border bg-background',
+                !expanded && 'cursor-grab hover:border-ring/30',
+                dragging === index &&
+                  'cursor-grabbing border-2 border-dashed border-ring/60 bg-accent/40 [&_*]:invisible'
+              )}
+            >
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-2 py-1.5 transition-colors',
+                  expanded && 'border-b border-border bg-muted/60'
+                )}
+              >
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
+                  {index + 1}
+                </span>
+
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => toggle(row.id)}
+                  className="min-w-0 flex-1 truncate text-left text-[13px] font-medium"
+                >
+                  {rowLabel(field, row, index)}
+                </button>
+
+                {rows.length > min ? (
+                  <Button
+                    size="icon-sm"
+                    variant="destructive-ghost"
+                    aria-label={__('Remove row', 'schemapress')}
+                    onClick={() => onChange(removeAt(rows, index))}
+                  >
+                    <Trash2 />
+                  </Button>
+                ) : null}
+
+                <ChevronRight
+                  aria-hidden="true"
+                  className={cn(
+                    'size-4 text-muted-foreground/40 transition-transform',
+                    expanded && 'rotate-90'
+                  )}
+                />
+              </div>
+
+              {expanded ? (
+                <div className="p-3">
+                  <FieldList
+                    fields={field.fields}
+                    values={row.values}
+                    context={context}
+                    onChange={(key, next) => updateRow(index, key, next)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
 
         <div>
           <Button
             size="sm"
             variant="outline"
             disabled={max > 0 && rows.length >= max}
-            onClick={() => setEditing(addRow())}
+            onClick={addRow}
           >
             <Plus />
-            {field.config?.button_label || __('Add item', 'schemapress')}
+            {field.config?.button_label || __('Add row', 'schemapress')}
           </Button>
         </div>
       </div>
     </Field>
-  )
-}
-
-/**
- * One row as a grid tile.
- *
- * @param {Object} props
- * @return {JSX.Element} The tile.
- */
-function Tile({ label, index, total, filled, onOpen, onMove, onRemove }) {
-  return (
-    <div className="group relative flex min-h-[92px] flex-col rounded-lg border border-border bg-background p-3 transition-colors hover:border-ring/40">
-      <button type="button" onClick={onOpen} className="flex flex-1 flex-col items-start gap-1 text-left">
-        <span className="inline-flex size-5 items-center justify-center rounded-full bg-muted text-[10px] text-muted-foreground">
-          {index + 1}
-        </span>
-        <span
-          className={cn(
-            'line-clamp-2 text-[13px] font-medium',
-            !filled && 'italic text-muted-foreground'
-          )}
-        >
-          {label}
-        </span>
-      </button>
-
-      <div className="mt-2 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-        <Button size="icon-sm" variant="ghost" aria-label={__('Edit', 'schemapress')} onClick={onOpen}>
-          <Pencil />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={__('Move earlier', 'schemapress')}
-          disabled={index === 0}
-          onClick={() => onMove(index - 1)}
-        >
-          <ChevronUp />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={__('Move later', 'schemapress')}
-          disabled={index === total - 1}
-          onClick={() => onMove(index + 1)}
-        >
-          <ChevronDown />
-        </Button>
-        {onRemove ? (
-          <Button
-            size="icon-sm"
-            variant="destructive-ghost"
-            aria-label={__('Remove', 'schemapress')}
-            onClick={onRemove}
-          >
-            <Trash2 />
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  )
-}
-
-/**
- * One row as a list item, for repeaters that are not card-shaped.
- *
- * @param {Object} props
- * @return {JSX.Element} The row.
- */
-function Row({ label, index, total, onOpen, onMove, onRemove }) {
-  return (
-    <div className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1.5">
-      <GripVertical className="size-3.5 shrink-0 text-muted-foreground/40" />
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-        <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] text-muted-foreground">
-          {index + 1}
-        </span>
-        <span className="truncate text-[13px]">{label}</span>
-      </button>
-
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={__('Move up', 'schemapress')}
-        disabled={index === 0}
-        onClick={() => onMove(index - 1)}
-      >
-        <ChevronUp />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={__('Move down', 'schemapress')}
-        disabled={index === total - 1}
-        onClick={() => onMove(index + 1)}
-      >
-        <ChevronDown />
-      </Button>
-      {onRemove ? (
-        <Button
-          size="icon-sm"
-          variant="destructive-ghost"
-          aria-label={__('Remove', 'schemapress')}
-          onClick={onRemove}
-        >
-          <Trash2 />
-        </Button>
-      ) : null}
-    </div>
   )
 }
 
@@ -371,7 +254,17 @@ export function GroupField({ field, value, onChange, context }) {
 
   return (
     <Field label={field.label} help={field.help} required={field.required}>
-      <div className="rounded-md border-l-2 border-border bg-muted/30 p-3 pl-4">
+      {/* the rule down the left is a rounded bar, not a border: a 2px border on
+          a rounded box curves around corners it does not belong on, which is
+          what made it read as a broken outline rather than as an indent. it
+          sits a pixel outside so it reads as the edge of the block rather than
+          as something drawn inside it */}
+      <div className="relative rounded-md bg-muted/30 p-3 pl-4">
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 -left-px w-[3px] rounded-full bg-border"
+        />
+
         <FieldList
           fields={field.fields}
           values={values}

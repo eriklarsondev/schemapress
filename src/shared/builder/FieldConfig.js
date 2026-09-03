@@ -6,9 +6,10 @@
  * UI silently losing the setting.
  */
 
-import { __ } from '@wordpress/i18n'
+import { __, sprintf } from '@wordpress/i18n'
 import { Plus, Trash2 } from 'lucide-react'
 import { removeAt, replaceAt } from '../utils'
+import { datasets } from '../settings'
 import { Button, Input, Field, Switch, Heading, Select } from '../../ui'
 
 /**
@@ -34,29 +35,21 @@ export function FieldConfig({ field, onChange }) {
     case 'email':
     case 'url':
     case 'phone':
+      // no placeholder here: it is text the form shows, not a fact about the
+      // data, so it is set on the Form tab with the other presentation
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={__('Placeholder', 'schemapress')}>
-            {(id) => (
-              <Input
-                id={id}
-                value={config.placeholder || ''}
-                onChange={(event) => update({ placeholder: event.target.value })}
-              />
-            )}
-          </Field>
-          <Field label={__('Max length', 'schemapress')} help={__('0 for none', 'schemapress')}>
-            {(id) => (
-              <Input
-                id={id}
-                type="number"
-                min="0"
-                value={config.maxlength || 0}
-                onChange={(event) => update({ maxlength: Number(event.target.value) || 0 })}
-              />
-            )}
-          </Field>
-        </div>
+        <Field label={__('Max length', 'schemapress')} help={__('0 for none', 'schemapress')}>
+          {(id) => (
+            <Input
+              id={id}
+              type="number"
+              min="0"
+              className="sm:max-w-40"
+              value={config.maxlength || 0}
+              onChange={(event) => update({ maxlength: Number(event.target.value) || 0 })}
+            />
+          )}
+        </Field>
       )
 
     case 'number':
@@ -138,6 +131,7 @@ export function FieldConfig({ field, onChange }) {
  */
 function SelectOptions({ config, onChange }) {
   const options = config.options || []
+  const dataset = datasets.find((set) => set.slug === config.source)
 
   return (
     <div className="flex flex-col gap-3">
@@ -147,11 +141,66 @@ function SelectOptions({ config, onChange }) {
         onChange={(multiple) => onChange({ multiple })}
       />
 
+      {/* a ready-made list is stored by name, not copied in — so a correction
+          to it reaches every field that named it, and two collections cannot
+          end up with "USA" in one and "United States" in the other */}
+      <Field
+        label={__('Choices from', 'schemapress')}
+        help={__('A ready-made list, or your own.', 'schemapress')}
+      >
+        {(id) => (
+          <Select
+            id={id}
+            value={config.source || ''}
+            options={[
+              { value: '', label: __('My own list', 'schemapress') },
+              ...datasets.map((set) => ({ value: set.slug, label: set.label })),
+            ]}
+            onChange={(source) => onChange({ source })}
+          />
+        )}
+      </Field>
+
+      {dataset ? (
+        <div className="rounded-md border border-border bg-muted/30 p-3">
+          <p className="text-[12px] text-muted-foreground">
+            {sprintf(
+              /* translators: 1: dataset name, 2: number of choices */
+              __('%1$s — %2$d choices, kept up to date for you.', 'schemapress'),
+              dataset.label,
+              dataset.options.length,
+            )}
+          </p>
+
+          <p className="mt-1 truncate text-[12px] text-muted-foreground/70">
+            {dataset.options
+              .slice(0, 6)
+              .map((option) => option.label)
+              .join(', ')}
+            {dataset.options.length > 6 ? '…' : ''}
+          </p>
+        </div>
+      ) : (
       <div className="flex flex-col gap-2">
         <Heading>{__('Options', 'schemapress')}</Heading>
 
+        {/* label before value: the label is the thing you are deciding, and the
+            value is what gets stored under it — a consequence of that decision */}
         {options.map((option, index) => (
           <div key={index} className="flex items-end gap-2">
+            <Field label={__('Label', 'schemapress')} className="flex-1">
+              {(id) => (
+                <Input
+                  id={id}
+                  value={option.label}
+                  onChange={(event) =>
+                    onChange({
+                      options: replaceAt(options, index, { ...option, label: event.target.value }),
+                    })
+                  }
+                />
+              )}
+            </Field>
             <Field label={__('Value', 'schemapress')} className="flex-1">
               {(id) => (
                 <Input
@@ -161,19 +210,6 @@ function SelectOptions({ config, onChange }) {
                   onChange={(event) =>
                     onChange({
                       options: replaceAt(options, index, { ...option, value: event.target.value }),
-                    })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={__('Label', 'schemapress')} className="flex-1">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={option.label}
-                  onChange={(event) =>
-                    onChange({
-                      options: replaceAt(options, index, { ...option, label: event.target.value }),
                     })
                   }
                 />
@@ -201,6 +237,7 @@ function SelectOptions({ config, onChange }) {
           </Button>
         </div>
       </div>
+      )}
     </div>
   )
 }

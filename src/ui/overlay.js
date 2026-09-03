@@ -80,39 +80,45 @@ export function ConfirmDialog({
         <DialogPrimitive.Overlay
           className={cn('fixed inset-0 bg-black/40', LAYERS.confirmOverlay)}
         />
-        <DialogPrimitive.Content
+        {/* centred by flex rather than by a transform, which the open
+            animation would otherwise overwrite — see Dialog */}
+        <div
           className={cn(
-            'fixed left-1/2 top-1/2 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-5 shadow-xl animate-sp-in focus:outline-none',
+            'pointer-events-none fixed inset-0 flex items-center justify-center p-4',
             LAYERS.confirmContent
           )}
         >
-          <DialogPrimitive.Title className="text-base font-semibold">
-            {title}
-          </DialogPrimitive.Title>
-          {description ? (
-            <DialogPrimitive.Description className="mt-1.5 text-[13px] text-muted-foreground">
-              {description}
-            </DialogPrimitive.Description>
-          ) : null}
+          <DialogPrimitive.Content
+            className="pointer-events-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background p-5 shadow-xl animate-sp-in focus:outline-none"
+          >
+            <DialogPrimitive.Title className="text-base font-semibold">
+              {title}
+            </DialogPrimitive.Title>
+            {description ? (
+              <DialogPrimitive.Description className="mt-1.5 text-[13px] text-muted-foreground">
+                {description}
+              </DialogPrimitive.Description>
+            ) : null}
 
-          <div className="mt-5 flex justify-end gap-2">
-            <DialogPrimitive.Close asChild>
-              <Button variant="outline" size="sm">
-                {__('Cancel', 'schemapress')}
+            <div className="mt-5 flex justify-end gap-2">
+              <DialogPrimitive.Close asChild>
+                <Button variant="outline" size="sm">
+                  {__('Cancel', 'schemapress')}
+                </Button>
+              </DialogPrimitive.Close>
+              <Button
+                size="sm"
+                variant={destructive ? 'destructive' : 'default'}
+                onClick={() => {
+                  onConfirm()
+                  onOpenChange(false)
+                }}
+              >
+                {confirmLabel}
               </Button>
-            </DialogPrimitive.Close>
-            <Button
-              size="sm"
-              variant={destructive ? 'destructive' : 'default'}
-              onClick={() => {
-                onConfirm()
-                onOpenChange(false)
-              }}
-            >
-              {confirmLabel}
-            </Button>
-          </div>
-        </DialogPrimitive.Content>
+            </div>
+          </DialogPrimitive.Content>
+        </div>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   )

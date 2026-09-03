@@ -5,6 +5,11 @@
  * and rendered against. It is the one screen here whose changes reach content
  * that already exists, so it says so, and it saves explicitly rather than as
  * you type — a half-typed field name should not become the shape of the data.
+ *
+ * Only what the data IS: a field's name, its key, its type, its bounds, and
+ * what it nests. How the entry form presents it — the width, the placeholder,
+ * the help text, whether it is required, when it is shown at all — is the Form
+ * tab's business, because none of it changes a single stored value.
  */
 
 import { useEffect, useState } from '@wordpress/element'

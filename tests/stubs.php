@@ -104,6 +104,13 @@ function admin_url($path = '') { return 'http://example.test/wp-admin/' . $path;
 function rest_url($path = '') { return 'http://example.test/wp-json/' . $path; }
 function wp_json_encode($value) { return json_encode($value); }
 
+function wp_list_pluck($list, $field)
+{
+    return array_map(function ($item) use ($field) {
+        return is_object($item) ? ($item->$field ?? null) : ($item[$field] ?? null);
+    }, (array) $list);
+}
+
 function wp_generate_uuid4()
 {
     return sprintf(
@@ -334,6 +341,7 @@ function get_permalink($post) { return 'http://example.test/?p=' . (is_object($p
 // --- the plugin --------------------------------------------------------------
 
 require_once SCHEMAPRESS_PATH . 'classes/class-inflector.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-datasets.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-field-types.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema-model.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema.php';
@@ -346,6 +354,7 @@ require_once SCHEMAPRESS_PATH . 'classes/class-entries.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content-type.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-collection.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-component.php';
 
 // field types register on construction
 new SchemaPress\FieldTypes();

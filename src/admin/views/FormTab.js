@@ -1,43 +1,68 @@
 /**
  * Arranging the entry form.
  *
- * A canvas, not a settings table. Each field is drawn roughly as its control
- * will be drawn — a label over a box the shape of the input — laid on the same
- * twelve columns the entry form uses. So this screen looks like the thing it
- * configures, and "half width, third from the top" is something you see rather
+ * A canvas, not a settings table. Each field is drawn as a card on the same
+ * twelve columns the entry form uses, so this screen looks like the thing it
+ * configures and "half width, third from the top" is something you see rather
  * than something you read off a row of dropdowns and assemble in your head.
  *
- * Two kinds of empty space, and both are drop targets:
+ * This tab owns how the form BEHAVES, the Schema tab owns what the data is.
+ * Nothing set here changes a stored value:
  *
- *   leftover  what a row has spare after its fields
- *   new row   a full-width strip under the layout, and between rows while
- *             dragging, so a field always has somewhere to land
+ *   order   drag a card onto another and they swap places
+ *   width   the badge on the card, or drop into a row's leftover space and the
+ *           field takes exactly that width
+ *   rest    click the card — placeholder, help text, required, when it shows
  *
- * Dragging across a target previews the width the field would take, because at
- * a third of the way in it becomes a third — the position IS the width, and
- * asking for it separately afterwards would be asking twice.
+ * The previous version made width a consequence of how far across a target you
+ * released, which meant every drop was a guess and you could not move a field
+ * without also resizing it. A gap, by contrast, has one sensible size: a third
+ * of a row left over fits a third. That is a rule you can predict.
+ *
+ * Those gaps appear ONLY while dragging. Standing there permanently they read
+ * as empty content rather than as targets, which is what made the first version
+ * of this screen confusing.
  *
  * Nothing here reaches the front end. It is presentation of the admin screen,
  * which is this plugin's own to arrange.
  */
 
-import { useEffect, useRef, useState } from '@wordpress/element'
-import { __ } from '@wordpress/i18n'
-import { Save, LayoutList, GripVertical } from 'lucide-react'
-import { Card, CardBody, Button, Alert, Badge, Empty, cn } from '../../ui'
+import { useEffect, useState } from '@wordpress/element'
+import { __, sprintf } from '@wordpress/i18n'
+import { Save, LayoutList, Pencil } from 'lucide-react'
+import {
+  Card,
+  CardBody,
+  Button,
+  Alert,
+  Badge,
+  Empty,
+  Segmented,
+  Dialog,
+  Field,
+  Input,
+  Select,
+  Switch,
+  Popover,
+  cn
+} from '../../ui'
 import { move } from '../../shared/utils'
+import { conditionTargets } from '../../shared/conditions'
+
+/** The types whose control takes a placeholder, mirroring SchemaModel. */
+const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone']
 
 /** The widths a control may take, in twelfths. */
 const WIDTHS = [
-  { value: 'third', span: 4, label: '⅓' },
-  { value: 'half', span: 6, label: '½' },
-  { value: 'two-thirds', span: 8, label: '⅔' },
-  { value: 'full', span: 12, label: 'Full' }
+  { value: 'third', span: 4, label: __('⅓', 'schemapress') },
+  { value: 'half', span: 6, label: __('½', 'schemapress') },
+  { value: 'two-thirds', span: 8, label: __('⅔', 'schemapress') },
+  { value: 'full', span: 12, label: __('Full', 'schemapress') }
 ]
 
 /**
- * Tailwind cannot see a computed class name, so every span is written out.
- * Leftovers take whatever a row has spare, so all twelve can occur.
+ * Tailwind cannot see a computed class name, so every span is written out. A
+ * leftover gap takes whatever a row has spare, so all twelve can occur.
  */
 const SPANS = {
   1: 'sm:col-span-1',
@@ -55,16 +80,19 @@ const SPANS = {
 }
 
 /**
- * The height a type's control roughly occupies, so the canvas reads like the
- * form rather than like a stack of identical boxes.
+ * Where a control starts, when it is not simply next in the flow. Written out
+ * for the same reason as SPANS: Tailwind cannot see a computed class name.
  */
-const HEIGHTS = {
-  textarea: 'h-14',
-  wysiwyg: 'h-16',
-  image: 'h-16',
-  file: 'h-14',
-  repeater: 'h-14',
-  group: 'h-14'
+const STARTS = {
+  1: 'sm:col-start-1',
+  2: 'sm:col-start-2',
+  3: 'sm:col-start-3',
+  4: 'sm:col-start-4',
+  5: 'sm:col-start-5',
+  6: 'sm:col-start-6',
+  7: 'sm:col-start-7',
+  8: 'sm:col-start-8',
+  9: 'sm:col-start-9'
 }
 
 /**
@@ -90,35 +118,36 @@ function spanOf(field) {
 }
 
 /**
- * The width option nearest a span, for snapping an edge resize.
+ * How much blank space sits before a field on its row.
  *
- * @param {number} span
- * @return {Object} The width option.
+ * @param {Object} field
+ * @return {number} The offset in twelfths.
  */
-function nearest(span) {
-  return WIDTHS.reduce((best, option) =>
-    Math.abs(option.span - span) < Math.abs(best.span - span) ? option : best
-  )
+function offsetOf(field) {
+  const offset = Number(field.config?.offset) || 0
+
+  return Math.max(0, Math.min(offset, 12 - spanOf(field)))
 }
 
 /**
- * The widths that fit a gap this wide, narrowest first.
- *
- * A gap narrower than a third can hold nothing properly, so it still offers the
- * third — the field wraps to its own row, which is the honest outcome rather
- * than a drop that silently does nothing.
+ * The widest width that fits a gap, or null if nothing does.
  *
  * @param {number} span
- * @return {Array} The width options.
+ * @return {Object|null} The width option.
  */
-function fitting(span) {
-  const fits = WIDTHS.filter((option) => option.span <= span)
+function fits(span) {
+  const options = WIDTHS.filter((option) => option.span <= span)
 
-  return fits.length > 0 ? fits : [WIDTHS[0]]
+  return options.length ? options[options.length - 1] : null
 }
 
 /**
- * Packs fields into rows of twelve, marking every place something could go.
+ * Packs fields into rows of twelve, noting the space each row has left over.
+ *
+ * Those leftovers only matter while something is being dragged, which is when
+ * they become the answer to "where can this go, and how wide will it be" — a
+ * gap has exactly one sensible size, so dropping into one sets the width
+ * rather than asking afterwards.
  *
  * @param {Array} fields
  * @return {Array} Cells, in order.
@@ -126,107 +155,43 @@ function fitting(span) {
 function pack(fields) {
   const cells = []
   let used = 0
+  let row = []
 
   fields.forEach((field, index) => {
-    const span = spanOf(field)
+    const offset = offsetOf(field)
+    const span = spanOf(field) + offset
 
     if (used > 0 && used + span > 12) {
-      cells.push({ kind: 'gap', span: 12 - used, at: index })
+      cells.push({ gap: 12 - used, at: index, start: used, row })
       used = 0
+      row = []
     }
 
-    // between two rows, while dragging: without it a field can only be dropped
-    // where there is spare room, and a tidy layout has none
-    if (used === 0 && index > 0) {
-      cells.push({ kind: 'row', at: index })
+    // blank space a field's own offset put in front of it. it is as droppable
+    // as any other gap, and without this it was the one hole on the screen
+    // with nothing offering to fill it
+    if (offset > 0) {
+      cells.push({ gap: offset, at: index, start: used, row })
     }
 
-    cells.push({ kind: 'field', field, index, span })
-    used = (used + span) % 12
+    cells.push({ field, index })
+    used += span
+    row = [...row, index]
+
+    if (used >= 12) {
+      used = 0
+      row = []
+    }
   })
 
-  // the spare part of the last row, if it has any
   if (used > 0) {
-    cells.push({ kind: 'gap', span: 12 - used, at: fields.length })
+    cells.push({ gap: 12 - used, at: fields.length, start: used, row })
   }
 
-  // and a full-width strip under everything, so there is always somewhere to
-  // put a field that should span the row
-  cells.push({ kind: 'row', at: fields.length, last: true })
+  // and a whole row under everything, so a field can always be given one
+  cells.push({ gap: 12, at: fields.length, start: 0, row: [], newRow: true })
 
   return cells
-}
-
-/**
- * A drop target that also decides a width.
- *
- * @param {Object} props
- * @return {JSX.Element} The target.
- */
-function Target({ span, at, last, dragging, onDrop }) {
-  const [preview, setPreview] = useState(null)
-
-  const options = fitting(span)
-
-  /**
-   * The width the pointer is currently choosing.
-   *
-   * @param {Object} event
-   * @return {Object} The width option.
-   */
-  const widthAt = (event) => {
-    const box = event.currentTarget.getBoundingClientRect()
-    const columns = Math.max(1, Math.round(((event.clientX - box.left) / box.width) * span))
-
-    return [...options].reverse().find((option) => option.span <= columns) || options[0]
-  }
-
-  return (
-    <div
-      onDragOver={(event) => {
-        event.preventDefault()
-        setPreview(widthAt(event))
-      }}
-      onDragLeave={() => setPreview(null)}
-      onDrop={(event) => {
-        event.preventDefault()
-
-        const chosen = preview || options[0]
-
-        setPreview(null)
-        onDrop(at, chosen.value)
-      }}
-      className={cn(
-        'relative rounded-lg border-2 border-dashed transition-all',
-        SPANS[span],
-        // a target you are dragging over is tall enough to aim at; one you are
-        // not is still visible, so you know it is there before you start
-        dragging ? 'min-h-[4.5rem]' : last ? 'min-h-[3rem]' : 'min-h-[3.5rem]',
-        preview
-          ? 'border-primary bg-primary/5'
-          : dragging
-            ? 'border-ring/50 bg-accent/20'
-            : 'border-border bg-muted/30'
-      )}
-    >
-      {preview ? (
-        <div
-          className="absolute inset-y-0 left-0 flex items-center justify-center rounded-lg bg-primary/15 text-[13px] font-semibold text-primary transition-[width]"
-          style={{ width: `${(preview.span / span) * 100}%` }}
-        >
-          {preview.label}
-        </div>
-      ) : (
-        <span className="flex h-full items-center justify-center text-[12px] text-muted-foreground">
-          {dragging
-            ? __('Drop here', 'schemapress')
-            : last
-              ? __('Drop a field here for a new row', 'schemapress')
-              : __('Empty', 'schemapress')}
-        </span>
-      )}
-    </div>
-  )
 }
 
 /**
@@ -238,10 +203,8 @@ function Target({ span, at, last, dragging, onDrop }) {
 export function FormTab({ fields, onChange }) {
   const [draft, setDraft] = useState(fields)
   const [saving, setSaving] = useState(false)
-  const [dragging, setDragging] = useState(null)
-  const [resizing, setResizing] = useState(null)
-
-  const grid = useRef(null)
+  const [dragging, setDragging] = useState(-1)
+  const [editing, setEditing] = useState(-1)
 
   useEffect(() => {
     setDraft(fields)
@@ -264,92 +227,97 @@ export function FormTab({ fields, onChange }) {
     )
 
   /**
-   * Begins an edge resize, following the pointer until it is released.
+   * Swaps one field for an edited copy of it, and stores the result.
    *
-   * The column width is measured from the live grid rather than assumed, so the
-   * snap points line up with what is on screen at any window size.
+   * The dialog has its own confirm button, and a confirm button that only
+   * confirms into another unsaved pile is a confirm button that lied. So
+   * pressing Save there saves the layout — the drag-and-drop on the canvas
+   * still batches behind Save layout, because a drag is exploratory in a way
+   * that filling in a form is not.
    *
-   * @param {Object} event
    * @param {number} index
+   * @param {Object} next
    * @return {void}
    */
-  const startResize = (event, index) => {
-    event.preventDefault()
-    event.stopPropagation()
+  const replaceAndSave = (index, next) => {
+    const updated = draft.map((field, i) => (i === index ? next : field))
 
-    const cell = event.currentTarget.parentElement
-    const box = grid.current?.getBoundingClientRect()
-
-    if (!box) {
-      return
-    }
-
-    const left = cell.getBoundingClientRect().left
-    const column = box.width / 12
-
-    setResizing(index)
-
-    /**
-     * @param {PointerEvent} moved
-     * @return {void}
-     */
-    const onMove = (moved) => {
-      const span = Math.round((moved.clientX - left) / column)
-
-      setWidth(index, nearest(Math.min(12, Math.max(1, span))).value)
-    }
-
-    /**
-     * @return {void}
-     */
-    const onUp = () => {
-      setResizing(null)
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    setDraft(updated)
+    persist(updated)
   }
 
   /**
-   * Moves the dragged field to a position, resizing it to whatever the drop
-   * position chose.
+   * Reorders as a dragged card passes over another, rather than on drop.
    *
-   * @param {number}      to
-   * @param {string|null} width
+   * The layout rearranges under the pointer, so what is on screen mid-drag is
+   * what you will get — including how the rows re-wrap, which is the part that
+   * was hardest to predict before.
+   *
+   * @param {number} over
    * @return {void}
    */
-  const drop = (to, width = null) => {
-    if (dragging === null) {
+  const dragOver = (over) => {
+    if (dragging === -1 || dragging === over) {
+      return
+    }
+
+    setDraft((current) => move(current, dragging, over))
+    setDragging(over)
+  }
+
+  /**
+   * Drops the dragged field into a row's leftover space, sizing it to fill.
+   *
+   * @param {number} at   Where in the order it lands.
+   * @param {number} span How many twelfths the gap holds.
+   * @return {void}
+   */
+  const dropInGap = (cell) => {
+    const width = fits(cell.gap)
+
+    if (dragging === -1 || !width) {
       return
     }
 
     setDraft((current) => {
-      const sized = width
-        ? current.map((field, i) =>
-            i === dragging ? { ...field, config: { ...field.config, width } } : field
-          )
-        : current
+      // the field lands where the gap is, not merely after whatever preceded
+      // it. usually the row's other fields push it there on their own; but if
+      // the only thing before the gap was the field being moved, it leaves as
+      // it arrives, and the space it should sit in has to be stated
+      const before = cell.row
+        .filter((index) => index !== dragging)
+        .reduce((sum, index) => sum + spanOf(current[index]) + offsetOf(current[index]), 0)
 
-      // a move to a later index counts the field being moved, so the target it
-      // was dropped on has already shifted left by one
-      const target = to > dragging ? to - 1 : to
+      const sized = current.map((field, i) =>
+        i === dragging
+          ? {
+              ...field,
+              config: {
+                ...field.config,
+                width: width.value,
+                offset: Math.max(0, cell.start - before)
+              }
+            }
+          : field
+      )
 
-      return dragging === target ? sized : move(sized, dragging, target)
+      // moving to a later index counts the field being moved, so the gap it
+      // was dropped into has already shifted left by one
+      return move(sized, dragging, cell.at > dragging ? cell.at - 1 : cell.at)
     })
 
-    setDragging(null)
+    setDragging(-1)
   }
 
   /**
-   * Stores the draft.
+   * Stores a field list.
    *
+   * @param {Array} list
    * @return {void}
    */
-  const save = () => {
+  const persist = (list) => {
     setSaving(true)
-    Promise.resolve(onChange(draft)).finally(() => setSaving(false))
+    Promise.resolve(onChange(list)).finally(() => setSaving(false))
   }
 
   if (fields.length === 0) {
@@ -367,95 +335,56 @@ export function FormTab({ fields, onChange }) {
     <div className="flex flex-col gap-3">
       <Alert variant="info">
         {__(
-          'Drag a field onto an empty area to move it — how far across you drop it sets how wide it becomes. Or drag its right edge to resize in place.',
+          'Drag a field onto another to reorder, or into a row’s spare space to fill it. Click a card for its placeholder, help text and whether it is required.',
           'schemapress'
         )}
       </Alert>
 
       <Card>
         <CardBody>
-          <div ref={grid} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-            {pack(draft).map((cell) => {
-              if (cell.kind === 'gap' || cell.kind === 'row') {
-                return (
-                  <Target
-                    key={`${cell.kind}-${cell.at}-${cell.span || 12}`}
-                    span={cell.span || 12}
-                    at={cell.at}
-                    last={cell.last}
-                    dragging={dragging !== null}
-                    onDrop={drop}
-                  />
-                )
-              }
-
-              const { field, index, span } = cell
-              const isDragging = dragging === index
-              const width = WIDTHS.find((option) => option.span === span)
-
-              return (
-                <div
-                  key={field.key}
-                  draggable={resizing === null}
-                  onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = 'move'
-                    setDragging(index)
-                  }}
-                  onDragEnd={() => setDragging(null)}
-                  className={cn(
-                    'group relative rounded-lg border-2 bg-background p-3 shadow-sm transition-colors',
-                    SPANS[span],
-                    resizing === index
-                      ? 'border-primary'
-                      : isDragging
-                        ? 'border-primary opacity-40'
-                        : 'border-border hover:border-primary/40',
-                    resizing === null && 'cursor-grab active:cursor-grabbing'
-                  )}
-                >
-                  <div className="mb-2 flex min-w-0 items-center gap-1.5">
-                    <GripVertical className="size-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
-
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-                      {field.label}
-                    </span>
-
-                    <Badge variant="outline">{field.type}</Badge>
-                    <Badge variant="mono">{width?.label}</Badge>
-                  </div>
-
-                  {/* the control, roughly — enough that the canvas reads as the
-                      form and not as a list of identical boxes */}
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      'rounded-md border border-input bg-muted',
-                      HEIGHTS[field.type] || 'h-9'
-                    )}
-                  />
-
-                  {/* the right edge is the resize grip */}
-                  <span
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label={__('Resize', 'schemapress')}
-                    onPointerDown={(event) => startResize(event, index)}
-                    className={cn(
-                      'absolute inset-y-3 right-0 flex w-3 cursor-col-resize items-center justify-center rounded-r-lg transition-opacity',
-                      resizing === index ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    )}
-                  >
-                    <span className="h-8 w-1 rounded-full bg-primary" />
-                  </span>
-                </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+            {pack(draft).map((cell) =>
+              cell.field ? (
+                <FieldCard
+                  key={cell.field.key}
+                  field={cell.field}
+                  index={cell.index}
+                  dragging={dragging === cell.index}
+                  onDragStart={() => setDragging(cell.index)}
+                  onDragOver={() => dragOver(cell.index)}
+                  onDragEnd={() => setDragging(-1)}
+                  onWidth={(width) => setWidth(cell.index, width)}
+                  onEdit={() => setEditing(cell.index)}
+                />
+              ) : (
+                <Gap
+                  key={`gap-${cell.at}-${cell.gap}${cell.newRow ? '-new' : ''}`}
+                  span={cell.gap}
+                  start={cell.start}
+                  newRow={cell.newRow}
+                  dragging={dragging !== -1}
+                  onDrop={() => dropInGap(cell)}
+                />
               )
-            })}
+            )}
           </div>
         </CardBody>
       </Card>
 
+      {draft[editing] ? (
+        <FieldDialog
+          field={draft[editing]}
+          siblings={draft}
+          onClose={() => setEditing(-1)}
+          onSave={(next) => {
+            replaceAndSave(editing, next)
+            setEditing(-1)
+          }}
+        />
+      ) : null}
+
       <div className="flex items-center gap-3">
-        <Button disabled={!dirty || saving} onClick={save}>
+        <Button disabled={!dirty || saving} onClick={() => persist(draft)}>
           <Save />
           {saving ? __('Saving…', 'schemapress') : __('Save layout', 'schemapress')}
         </Button>
@@ -466,6 +395,394 @@ export function FormTab({ fields, onChange }) {
           </span>
         ) : null}
       </div>
+    </div>
+  )
+}
+
+/**
+ * A row's leftover space, offered as somewhere to drop.
+ *
+ * Only while dragging. Standing on screen the rest of the time, these read as
+ * content — empty boxes in a form — rather than as targets, which is what the
+ * first version of this tab got wrong.
+ *
+ * The label is the width the field will become, because that is the whole
+ * bargain: the gap is this wide, so the field will be too.
+ *
+ * @param {Object} props
+ * @return {JSX.Element|null} The target.
+ */
+function Gap({ span, start, newRow, dragging, onDrop }) {
+  const [over, setOver] = useState(false)
+
+  const width = fits(span)
+
+  // a sliver narrower than a third can hold nothing, so it is not offered
+  if (!dragging || !width) {
+    return null
+  }
+
+  return (
+    <div
+      onDragOver={(event) => {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        event.preventDefault()
+        setOver(false)
+        onDrop()
+      }}
+      className={cn(
+        'flex min-h-[5rem] items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors',
+        SPANS[span],
+        start > 0 && STARTS[start + 1],
+        over ? 'border-primary bg-primary/10 text-primary' : 'border-ring/40 bg-accent/20 text-muted-foreground'
+      )}
+    >
+      <span>{newRow ? __('New row', 'schemapress') : __('Fill this space', 'schemapress')}</span>
+      <Badge variant="outline">{width.label}</Badge>
+    </div>
+  )
+}
+
+/**
+ * One field, drawn roughly as its control.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The card.
+ */
+function FieldCard({
+  field,
+  index,
+  dragging,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onWidth,
+  onEdit
+}) {
+  const [sizing, setSizing] = useState(false)
+
+  const width = widthOf(field)
+  const option = WIDTHS.find((candidate) => candidate.value === width)
+  const offset = offsetOf(field)
+
+  return (
+    <div
+      draggable
+      // the whole card opens the settings. a drag only fires on movement, so
+      // the two gestures do not collide, and there is no small target to find
+      onClick={onEdit}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move'
+        // Firefox refuses to start a drag without payload
+        event.dataTransfer.setData('text/plain', field.key || String(index))
+        onDragStart()
+      }}
+      onDragOver={(event) => {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        onDragOver()
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        onDragEnd()
+      }}
+      onDragEnd={onDragEnd}
+      className={cn(
+        'group relative flex cursor-grab flex-col rounded-lg bg-background p-3 shadow-sm transition-colors',
+        SPANS[option.span],
+        offset > 0 && STARTS[offset + 1],
+        dragging
+          ? // the card being dragged reads as the gap it left behind, so the
+            // destination is a shape on screen rather than a guess. thicker
+            // than a resting card on purpose: it is a target now, not content
+            'cursor-grabbing items-center justify-center border-2 border-dashed border-ring/60 bg-accent/40'
+          : 'border border-border hover:border-primary/40'
+      )}
+    >
+      {/* while it is being dragged the card IS a drop target — put it back
+          here — so it says so, like every other target on the screen. hiding
+          its contents and leaving a blank dashed box was the one unlabelled
+          shape in a row of labelled ones */}
+      {dragging ? (
+        <span className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+          {__('Fill this space', 'schemapress')}
+          <Badge variant="outline">{option.label}</Badge>
+        </span>
+      ) : null}
+
+      <div className={cn('mb-2 flex min-w-0 items-center gap-1.5', dragging && 'hidden')}>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{field.label}</span>
+
+        <Badge variant="outline">{field.type}</Badge>
+
+        {/* width is the one setting worth changing without opening anything,
+            because it is the whole point of this screen — so it is a popover
+            on the card rather than a row of buttons under every field */}
+        <Popover
+          open={sizing}
+          onOpenChange={setSizing}
+          align="end"
+          className="p-2"
+          trigger={
+            <button
+              type="button"
+              onClick={(event) => event.stopPropagation()}
+              aria-label={sprintf(
+                /* translators: %s: the field's label */
+                __('Width of %s', 'schemapress'),
+                field.label
+              )}
+              className="flex h-5 min-w-[1.75rem] items-center justify-center rounded border border-border px-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              {option.label}
+            </button>
+          }
+        >
+          <div onClick={(event) => event.stopPropagation()}>
+            <Segmented
+              value={width}
+              onChange={(next) => {
+                onWidth(next)
+                setSizing(false)
+              }}
+              options={WIDTHS.map((candidate) => ({
+                value: candidate.value,
+                label: candidate.label
+              }))}
+            />
+          </div>
+        </Popover>
+      </div>
+
+      {/* the control, roughly. every one is the same height on purpose: this
+          screen arranges fields across the row, and a textarea drawn taller
+          than its neighbour only makes the cards in a row line up badly while
+          saying nothing about the layout being set */}
+      <div
+        className={cn(
+          'relative flex h-9 w-full items-center rounded-md border border-input bg-muted px-2.5 text-[12px] text-muted-foreground transition-colors group-hover:border-primary/40',
+          dragging && 'hidden'
+        )}
+      >
+        <span className="min-w-0 flex-1 truncate">{field.config?.placeholder || ''}</span>
+
+        <Pencil className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+      </div>
+    </div>
+  )
+}
+
+
+/**
+ * One field's presentation, as a dialog.
+ *
+ * Everything here is about how the entry form BEHAVES — the text it shows, how
+ * wide the control is, whether it can be left blank, when it appears at all.
+ * None of it changes what the field stores, which is why none of it is on the
+ * Schema tab. That tab answers "what is an entry made of"; this one answers
+ * "what does filling one in look like".
+ *
+ * Edits are held here until Done. Writing them straight through meant the card
+ * behind the dialog jumped to a new width the instant you touched the control,
+ * with no way back — a dialog with a confirm button should not have already
+ * happened by the time you press it.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The dialog.
+ */
+function FieldDialog({ field, siblings, onClose, onSave }) {
+  const [draft, setDraft] = useState(field)
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(field)
+  const takesPlaceholder = PLACEHOLDER_TYPES.includes(draft.type)
+
+  /**
+   * Merges changes into the local copy, config included.
+   *
+   * @param {Object} changes
+   * @return {void}
+   */
+  const update = (changes) =>
+    setDraft((current) => ({
+      ...current,
+      ...changes,
+      config: { ...current.config, ...changes.config }
+    }))
+
+  return (
+    <Dialog
+      open
+      size="md"
+      onOpenChange={(next) => !next && onClose()}
+      title={draft.label || __('Field', 'schemapress')}
+      description={__('How this field appears on the entry form.', 'schemapress')}
+      badge={<Badge variant="outline">{draft.type}</Badge>}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {__('Cancel', 'schemapress')}
+          </Button>
+          <Button disabled={!dirty} onClick={() => onSave(draft)}>
+            <Save />
+            {__('Save field', 'schemapress')}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Field
+          label={__('Width', 'schemapress')}
+          help={__('How much of the row the control takes.', 'schemapress')}
+        >
+          {(id) => (
+            <Segmented
+              id={id}
+              stretch
+              value={widthOf(draft)}
+              onChange={(width) => update({ config: { width } })}
+              options={WIDTHS.map((option) => ({ value: option.value, label: option.label }))}
+            />
+          )}
+        </Field>
+
+        {takesPlaceholder ? (
+          <Field
+            label={__('Placeholder', 'schemapress')}
+            hint={__('Optional', 'schemapress')}
+            help={__('Greyed-out text inside the empty control.', 'schemapress')}
+          >
+            {(id) => (
+              <Input
+                id={id}
+                value={draft.config?.placeholder || ''}
+                onChange={(event) => update({ config: { placeholder: event.target.value } })}
+              />
+            )}
+          </Field>
+        ) : null}
+
+        <Field
+          label={__('Help text', 'schemapress')}
+          hint={__('Optional', 'schemapress')}
+          help={__('Shown under the control.', 'schemapress')}
+        >
+          {(id) => (
+            <Input
+              id={id}
+              value={draft.help || ''}
+              onChange={(event) => update({ help: event.target.value })}
+            />
+          )}
+        </Field>
+
+        <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3">
+          <Switch
+            label={__('Required', 'schemapress')}
+            help={__('An entry cannot be saved without it.', 'schemapress')}
+            checked={Boolean(draft.required)}
+            onChange={(required) => update({ required })}
+          />
+
+          <ConditionSettings
+            field={draft}
+            siblings={siblings}
+            onChange={(condition) => update({ config: { condition } })}
+          />
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+/**
+ * When a field appears on the entry form.
+ *
+ * The rule reads as a sentence — "show when Contactable is filled in" — so it
+ * is laid out as one: the lead-in is a label over the row rather than a word
+ * wedged beside the first select, which left the two controls sitting at
+ * different heights with nothing lining up.
+ *
+ * @param {Object} props
+ * @return {JSX.Element|null} The settings, or null when nothing could gate it.
+ */
+function ConditionSettings({ field, siblings, onChange }) {
+  const condition = field.config?.condition || { field: '', operator: 'filled', value: '' }
+  const targets = conditionTargets(siblings, field.key)
+  const on = Boolean(condition.field)
+
+  const needsValue = ['equals', 'not_equals'].includes(condition.operator)
+
+  if (targets.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border/70 pt-3">
+      <Switch
+        label={__('Only show this field sometimes', 'schemapress')}
+        help={__(
+          'A hidden field keeps whatever was already in it, and still delivers it.',
+          'schemapress'
+        )}
+        checked={on}
+        onChange={(next) =>
+          onChange(
+            next
+              ? { field: targets[0].key, operator: 'filled', value: '' }
+              : { field: '', operator: 'filled', value: '' }
+          )
+        }
+      />
+
+      {on ? (
+        <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2.5">
+          <Badge variant="outline" className="w-fit uppercase tracking-wide">
+            {__('Show when', 'schemapress')}
+          </Badge>
+
+          {/* the field being tested is the part you read, so it gets two
+              thirds; the comparison is a short closed list and gets one */}
+          <div className="grid grid-cols-3 gap-2">
+            <Select
+              className="col-span-2"
+              aria-label={__('Field', 'schemapress')}
+              value={condition.field}
+              options={targets.map((target) => ({
+                value: target.key,
+                label: target.label || target.key
+              }))}
+              onChange={(next) => onChange({ ...condition, field: next })}
+            />
+
+            <Select
+              aria-label={__('Is', 'schemapress')}
+              value={condition.operator}
+              options={[
+                { value: 'filled', label: __('filled in', 'schemapress') },
+                { value: 'empty', label: __('empty', 'schemapress') },
+                { value: 'equals', label: __('exactly', 'schemapress') },
+                { value: 'not_equals', label: __('anything but', 'schemapress') }
+              ]}
+              onChange={(next) => onChange({ ...condition, operator: next })}
+            />
+          </div>
+
+          {needsValue ? (
+            <Input
+              aria-label={__('Value', 'schemapress')}
+              className="mt-0.5"
+              placeholder={__('the value to compare against', 'schemapress')}
+              value={condition.value || ''}
+              onChange={(event) => onChange({ ...condition, value: event.target.value })}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }
