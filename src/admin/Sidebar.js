@@ -11,7 +11,7 @@
  */
 
 import { __ } from '@wordpress/i18n'
-import { Boxes, Database, BookOpen, Plus } from 'lucide-react'
+import { Boxes, Database, Blocks, BookOpen, Plus } from 'lucide-react'
 import { cn } from '../ui'
 
 /**
@@ -20,10 +20,21 @@ import { cn } from '../ui'
  * @param {Object} props
  * @return {JSX.Element} The sidebar.
  */
-export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSelect, onCreate }) {
+export function Sidebar({
+  types = [],
+  components = [],
+  active,
+  loading,
+  docsUrl,
+  version,
+  onSelect,
+  onCreate,
+  onSelectComponent,
+  onCreateComponent
+}) {
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-background">
-      <header className="flex items-center gap-2.5 px-4 py-4">
+      <header className="flex items-center gap-3 px-5 py-5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Boxes className="size-4" />
         </span>
@@ -39,35 +50,23 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
       </header>
 
       <nav
-        className="flex-1 overflow-y-auto px-2 pb-4"
+        className="flex-1 overflow-y-auto px-3 pb-6"
         aria-label={__('Collections', 'schemapress')}
       >
-        <div className="flex items-center gap-1 pr-1">
-          <p className="flex flex-1 items-center gap-1.5 px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <Database className="size-3 shrink-0" />
-            {__('Collection types', 'schemapress')}
-            {!loading ? (
-              <span className="rounded bg-muted px-1 text-[10px] tabular-nums">{types.length}</span>
-            ) : null}
-          </p>
-
-          <button
-            type="button"
-            title={__('Create a collection type', 'schemapress')}
-            aria-label={__('Create a collection type', 'schemapress')}
-            onClick={onCreate}
-            className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <Plus className="size-3.5" />
-          </button>
-        </div>
+        <Group
+          icon={Database}
+          label={__('Collection types', 'schemapress')}
+          count={loading ? null : types.length}
+          addLabel={__('Create a collection type', 'schemapress')}
+          onAdd={onCreate}
+        />
 
         {loading ? (
-          <p className="px-2 py-1.5 text-[12px] italic text-muted-foreground/70">
+          <p className="px-2 py-2 text-[12px] italic text-muted-foreground/70">
             {__('Loading…', 'schemapress')}
           </p>
         ) : types.length === 0 ? (
-          <p className="px-2 py-1.5 text-[12px] italic text-muted-foreground/70">
+          <p className="px-2 py-2 text-[12px] italic text-muted-foreground/70">
             {__('No collections yet', 'schemapress')}
           </p>
         ) : (
@@ -76,26 +75,88 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
               key={type.id}
               label={type.pluralLabel || type.label}
               count={type.entries}
-              active={type.id === activeId}
+              active={active?.view === 'type' && active.id === type.id}
               onClick={() => onSelect(type.id)}
+            />
+          ))
+        )}
+
+        {/* components are the other kind of thing a site is made of: a shape
+            with no content of its own, described once and imported wherever it
+            is needed. its own group, because it is not a collection */}
+        {/* no count. a number beside a collection is how much content is in it,
+            which is worth knowing at a glance; a component holds no content, so
+            the same badge in the same place would mean something else entirely */}
+        <Group
+          icon={Blocks}
+          label={__('Components', 'schemapress')}
+          addLabel={__('Create a component', 'schemapress')}
+          onAdd={onCreateComponent}
+          className="mt-4"
+        />
+
+        {!loading && components.length === 0 ? (
+          <p className="px-2 py-2 text-[12px] italic text-muted-foreground/70">
+            {__('No components yet', 'schemapress')}
+          </p>
+        ) : (
+          components.map((component) => (
+            <Item
+              key={component.id}
+              label={component.label}
+              active={active?.view === 'component' && active.id === component.id}
+              onClick={() => onSelectComponent(component.id)}
             />
           ))
         )}
 
         {docsUrl ? (
           <>
-            <hr className="mx-2 my-3 border-0 border-t border-border" />
+            <hr className="mx-2 my-4 border-0 border-t border-border" />
             <Item label={__('Documentation', 'schemapress')} icon={BookOpen} href={docsUrl} />
           </>
         ) : null}
       </nav>
 
       {version ? (
-        <footer className="border-t border-border px-4 py-2.5 text-[10px] text-muted-foreground">
+        <footer className="border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
           {__('SchemaPress', 'schemapress')} {version}
         </footer>
       ) : null}
     </aside>
+  )
+}
+
+/**
+ * A section heading with its own add button.
+ *
+ * It stays even when the section is empty, because "no components yet" is
+ * information — a missing heading only looks like the sidebar failed to load.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The heading.
+ */
+function Group({ icon: Icon, label, count, addLabel, onAdd, className }) {
+  return (
+    <div className={cn('flex items-center gap-1 pr-1', className)}>
+      <p className="flex flex-1 items-center gap-1.5 px-2 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Icon className="size-3 shrink-0" />
+        {label}
+        {typeof count === 'number' ? (
+          <span className="rounded bg-muted px-1 text-[10px] tabular-nums">{count}</span>
+        ) : null}
+      </p>
+
+      <button
+        type="button"
+        title={addLabel}
+        aria-label={addLabel}
+        onClick={onAdd}
+        className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <Plus className="size-3.5" />
+      </button>
+    </div>
   )
 }
 
@@ -111,7 +172,7 @@ export function Sidebar({ types = [], activeId, loading, docsUrl, version, onSel
  */
 function Item({ label, icon: Icon, count, active, onClick, href }) {
   const className = cn(
-    'relative flex w-full items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors',
+    'relative flex w-full items-center gap-2 rounded-md py-2 pl-3 pr-2 text-left text-[13px] transition-colors',
     active
       ? 'bg-accent font-medium text-foreground'
       : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',

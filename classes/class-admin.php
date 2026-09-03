@@ -88,6 +88,7 @@ class Admin
         Assets::enqueue('admin', [
             'rest' => Assets::restContext(),
             'fieldTypes' => $this->fieldTypesForClient(),
+            'datasets' => Datasets::forClient(),
             'elements' => Elements::all(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
             'docsUrl' => esc_url_raw(admin_url('admin.php?page=' . Docs::PAGE_SLUG)),
@@ -106,6 +107,12 @@ class Admin
         $types = [];
 
         foreach (FieldTypes::all() as $slug => $definition) {
+            // an internal type is still valid to store — it just is not
+            // something you pick from a list
+            if (!empty($definition['internal'])) {
+                continue;
+            }
+
             $types[] = [
                 'type' => $slug,
                 'label' => $definition['label'],

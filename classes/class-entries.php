@@ -48,6 +48,15 @@ class Entries
     const META_PUBLISHED_AT = '_schemapress_published_at';
 
     /**
+     * the draft's name, while it differs from the published one.
+     *
+     * the post row's title belongs to the published copy, so an entry with
+     * unpublished edits needs somewhere else to keep what it is currently
+     * called. absent means the two agree.
+     */
+    const META_DRAFT_TITLE = '_schemapress_draft_title';
+
+    /**
      * the entry's public identifier.
      *
      * a generated uuid rather than the post id, because the post id is a row
@@ -210,17 +219,25 @@ class Entries
             ? self::sanitized($existing->ID, self::META_DRAFT, $definition['fields'])
             : [];
 
+        $live = $existing && $existing->post_status === 'publish';
+        $title = self::deriveTitle($values, $definition['fields'], $data['title'] ?? '');
+
         $post = [
             'post_type' => $type['postType'],
-            // the listing name follows the content, because the form does not
-            // ask for one separately
-            'post_title' => self::deriveTitle($values, $definition['fields'], $data['title'] ?? ''),
             // once published an entry stays published; only unpublish moves it
             // back, so an ordinary save cannot take a live entry off the site
-            'post_status' => $publish || ($existing && $existing->post_status === 'publish')
-                ? 'publish'
-                : 'draft',
+            'post_status' => $publish || $live ? 'publish' : 'draft',
         ];
+
+        // post_title is the PUBLISHED name. it has to be, because it is the
+        // column WordPress searches and the only copy of the name that is not
+        // in this plugin's own meta — so writing the draft's name into it would
+        // put unpublished text on the live site under a heading nobody chose.
+        // a draft-only save of a live entry therefore leaves it alone, and the
+        // draft's own name is kept beside it until it is published
+        if (!$live) {
+            $post['post_title'] = $title;
+        }
 
         if ($existing) {
             $post['ID'] = $existing->ID;
@@ -236,9 +253,14 @@ class Entries
         self::write($id, self::META_DRAFT, $values);
 
         if ($publish) {
-            self::promote($id, $values);
-        } elseif ($existing && $existing->post_status === 'publish') {
+            self::promote($id, $values, $title);
+        } elseif ($live) {
+            update_post_meta($id, self::META_DRAFT_TITLE, $title);
             self::retrack($id, $values, $before, $definition['fields']);
+        } else {
+            // not published: the post row is the draft's own, so nothing is
+            // being held back and the second copy would only go stale
+            delete_post_meta($id, self::META_DRAFT_TITLE);
         }
 
         return self::get($type_id, $id, 0, self::DRAFT);
@@ -260,8 +282,19 @@ class Entries
             return null;
         }
 
+        $definition = SchemaRepository::definition($type_id);
+
+        // the draft's own name, which is what the admin has been looking at.
+        // absent means the two names already agree, so the post row keeps its
+        // title — including one a caller supplied rather than derived
+        $stored = get_post_meta($post->ID, self::META_DRAFT_TITLE, true);
+
         wp_update_post(['ID' => $post->ID, 'post_status' => 'publish']);
-        self::promote($post->ID, self::stored($post->ID, self::META_DRAFT));
+        self::promote(
+            $post->ID,
+            self::sanitized($post->ID, self::META_DRAFT, $definition['fields']),
+            is_string($stored) && $stored !== '' ? $stored : get_the_title($post)
+        );
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
     }
@@ -282,9 +315,20 @@ class Entries
             return null;
         }
 
-        wp_update_post(['ID' => $post->ID, 'post_status' => 'draft']);
+        $definition = SchemaRepository::definition($type_id);
+        $draft = self::sanitized($post->ID, self::META_DRAFT, $definition['fields']);
+
+        wp_update_post([
+            'ID' => $post->ID,
+            'post_status' => 'draft',
+            // nothing is published any more, so the post row's title goes back
+            // to describing the only copy left
+            'post_title' => self::deriveTitle($draft, $definition['fields']),
+        ]);
+
         delete_post_meta($post->ID, self::META_VALUES);
         delete_post_meta($post->ID, self::META_PUBLISHED_AT);
+        delete_post_meta($post->ID, self::META_DRAFT_TITLE);
         update_post_meta($post->ID, self::META_AHEAD, 0);
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
@@ -308,6 +352,9 @@ class Entries
 
         self::write($post->ID, self::META_DRAFT, self::stored($post->ID, self::META_VALUES));
         update_post_meta($post->ID, self::META_AHEAD, 0);
+
+        // the discarded draft's name goes with it, back to the published one
+        delete_post_meta($post->ID, self::META_DRAFT_TITLE);
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
     }
@@ -467,16 +514,24 @@ class Entries
     /**
      * copies values into the published slot and resets the divergence count.
      *
+     * the post row's title moves here and nowhere else, because that is what
+     * makes it mean "the published name" — which is what the front end reads
+     * and what WordPress search matches.
+     *
      * @param integer $id
      * @param array   $values
+     * @param string  $title  the name being published, already derived
      *
      * @return void
      */
-    private static function promote($id, array $values)
+    private static function promote($id, array $values, $title)
     {
         self::write($id, self::META_VALUES, $values);
         update_post_meta($id, self::META_AHEAD, 0);
         update_post_meta($id, self::META_PUBLISHED_AT, gmdate('Y-m-d H:i:s'));
+
+        wp_update_post(['ID' => $id, 'post_title' => $title]);
+        delete_post_meta($id, self::META_DRAFT_TITLE);
     }
 
     /**
@@ -556,9 +611,18 @@ class Entries
 
         $values = ContentSanitizer::values($stored, $definition['fields']);
 
+        // the post row's title is the published name; the draft keeps its own
+        // beside it while the two disagree. reading one for both views is how
+        // draft-only text used to reach the front end
+        $draftTitle = $view === self::DRAFT
+            ? get_post_meta($post->ID, self::META_DRAFT_TITLE, true)
+            : '';
+
         return [
             'id' => self::uid($post->ID),
-            'title' => get_the_title($post),
+            'title' => is_string($draftTitle) && $draftTitle !== ''
+                ? $draftTitle
+                : get_the_title($post),
             'slug' => $post->post_name,
             // what this entry is, in one word, for a badge
             'state' => !$published ? 'draft' : ($ahead > 0 ? 'modified' : 'published'),

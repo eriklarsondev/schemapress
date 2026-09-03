@@ -93,7 +93,13 @@ export function Copyable({ value, label = __('Copy', 'schemapress'), className }
         className
       )}
     >
-      <span className="min-w-0 flex-1 break-all font-mono leading-snug text-muted-foreground">
+      {/* one line, truncated. a uuid broken across two lines is harder to
+          compare at a glance, and it is here to be copied rather than read —
+          the full value is in the title for the rare time you do read it */}
+      <span
+        title={String(value)}
+        className="min-w-0 flex-1 truncate font-mono text-muted-foreground"
+      >
         {value}
       </span>
 
@@ -101,7 +107,7 @@ export function Copyable({ value, label = __('Copy', 'schemapress'), className }
         type="button"
         onClick={run}
         aria-label={copied ? __('Copied', 'schemapress') : label}
-        className="shrink-0 self-start rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
       </button>

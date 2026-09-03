@@ -8,6 +8,7 @@
 import { __ } from '@wordpress/i18n'
 import { Alert } from '../../ui'
 import { visibleFields } from '../conditions'
+import { cellClass, gridClass } from '../layout'
 import {
   TextField,
   TextareaField,
@@ -77,17 +78,21 @@ export function FieldList({ fields = [], values = {}, onChange, context }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // the same twelve columns the top level uses, so a component keeps the
+    // layout it was given when it is imported into a collection — and a
+    // repeater row can be laid out at all
+    <div className={gridClass()}>
       {/* a condition names a sibling, so inside a repeater row it is evaluated
           against that row's own values — which is what `values` already is */}
       {visibleFields(fields, values).map((field) => (
-        <FieldControl
-          key={field.key}
-          field={field}
-          value={values?.[field.key]}
-          context={context}
-          onChange={(next) => onChange(field.key, next)}
-        />
+        <div key={field.key} className={cellClass(field)}>
+          <FieldControl
+            field={field}
+            value={values?.[field.key]}
+            context={context}
+            onChange={(next) => onChange(field.key, next)}
+          />
+        </div>
       ))}
     </div>
   )

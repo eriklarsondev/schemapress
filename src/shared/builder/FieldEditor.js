@@ -15,11 +15,9 @@
  * structures with one component pair.
  */
 
-import { useState } from '@wordpress/element'
-import { __, sprintf } from '@wordpress/i18n'
+import { Fragment, useEffect, useState } from '@wordpress/element'
+import { __, sprintf, _n } from '@wordpress/i18n'
 import {
-  ChevronUp,
-  ChevronDown,
   Trash2,
   Plus,
   ChevronRight,
@@ -35,13 +33,14 @@ import {
   Image as ImageIcon,
   Paperclip,
   Link2,
-  Group as GroupIcon,
   Rows3,
   CircleHelp,
+  Blocks,
 } from 'lucide-react'
 import { move, removeAt, replaceAt, toKey, uniqueKey } from '../utils'
-import { conditionTargets } from '../conditions'
-import { Button, Input, Field, Select, Switch, Badge, Dialog, cn } from '../../ui'
+import { datasets } from '../settings'
+import { Button, Input, Field, Select, Switch, Badge, Dialog, Tabs, TabPanel, cn } from '../../ui'
+import { api } from '../api'
 import { FieldConfig } from './FieldConfig'
 
 /**
@@ -61,8 +60,25 @@ const ICONS = {
   image: ImageIcon,
   file: Paperclip,
   link: Link2,
-  group: GroupIcon,
+  group: Blocks,
   repeater: Rows3,
+}
+
+/**
+ * Types that hold child fields.
+ *
+ * The registry PHP sends says which types nest, but it only lists types you can
+ * PICK — and group, which is what an imported component becomes, is not one of
+ * those. Stating it here keeps a component's sub fields editable.
+ */
+const NESTS = ['group', 'repeater']
+
+/**
+ * What an internal type is called on screen. `group` is the storage name; what
+ * you actually have in front of you is a component you imported.
+ */
+const INTERNAL_LABELS = {
+  group: __('Component', 'schemapress'),
 }
 
 /**
@@ -87,6 +103,14 @@ function summarize(field) {
 
   switch (field.type) {
     case 'select': {
+      // a dataset-backed dropdown keeps no copy of its options, so counting
+      // them would report "no choices yet" about a field with 249 of them
+      const dataset = datasets.find((set) => set.slug === config.source)
+
+      if (dataset) {
+        return dataset.label.toLowerCase()
+      }
+
       const count = (config.options || []).length
 
       return count
@@ -133,12 +157,14 @@ function summarize(field) {
  * @param {Object} props
  * @return {JSX.Element} The list editor.
  */
-export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
+export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, editing = 0 }) {
   const [picking, setPicking] = useState(false)
 
   // a field created from the picker opens straight away: you chose a type, and
   // naming it is the very next thing you were going to do
   const [opened, setOpened] = useState(null)
+
+  const [dragging, setDragging] = useState(-1)
 
   /**
    * Appends a field of a chosen type.
@@ -169,6 +195,94 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
     setOpened(key)
   }
 
+  /**
+   * Appends a dropdown already pointed at a ready-made list.
+   *
+   * Named after the list, because "Countries" is what you came to add — and
+   * unlike a blank field, this one is complete the moment it exists.
+   *
+   * @param {Object} dataset
+   * @return {void}
+   */
+  const addDataset = (dataset) => {
+    const key = uniqueKey(
+      toKey(dataset.label),
+      fields.map((field) => field.key),
+    )
+
+    onChange([
+      ...fields,
+      {
+        key,
+        label: dataset.label,
+        type: 'select',
+        help: '',
+        required: false,
+        config: { source: dataset.slug },
+      },
+    ])
+
+    setPicking(false)
+    setOpened(key)
+  }
+
+  /**
+   * Appends a component as a group, copying its fields in.
+   *
+   * A copy, not a link: a shared definition would mean editing a component
+   * silently reshapes content that already exists elsewhere, and there is no
+   * migration story for that. The copy can drift, which is the lesser problem.
+   *
+   * @param {Object} component
+   * @return {void}
+   */
+  const importComponent = (component) => {
+    setPicking(false)
+
+    api
+      .component(component.id)
+      .then((result) => {
+        const key = uniqueKey(
+          toKey(result.component.label),
+          fields.map((field) => field.key)
+        )
+
+        onChange([
+          ...fields,
+          {
+            key,
+            label: result.component.label,
+            type: 'group',
+            help: '',
+            required: false,
+            config: {},
+            fields: result.component.fields,
+          },
+        ])
+
+        setOpened(key)
+      })
+      .catch(() => {})
+  }
+
+  /**
+   * Reorders as a dragged card passes over another, rather than on drop.
+   *
+   * The list moves under the pointer, so what you see mid-drag is the order
+   * you will get — there is nothing to aim at and no insertion line to read.
+   *
+   * @param {number} over
+   * @return {void}
+   */
+  const dragOver = (over) => {
+    if (dragging === -1 || dragging === over) {
+      return
+    }
+
+    onChange(move(fields, dragging, over))
+    setDragging(over)
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {fields.map((field, index) => (
@@ -179,14 +293,16 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
           key={index}
           field={field}
           index={index}
-          total={fields.length}
-          siblings={fields}
           siblingKeys={fields.filter((_, i) => i !== index).map((f) => f.key)}
           fieldTypes={fieldTypes}
+          editing={editing}
           startOpen={opened === field.key}
+          dragging={dragging === index}
           onOpened={() => setOpened(null)}
           onChange={(next) => onChange(replaceAt(fields, index, next))}
-          onMove={(to) => onChange(move(fields, index, to))}
+          onDragStart={() => setDragging(index)}
+          onDragOver={() => dragOver(index)}
+          onDragEnd={() => setDragging(-1)}
           onRemove={() => onChange(removeAt(fields, index))}
         />
       ))}
@@ -213,8 +329,12 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
 
       {picking ? (
         <FieldTypePicker
+          nested={nested}
           fieldTypes={fieldTypes}
+          editing={editing}
           onPick={addField}
+          onPickDataset={addDataset}
+          onImport={importComponent}
           onClose={() => setPicking(false)}
         />
       ) : null}
@@ -223,104 +343,54 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false }) {
 }
 
 /**
- * When a field appears on the entry form.
+ * What can be added to a field list: a built-in type, a ready-made dropdown, or
+ * one of your own components.
  *
- * Off by default and stated in one sentence when on, because the setting reads
- * as a sentence — "show this field when Contactable is filled" — and a row of
- * three unlabelled selects does not.
+ * Two tabs rather than one long grid, because they are different kinds of
+ * answer. A primitive is a decision about one value; a component is a shape
+ * somebody already worked out, and picking one is closer to reusing a decision
+ * than to making one.
  *
- * @param {Object} props
- * @return {JSX.Element} The settings.
- */
-function ConditionSettings({ field, siblings, onChange }) {
-  const condition = field.config?.condition || { field: '', operator: 'filled', value: '' }
-  const targets = conditionTargets(siblings, field.key)
-  const on = Boolean(condition.field)
-
-  const needsValue = ['equals', 'not_equals'].includes(condition.operator)
-
-  if (targets.length === 0) {
-    return null
-  }
-
-  return (
-    <div className="flex flex-col gap-3 border-t border-border pt-3">
-      <Switch
-        label={__('Only show this field sometimes', 'schemapress')}
-        help={__(
-          'A hidden field keeps whatever was already in it, and still delivers it.',
-          'schemapress',
-        )}
-        checked={on}
-        onChange={(next) =>
-          onChange(
-            next
-              ? { field: targets[0].key, operator: 'filled', value: '' }
-              : { field: '', operator: 'filled', value: '' },
-          )
-        }
-      />
-
-      {on ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <span className="pb-2 text-[13px] text-muted-foreground">
-            {__('Show when', 'schemapress')}
-          </span>
-
-          <Field label={__('Field', 'schemapress')} className="min-w-40 flex-1">
-            {(id) => (
-              <Select
-                id={id}
-                value={condition.field}
-                options={targets.map((target) => ({
-                  value: target.key,
-                  label: target.label || target.key,
-                }))}
-                onChange={(next) => onChange({ ...condition, field: next })}
-              />
-            )}
-          </Field>
-
-          <Field label={__('Is', 'schemapress')} className="min-w-36">
-            {(id) => (
-              <Select
-                id={id}
-                value={condition.operator}
-                options={[
-                  { value: 'filled', label: __('filled in', 'schemapress') },
-                  { value: 'empty', label: __('empty', 'schemapress') },
-                  { value: 'equals', label: __('exactly', 'schemapress') },
-                  { value: 'not_equals', label: __('anything but', 'schemapress') },
-                ]}
-                onChange={(next) => onChange({ ...condition, operator: next })}
-              />
-            )}
-          </Field>
-
-          {needsValue ? (
-            <Field label={__('Value', 'schemapress')} className="min-w-36 flex-1">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={condition.value || ''}
-                  onChange={(event) => onChange({ ...condition, value: event.target.value })}
-                />
-              )}
-            </Field>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-/**
- * The grid of field types shown when adding one.
+ * Components are fetched when the dialog opens rather than passed down. They
+ * change on another screen entirely, and a stale list here would offer to
+ * import something that no longer exists.
  *
  * @param {Object} props
  * @return {JSX.Element} The picker.
  */
-function FieldTypePicker({ fieldTypes, onPick, onClose }) {
+function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, onImport, onClose }) {
+  const [tab, setTab] = useState('primitives')
+  const [components, setComponents] = useState(null)
+
+  useEffect(() => {
+    let live = true
+
+    api
+      .components()
+      // a component cannot import itself: it would copy its own fields into
+      // itself, which is not a shape anybody meant to describe
+      .then(
+        (result) =>
+          live &&
+          setComponents((result.components || []).filter((one) => one.id !== editing))
+      )
+      .catch(() => live && setComponents([]))
+
+    return () => {
+      live = false
+    }
+  }, [])
+
+  const tabs = [
+    { value: 'primitives', label: __('Field types', 'schemapress'), icon: Type },
+    { value: 'components', label: __('My components', 'schemapress'), icon: Blocks },
+  ]
+
+  // a repeater inside a repeater is a list of lists, which nothing downstream
+  // renders and which cannot be arranged on the form. it is not offered rather
+  // than offered and then quietly broken
+  const offered = nested ? fieldTypes.filter((type) => !type.repeatable) : fieldTypes
+
   return (
     <Dialog
       open
@@ -329,25 +399,127 @@ function FieldTypePicker({ fieldTypes, onPick, onClose }) {
       title={__('Add a field', 'schemapress')}
       description={__('What kind of thing does this hold?', 'schemapress')}
     >
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {fieldTypes.map((type) => {
-          const Icon = iconFor(type.type)
+      <Tabs tabs={tabs} value={tab} onValueChange={setTab}>
+        <TabPanel value="primitives">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {offered.map((type) => {
+              const Icon = iconFor(type.type)
 
-          return (
-            <button
-              key={type.type}
-              type="button"
-              onClick={() => onPick(type)}
-              className="flex items-center gap-2.5 rounded-lg border border-border p-3 text-left transition-colors hover:border-ring/40 hover:bg-accent/40"
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <Icon className="size-4" />
-              </span>
-              <span className="min-w-0 truncate text-[13px] font-medium">{type.label}</span>
-            </button>
-          )
-        })}
-      </div>
+              return (
+                <button
+                  key={type.type}
+                  type="button"
+                  onClick={() => onPick(type)}
+                  className="flex items-center gap-2.5 rounded-lg border border-border p-3 text-left transition-colors hover:border-ring/40 hover:bg-accent/40"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 truncate text-[13px] font-medium">{type.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* the ready-made lists are here, beside the types, because that is
+              where you look for "I need a country field". Buried as a setting
+              inside Dropdown they were something you had to already know about */}
+          {datasets.length > 0 ? (
+            <>
+              <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {__('Ready-made dropdowns', 'schemapress')}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {datasets.map((set) => (
+                  <button
+                    key={set.slug}
+                    type="button"
+                    onClick={() => onPickDataset(set)}
+                    className="flex items-center gap-2.5 rounded-lg border border-border p-3 text-left transition-colors hover:border-ring/40 hover:bg-accent/40"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                      <ListChecks className="size-4" />
+                    </span>
+
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-medium">{set.label}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {sprintf(
+                          /* translators: %d: number of choices */
+                          __('%d choices', 'schemapress'),
+                          set.options.length,
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </TabPanel>
+
+        <TabPanel value="components">
+          {components === null ? (
+            <p className="py-6 text-center text-[13px] text-muted-foreground">
+              {__('Loading…', 'schemapress')}
+            </p>
+          ) : components.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+              <p className="text-[13px] font-medium">
+                {__('No components yet', 'schemapress')}
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {__('Make one from the sidebar to reuse a shape across collections.', 'schemapress')}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {components.map((component) => (
+                <button
+                  key={component.id}
+                  type="button"
+                  disabled={component.fields === 0}
+                  onClick={() => onImport(component)}
+                  className="flex items-center gap-2.5 rounded-lg border border-border p-3 text-left transition-colors hover:border-ring/40 hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    <Blocks className="size-4" />
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium">
+                      {component.label}
+                    </span>
+                    <span className="block truncate text-[12px] text-muted-foreground">
+                      {component.description ||
+                        sprintf(
+                          /* translators: %d: number of fields */
+                          _n(
+                            '%d field',
+                            '%d fields',
+                            component.fields,
+                            'schemapress'
+                          ),
+                          component.fields
+                        )}
+                    </span>
+                  </span>
+
+                  <Badge variant="outline">{__('Import', 'schemapress')}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            {__(
+              'Importing copies the component’s fields in. Editing the component later does not change this collection.',
+              'schemapress'
+            )}
+          </p>
+        </TabPanel>
+      </Tabs>
     </Dialog>
   )
 }
@@ -361,14 +533,16 @@ function FieldTypePicker({ fieldTypes, onPick, onClose }) {
 function FieldRow({
   field,
   index,
-  total,
-  siblings,
   siblingKeys,
   fieldTypes,
+  editing,
   startOpen,
+  dragging,
   onOpened,
   onChange,
-  onMove,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
   onRemove,
 }) {
   const [open, setOpen] = useState(Boolean(startOpen))
@@ -380,9 +554,24 @@ function FieldRow({
   const [derived, setDerived] = useState(() => /^field(_\d+)?$/.test(field.key))
 
   const type = fieldTypes.find((candidate) => candidate.type === field.type)
-  const nests = Boolean(type?.children)
+
+  // a type the registry does not offer is an INTERNAL one — group, which is
+  // what an imported component becomes. it is still perfectly valid to store,
+  // it just is not something you pick, and so not something you can switch to
+  // or away from either
+  const switchable = Boolean(type)
+  const nests = Boolean(type?.children) || NESTS.includes(field.type)
   const Icon = iconFor(field.type)
   const summary = summarize(field)
+
+  // a repeater is set up in a dialog rather than inline: naming a list and
+  // describing one of its rows are two jobs, and an inline panel presented them
+  // as one long form with a whole field editor buried at the bottom of it
+  const stepped = field.type === 'repeater'
+
+  // a dropdown drawing on a ready-made list is that list; it is not a type you
+  // can swap out from under itself
+  const preset = Boolean(field.config?.source)
 
   /**
    * Merges a partial change into the field.
@@ -411,13 +600,60 @@ function FieldRow({
 
   return (
     <div
+      // the whole closed card is the handle — grab it anywhere. an OPEN card
+      // is not draggable: it is full of inputs, and a draggable ancestor stops
+      // you selecting the text inside them
+      draggable={!open}
+      onDragStart={(event) => {
+        event.stopPropagation()
+        event.dataTransfer.effectAllowed = 'move'
+        // Firefox refuses to start a drag without payload
+        event.dataTransfer.setData('text/plain', field.key || String(index))
+        onDragStart()
+      }}
+      onDragOver={(event) => {
+        event.preventDefault()
+        // a nested field list is inside this one; without this its drags would
+        // reorder the parent as well
+        event.stopPropagation()
+        event.dataTransfer.dropEffect = 'move'
+        onDragOver()
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onDragEnd()
+      }}
+      onDragEnd={onDragEnd}
       className={cn(
-        'overflow-hidden rounded-lg border bg-background transition-colors',
-        open ? 'border-ring/40' : 'border-border hover:border-ring/30',
+        'overflow-hidden rounded-lg border transition-colors',
+        // a component sits darker than a plain field: it is a shape that came
+        // from somewhere else, and a list of eight fields with one component in
+        // it should say so before you read a word
+        switchable ? 'bg-background' : 'bg-muted/50',
+        open ? 'border-ring/40' : 'cursor-grab border-border hover:border-ring/30',
+        // the card being dragged becomes the slot it will land in: an outlined
+        // gap the size of the card, so the destination is a shape on screen
+        // rather than something to infer from where the cursor happens to be
+        dragging &&
+          'cursor-grabbing border-dashed border-ring/60 bg-accent/40 [&_*]:invisible',
       )}
     >
-      <div className="group flex items-center gap-3 p-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      {/* open, the row is a title bar over the form rather than another white
+          band merging into it: tinted and separated, so the card reads as one
+          field being edited instead of a page of loose inputs */}
+      <div
+        className={cn(
+          'group flex items-center gap-3 p-3 transition-colors',
+          open && 'border-b border-border bg-muted/60',
+        )}
+      >
+        <span
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors',
+            open ? 'bg-background text-foreground' : switchable ? 'bg-muted' : 'bg-background',
+          )}
+        >
           <Icon className="size-4" />
         </span>
 
@@ -441,7 +677,7 @@ function FieldRow({
           </span>
 
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
-            <span>{type?.label || field.type}</span>
+            <span>{type?.label || INTERNAL_LABELS[field.type] || field.type}</span>
             {summary ? (
               <>
                 <span aria-hidden="true">·</span>
@@ -452,24 +688,6 @@ function FieldRow({
         </button>
 
         <span className="flex shrink-0 items-center gap-0.5">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={__('Move up', 'schemapress')}
-            disabled={index === 0}
-            onClick={() => onMove(index - 1)}
-          >
-            <ChevronUp />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={__('Move down', 'schemapress')}
-            disabled={index === total - 1}
-            onClick={() => onMove(index + 1)}
-          >
-            <ChevronDown />
-          </Button>
           <Button
             size="icon-sm"
             variant="destructive-ghost"
@@ -483,15 +701,15 @@ function FieldRow({
             aria-hidden="true"
             className={cn(
               'ml-1 size-4 text-muted-foreground/40 transition-transform',
-              open && 'rotate-90',
+              open && !stepped && 'rotate-90',
             )}
           />
         </span>
       </div>
 
-      {open ? (
-        <div className="flex flex-col gap-4 border-t border-border bg-muted/20 p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+      {open && !stepped ? (
+        <div className="flex flex-col gap-4 bg-background p-4">
+          <div className={cn('grid gap-3', switchable ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
             <Field label={__('Label', 'schemapress')}>
               {(id) => (
                 <Input
@@ -511,14 +729,7 @@ function FieldRow({
               )}
             </Field>
 
-            <Field
-              label={__('Key', 'schemapress')}
-              help={
-                derived
-                  ? __('Used in the delivered JSON', 'schemapress')
-                  : __('Changing this orphans content already saved under it', 'schemapress')
-              }
-            >
+            <Field label={__('Key', 'schemapress')}>
               {(id) => (
                 <Input
                   id={id}
@@ -532,57 +743,44 @@ function FieldRow({
               )}
             </Field>
 
-            <Field label={__('Type', 'schemapress')}>
-              {(id) => (
-                <Select
-                  id={id}
-                  value={field.type}
-                  options={fieldTypes.map((candidate) => ({
-                    value: candidate.type,
-                    label: candidate.label,
-                  }))}
-                  onChange={changeType}
-                />
-              )}
-            </Field>
+            {/* an imported component is a group, and group is not a type you
+                can pick — so there is nothing to offer here and the select
+                rendered empty. it is not switchable either: turning a component
+                into a text field would throw its sub fields away */}
+            {switchable ? (
+              <Field label={__('Type', 'schemapress')}>
+                {(id) => (
+                  <Select
+                    id={id}
+                    // a dropdown pointed at a ready-made list cannot be
+                    // something else: changing the type clears the config, and
+                    // the list it names is the config
+                    disabled={preset}
+                    value={field.type}
+                    options={fieldTypes.map((candidate) => ({
+                      value: candidate.type,
+                      label: candidate.label,
+                    }))}
+                    onChange={changeType}
+                  />
+                )}
+              </Field>
+            ) : null}
           </div>
 
-          <div className="flex items-end gap-4">
-            <Field label={__('Help text', 'schemapress')} className="flex-1">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={field.help || ''}
-                  placeholder={__('Shown under the control on the entry form', 'schemapress')}
-                  onChange={(event) => update({ help: event.target.value })}
-                />
-              )}
-            </Field>
-
-            <div className="pb-2">
-              <Switch
-                label={__('Required', 'schemapress')}
-                checked={Boolean(field.required)}
-                onChange={(required) => update({ required })}
-              />
-            </div>
-          </div>
-
+          {/* only what the data IS lives here. help text, placeholder, whether
+              it is required and when it is shown are all things the FORM does
+              with the field, and they are set on the Form tab */}
           <FieldConfig field={field} onChange={(config) => update({ config })} />
 
-          <ConditionSettings
-            field={field}
-            siblings={siblings}
-            onChange={(condition) => update({ config: { ...field.config, condition } })}
-          />
-
           {nests ? (
-            <div className="rounded-lg border-l-2 border-ring/30 bg-background p-3 pl-4">
+            <div className="rounded-md border border-border bg-muted/30 p-3">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {__('Sub fields', 'schemapress')}
               </p>
               <FieldsEditor
                 nested
+                editing={editing}
                 fields={field.fields || []}
                 fieldTypes={fieldTypes}
                 onChange={(fields) => update({ fields })}
@@ -591,6 +789,252 @@ function FieldRow({
           ) : null}
         </div>
       ) : null}
+
+      {open && stepped ? (
+        <RepeaterDialog
+          field={field}
+          siblingKeys={siblingKeys}
+          fieldTypes={fieldTypes}
+          editing={editing}
+          onClose={() => setOpen(false)}
+          onSave={(next) => {
+            onChange(next)
+            setOpen(false)
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * Setting up a repeater, one decision at a time.
+ *
+ * A repeater is two questions that got asked at once: what IS this list, and
+ * what is one row of it made of. Inline they arrived together — a name, three
+ * numeric bounds, and a whole nested field editor in the same panel — and the
+ * second question is the bigger one by far.
+ *
+ * So: name it, then build a row. The step you are on is the only thing on
+ * screen, and nothing is written until the end, so backing out of a half-built
+ * repeater leaves the schema as it was.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The dialog.
+ */
+function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSave }) {
+  const [draft, setDraft] = useState(field)
+  const [step, setStep] = useState(0)
+
+  // the key tracks the label only while it is still the placeholder a new field
+  // was created with, exactly as it does on an ordinary field card
+  const [derived, setDerived] = useState(() => /^field(_\d+)?$/.test(field.key))
+
+  const rows = draft.fields || []
+
+  /**
+   * Merges a change into the local copy.
+   *
+   * @param {Object} changes
+   * @return {void}
+   */
+  const update = (changes) =>
+    setDraft((current) => ({
+      ...current,
+      ...changes,
+      config: { ...current.config, ...changes.config },
+    }))
+
+  // named after what you DO on each step. the pair used to be "The list" and
+  // "One row", which described the repeater's structure rather than the task,
+  // and left you working out which half you were on
+  const steps = [
+    {
+      label: __('Repeater', 'schemapress'),
+      hint: __('What the list is called, and how many rows it may hold.', 'schemapress'),
+      icon: Rows3,
+    },
+    {
+      label: __('Schema', 'schemapress'),
+      hint: __('The fields that repeat — one set of them per row.', 'schemapress'),
+      icon: ListChecks,
+    },
+  ]
+
+  return (
+    <Dialog
+      open
+      size="lg"
+      onOpenChange={(next) => !next && onClose()}
+      title={draft.label || __('Repeater', 'schemapress')}
+      description={steps[step].hint}
+      badge={<Badge variant="outline">{__('Repeater', 'schemapress')}</Badge>}
+      footer={
+        <>
+          <span className="mr-auto text-[12px] text-muted-foreground">
+            {sprintf(
+              /* translators: 1: current step, 2: total steps */
+              __('Step %1$d of %2$d', 'schemapress'),
+              step + 1,
+              steps.length,
+            )}
+          </span>
+
+          {step > 0 ? (
+            <Button variant="outline" onClick={() => setStep(step - 1)}>
+              {__('Back', 'schemapress')}
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={onClose}>
+              {__('Cancel', 'schemapress')}
+            </Button>
+          )}
+
+          {step < steps.length - 1 ? (
+            <Button disabled={draft.label.trim() === ''} onClick={() => setStep(step + 1)}>
+              {__('Next', 'schemapress')}
+            </Button>
+          ) : (
+            <Button onClick={() => onSave(draft)}>{__('Done', 'schemapress')}</Button>
+          )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Steps steps={steps} current={step} onGo={setStep} />
+
+        {step === 0 ? (
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label={__('Label', 'schemapress')}
+                help={__('What the list is called on the form.', 'schemapress')}
+              >
+                {(id) => (
+                  <Input
+                    id={id}
+                    value={draft.label}
+                    onChange={(event) =>
+                      update(
+                        derived
+                          ? {
+                              label: event.target.value,
+                              key: uniqueKey(toKey(event.target.value), siblingKeys),
+                            }
+                          : { label: event.target.value },
+                      )
+                    }
+                  />
+                )}
+              </Field>
+
+              <Field label={__('Key', 'schemapress')}>
+                {(id) => (
+                  <Input
+                    id={id}
+                    className="font-mono text-[12px]"
+                    value={draft.key}
+                    onChange={(event) => {
+                      setDerived(false)
+                      update({ key: uniqueKey(toKey(event.target.value), siblingKeys) })
+                    }}
+                  />
+                )}
+              </Field>
+            </div>
+
+            <FieldConfig field={draft} onChange={(config) => update({ config })} />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="text-[12px] text-muted-foreground">
+              {sprintf(
+                /* translators: %s: the repeater's label */
+                __(
+                  'Add the fields for a single row. Whoever fills in %s gets one set of these per row, and can add as many rows as they need.',
+                  'schemapress',
+                ),
+                (draft.label || '').toLowerCase(),
+              )}
+            </p>
+
+            <FieldsEditor
+              nested
+              editing={editing}
+              fields={rows}
+              fieldTypes={fieldTypes}
+              onChange={(next) => update({ fields: next })}
+            />
+          </div>
+        )}
+      </div>
+    </Dialog>
+  )
+}
+
+/**
+ * The step indicator, and a way back to a step you have already been through.
+ *
+ * @param {Object} props
+ * @return {JSX.Element} The indicator.
+ */
+function Steps({ steps, current, onGo }) {
+  return (
+    <div className="flex items-start justify-center py-1">
+      {steps.map((step, index) => {
+        const done = index < current
+        const active = index === current
+        const Icon = step.icon
+
+        return (
+          <Fragment key={step.label}>
+            <button
+              type="button"
+              // forward only by the footer button, which is what validates.
+              // going back to something you have already filled in needs no
+              // permission
+              disabled={index > current}
+              onClick={() => onGo(index)}
+              className="flex w-24 shrink-0 flex-col items-center gap-1.5"
+            >
+              <span
+                className={cn(
+                  'flex size-10 items-center justify-center rounded-full border-2 bg-background transition-colors',
+                  done || active
+                    ? 'border-primary text-primary'
+                    : 'border-border text-muted-foreground/60',
+                )}
+              >
+                {Icon ? <Icon className="size-4" /> : <span>{index + 1}</span>}
+              </span>
+
+              <span
+                className={cn(
+                  'text-center text-[12px] leading-tight transition-colors',
+                  active ? 'font-medium text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {step.label}
+              </span>
+            </button>
+
+            {/* the rule joins the CIRCLES, so it is offset to their middle
+                rather than centred on the column — the labels underneath make
+                the two different heights */}
+            {/* a fixed connector, not a stretching one: two steps spread over
+                a wide dialog read as two unrelated things at opposite ends */}
+            {index < steps.length - 1 ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  '-mx-3 mt-5 h-0.5 w-12 transition-colors',
+                  done ? 'bg-primary' : 'bg-border',
+                )}
+              />
+            ) : null}
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

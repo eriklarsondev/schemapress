@@ -5,6 +5,7 @@
  */
 
 import { Field, Input, Textarea, Select, Switch } from '../../ui'
+import { optionsFor } from '../settings'
 
 /**
  * Single-line text input.
@@ -137,7 +138,9 @@ export function ToggleField({ field, value, onChange }) {
  * @return {JSX.Element} The control.
  */
 export function SelectField({ field, value, onChange }) {
-  const options = field.config?.options || []
+  // whichever source the field names. mirrors Datasets::forField on the
+  // server, so the control cannot offer a choice the sanitizer will reject
+  const options = optionsFor(field)
   const multiple = Boolean(field.config?.multiple)
 
   if (!multiple) {

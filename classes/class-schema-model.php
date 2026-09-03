@@ -183,6 +183,34 @@ class SchemaModel
      *
      * @return array
      */
+    /**
+     * clamps a leading offset so the control still fits on its row.
+     *
+     * an offset that pushed a field past the twelfth column would wrap it to a
+     * row of its own with the gap still in front of it, which is neither what
+     * was asked for nor recoverable from the screen.
+     *
+     * @param mixed  $offset
+     * @param string $width
+     *
+     * @return integer
+     */
+    private static function normalizeOffset($offset, $width)
+    {
+        $spans = ['third' => 4, 'half' => 6, 'two-thirds' => 8, 'full' => 12];
+        $span = $spans[$width] ?? 12;
+
+        // (int) rather than absint: a negative offset means none, not the same
+        // gap on the other side
+        return max(0, min((int) $offset, 12 - $span));
+    }
+
+    /**
+     * @param array  $field
+     * @param string $type
+     *
+     * @return array
+     */
     private static function normalizeConfig(array $field, $type)
     {
         $config = isset($field['config']) && is_array($field['config']) ? $field['config'] : [];
@@ -191,15 +219,28 @@ class SchemaModel
         // all. both describe the admin's own screen rather than the delivered
         // content, which is the only reason a presentation value is allowed to
         // live in a definition
+        $width = in_array($config['width'] ?? '', ['third', 'half', 'two-thirds'], true)
+            ? $config['width']
+            : 'full';
+
         $clean = [
-            'width' => in_array($config['width'] ?? '', ['third', 'half', 'two-thirds'], true)
-                ? $config['width']
-                : 'full',
+            'width' => $width,
+            // how many twelfths of blank space sit before the control on its
+            // row. a grid flows its items together, so leaving a deliberate gap
+            // — a half-width field on the RIGHT of an otherwise empty row —
+            // needs the offset stated rather than implied
+            'offset' => self::normalizeOffset($config['offset'] ?? 0, $width),
             'condition' => self::normalizeCondition($config['condition'] ?? null),
         ];
 
         switch ($type) {
             case 'select':
+                // a named dataset is stored as a name, never as a copy of the
+                // list. that is what lets a correction to the country list
+                // reach every field that pointed at it
+                $source = isset($config['source']) ? sanitize_key($config['source']) : '';
+                $clean['source'] = Datasets::exists($source) ? $source : '';
+
                 $options = isset($config['options']) && is_array($config['options'])
                     ? $config['options']
                     : [];

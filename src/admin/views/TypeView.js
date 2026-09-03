@@ -1,12 +1,14 @@
 /**
  * One collection type.
  *
- * Four tabs, because there are four jobs and they are genuinely different:
+ * Three tabs, because there are three jobs and they are genuinely different:
  *
- *   Entries   the content itself — what an editor does every day
- *   Fields    what an entry is made of — what a developer sets up once
- *   Form      how those fields are arranged on the entry screen
- *   Settings  what the collection is, and how publishing works in it
+ *   Entries  the content itself — what an editor does every day
+ *   Schema   what an entry is made of — what a developer sets up once
+ *   Form     how those fields are arranged on the entry screen
+ *
+ * What the collection *is* — its name, whether it has drafts, whether it exists
+ * at all — is not one of those jobs, so it sits behind the header button.
  *
  * Entries leads, because filling content in is the common act and defining the
  * shape is the rare one. The definition is loaded here, once, and handed down —
@@ -16,14 +18,14 @@
 
 import { useCallback, useEffect, useState } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
-import { Table2, Wrench, LayoutList, SlidersHorizontal, Trash2 } from 'lucide-react'
-import { Tabs, TabPanel, Loading, Alert, Button, ConfirmDialog } from '../../ui'
+import { Table2, Wrench, LayoutList, SlidersHorizontal } from 'lucide-react'
+import { Tabs, TabPanel, Loading, Alert, Button } from '../../ui'
 import { api } from '../../shared/api'
 import { EntriesView } from './EntriesView'
 import { EntryView } from './EntryView'
 import { FieldsTab } from './FieldsTab'
 import { FormTab } from './FormTab'
-import { SettingsTab } from './SettingsTab'
+import { SettingsDialog } from './SettingsDialog'
 
 /**
  * The container for one collection type.
@@ -38,7 +40,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
 
   // undefined = the listing; null = a new entry; a number = that entry
   const [entryId, setEntryId] = useState(undefined)
-  const [removing, setRemoving] = useState(false)
+  const [configuring, setConfiguring] = useState(false)
 
   const load = useCallback(() => {
     setDefinition(null)
@@ -129,37 +131,41 @@ export function TypeView({ type, onChanged, onDeleted }) {
     )
   }
 
+  // the tabs are the three things you do to a collection. what the collection
+  // *is* — its name, its description, whether it has drafts, whether it exists
+  // at all — is not one of them, so it lives behind the header button instead
+  // of taking a quarter of the tab strip
   const tabs = [
     { value: 'entries', label: __('Entries', 'schemapress'), icon: Table2 },
-    { value: 'fields', label: __('Fields', 'schemapress'), icon: Wrench },
-    { value: 'form', label: __('Form', 'schemapress'), icon: LayoutList },
-    { value: 'settings', label: __('Settings', 'schemapress'), icon: SlidersHorizontal },
+    { value: 'fields', label: __('Schema', 'schemapress'), icon: Wrench },
+    { value: 'layout', label: __('Form', 'schemapress'), icon: LayoutList },
   ]
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[20px] font-semibold tracking-tight">
-              {type.pluralLabel || type.label}
-            </h1>
-          </div>
+      {/* the button sits on the title's own line rather than beside the whole
+          block, so it lines up with the name instead of floating against a
+          description of unpredictable height */}
+      <header className="flex flex-col gap-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="min-w-0 truncate text-[20px] font-semibold leading-tight tracking-tight">
+            {type.pluralLabel || type.label}
+          </h1>
 
-          {/* the machine keys are not here: they are reference material a
-              template author looks up once, not something worth a line under
-              the title on every visit. they live in Settings */}
-          {type.description ? (
-            <p className="mt-1 max-w-prose text-[13px] leading-relaxed text-muted-foreground">
-              {type.description}
-            </p>
-          ) : null}
+          <Button variant="outline" size="sm" onClick={() => setConfiguring(true)}>
+            <SlidersHorizontal />
+            {__('Settings', 'schemapress')}
+          </Button>
         </div>
 
-        <Button variant="destructive-ghost" size="sm" onClick={() => setRemoving(true)}>
-          <Trash2 />
-          {__('Delete type', 'schemapress')}
-        </Button>
+        {/* the machine keys are not here: they are reference material a
+            template author looks up once, not something worth a line under
+            the title on every visit. they live in Settings */}
+        {type.description ? (
+          <p className="max-w-prose text-[13px] leading-snug text-muted-foreground">
+            {type.description}
+          </p>
+        ) : null}
       </header>
 
       <Tabs tabs={tabs} value={tab} onValueChange={setTab}>
@@ -177,26 +183,18 @@ export function TypeView({ type, onChanged, onDeleted }) {
           <FieldsTab fields={fields} onChange={saveFields} />
         </TabPanel>
 
-        <TabPanel value="form">
+        <TabPanel value="layout">
           <FormTab fields={fields} onChange={saveFields} />
-        </TabPanel>
-
-        <TabPanel value="settings">
-          <SettingsTab type={type} settings={definition.settings || {}} onSave={update} />
         </TabPanel>
       </Tabs>
 
-      {removing ? (
-        <ConfirmDialog
-          open
-          onOpenChange={(next) => !next && setRemoving(false)}
-          title={__('Delete this collection type?', 'schemapress')}
-          description={__(
-            'Every entry in it is deleted too, permanently. This cannot be undone.',
-            'schemapress',
-          )}
-          confirmLabel={__('Delete', 'schemapress')}
-          onConfirm={() =>
+      {configuring ? (
+        <SettingsDialog
+          type={type}
+          settings={definition.settings || {}}
+          onClose={() => setConfiguring(false)}
+          onSave={update}
+          onDelete={() =>
             api.deleteType(type.id).then(() => {
               onChanged()
               onDeleted()

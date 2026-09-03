@@ -82,6 +82,23 @@ check('drops fields of an unknown type', 5, count($fields));
 check('keeps required', true, $fields[0]['required']);
 check('keeps the form width', 'half', $fields[2]['config']['width']);
 check('defaults the form width', 'full', $fields[0]['config']['width']);
+check('defaults to no offset', 0, $fields[0]['config']['offset']);
+
+// a deliberate gap before a control has to be stated, because a grid flows its
+// items together — but it cannot push the control off the end of its row
+$offsets = SchemaModel::normalize([
+    'fields' => [
+        ['label' => 'Right half', 'type' => 'text', 'config' => ['width' => 'half', 'offset' => 6]],
+        ['label' => 'Too far', 'type' => 'text', 'config' => ['width' => 'half', 'offset' => 11]],
+        ['label' => 'Full width', 'type' => 'text', 'config' => ['width' => 'full', 'offset' => 4]],
+        ['label' => 'Negative', 'type' => 'text', 'config' => ['width' => 'third', 'offset' => -3]],
+    ],
+])['fields'];
+
+check('keeps an offset that fits', 6, $offsets[0]['config']['offset']);
+check('clamps one that would overflow the row', 6, $offsets[1]['config']['offset']);
+check('a full-width control cannot be offset', 0, $offsets[2]['config']['offset']);
+check('refuses a negative offset', 0, $offsets[3]['config']['offset']);
 check('keeps whitelisted repeater config', 2, $fields[4]['config']['max']);
 check('drops unknown config keys', false, array_key_exists('junk', $fields[4]['config']));
 check('recurses into repeater children', 'link', $fields[4]['fields'][1]['type']);
@@ -368,6 +385,54 @@ check('defaults email to empty', '', $emptyContact['email']);
 check('defaults url to empty', '', $emptyContact['website']);
 check('defaults phone to empty', '', $emptyContact['phone']);
 
+// --- ready-made option lists --------------------------------------------------
+
+echo "\nDatasets\n";
+
+check('lists countries', true, count(SchemaPress\Datasets::options('countries')) > 200);
+check('lists US states and territories', 56, count(SchemaPress\Datasets::options('us_states')));
+
+// several country labels contain a comma of their own, and the packed list is
+// comma-separated — so this is the case a naive split silently mangles
+$korea = array_values(array_filter(
+    SchemaPress\Datasets::options('countries'),
+    function ($option) { return $option['value'] === 'KR'; }
+));
+
+check('keeps a comma inside a label', 'Korea, Republic of', $korea[0]['label']);
+check('knows a dataset', true, SchemaPress\Datasets::exists('countries'));
+check('and refuses one it does not have', false, SchemaPress\Datasets::exists('planets'));
+
+$sourced = SchemaModel::normalize([
+    'fields' => [
+        ['label' => 'Country', 'type' => 'select', 'config' => ['source' => 'countries']],
+        ['label' => 'Nowhere', 'type' => 'select', 'config' => ['source' => 'planets']],
+        [
+            'label' => 'Size',
+            'type' => 'select',
+            'config' => ['options' => [['value' => 's', 'label' => 'Small']]],
+        ],
+    ],
+])['fields'];
+
+check('stores the dataset by name', 'countries', $sourced[0]['config']['source']);
+check('and not a copy of the list', [], $sourced[0]['config']['options']);
+check('drops a dataset that does not exist', '', $sourced[1]['config']['source']);
+check('leaves a hand-written list alone', 1, count($sourced[2]['config']['options']));
+
+// the sanitizer has to accept what the control offered, from either source
+$picked = ContentSanitizer::values(
+    ['country' => 'GB', 'nowhere' => 'x', 'size' => 's'],
+    $sourced
+);
+
+check('accepts a value from the dataset', 'GB', $picked['country']);
+check('accepts one from a hand-written list', 's', $picked['size']);
+
+$rejected = ContentSanitizer::values(['country' => 'ZZ'], $sourced);
+
+check('refuses a value the dataset does not hold', '', $rejected['country']);
+
 // --- conditions --------------------------------------------------------------
 
 echo "\nConditional fields\n";
@@ -476,6 +541,47 @@ $discarded = Entries::discard($notes, $live['id']);
 check('discarding restores the published text', 'live', $discarded['values']['body']);
 check('and resets the count', 0, $discarded['ahead']);
 check('and it is simply published again', 'published', $discarded['state']);
+
+// the post row's title belongs to the PUBLISHED copy. it used to follow every
+// save, which put unpublished text on the live site under a heading nobody had
+// approved — and left it there permanently, because discard never took it back
+$secret = Entries::save($notes, $live['id'], ['values' => ['body' => 'SECRET headline']]);
+
+check('the draft carries its own name', 'SECRET headline', $secret['title']);
+check(
+    'the front end keeps the published name',
+    'Published',
+    Entries::get($notes, $live['id'])['title']
+);
+check(
+    'and searching the front end cannot find the draft',
+    0,
+    count(Content::collection('note')->search('SECRET')->get())
+);
+
+$reverted = Entries::discard($notes, $live['id']);
+
+check('discarding takes the draft name back too', 'Published', $reverted['title']);
+check(
+    'and the front end is unchanged',
+    'Published',
+    Entries::get($notes, $live['id'])['title']
+);
+
+// publishing is what moves the published name
+Entries::save($notes, $live['id'], ['values' => ['body' => 'a new name']]);
+$renamedLive = Entries::publish($notes, $live['id']);
+
+check('publishing moves the name', 'a new name', $renamedLive['title']);
+check(
+    'and the front end follows',
+    'a new name',
+    Entries::get($notes, $live['id'])['title']
+);
+
+// put it back for the checks that follow
+Entries::save($notes, $live['id'], ['values' => ['body' => 'live'], 'publish' => true]);
+Entries::save($notes, $live['id'], ['values' => ['body' => 'rewritten twice']]);
 
 // text identical to what is live is not ahead of it at all. this is the one
 // that bit: publish, then press save, and the entry claimed to be a change

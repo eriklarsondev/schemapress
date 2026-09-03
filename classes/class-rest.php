@@ -110,6 +110,172 @@ class Rest
                 ],
             ]
         );
+
+        $this->componentRoutes();
+    }
+
+    /**
+     * registers the component routes.
+     *
+     * @return void
+     */
+    private function componentRoutes()
+    {
+        register_rest_route(self::NAMESPACE, '/components', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'components'],
+                'permission_callback' => [$this, 'canEdit'],
+            ],
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'createComponent'],
+                'permission_callback' => [$this, 'canEdit'],
+                'args' => [
+                    'title' => ['type' => 'string', 'required' => true],
+                    'description' => ['type' => 'string'],
+                ],
+            ],
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/components/(?P<id>\d+)', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'component'],
+                'permission_callback' => [$this, 'canEditComponent'],
+            ],
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'updateComponent'],
+                'permission_callback' => [$this, 'canEditComponent'],
+            ],
+            [
+                'methods' => 'DELETE',
+                'callback' => [$this, 'deleteComponent'],
+                'permission_callback' => [$this, 'canEditComponent'],
+            ],
+        ]);
+    }
+
+    // --- components ----------------------------------------------------------
+
+    /**
+     * every component, for the sidebar and the field picker.
+     *
+     * @return \WP_REST_Response
+     */
+    public function components()
+    {
+        return rest_ensure_response(['components' => Component::all()]);
+    }
+
+    /**
+     * one component, with its fields.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function component($request)
+    {
+        $component = Component::get($request['id']);
+
+        return $component
+            ? rest_ensure_response(['component' => $component])
+            : new \WP_Error('schemapress_no_component', __('Component not found.', 'schemapress'), [
+                'status' => 404,
+            ]);
+    }
+
+    /**
+     * creates a component.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function createComponent($request)
+    {
+        $title = sanitize_text_field($request['title']);
+
+        if (trim($title) === '') {
+            return new \WP_Error('schemapress_no_title', __('A name is required.', 'schemapress'), [
+                'status' => 400,
+            ]);
+        }
+
+        $id = wp_insert_post([
+            'post_type' => Component::POST_TYPE,
+            'post_title' => $title,
+            'post_excerpt' => sanitize_textarea_field((string) $request['description']),
+            'post_status' => 'publish',
+        ], true);
+
+        if (is_wp_error($id)) {
+            return $id;
+        }
+
+        SchemaRepository::saveDefinition($id, ['fields' => []]);
+
+        return rest_ensure_response([
+            'component' => Component::get($id),
+            'components' => Component::all(),
+        ]);
+    }
+
+    /**
+     * renames a component or replaces its fields.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function updateComponent($request)
+    {
+        $id = absint($request['id']);
+        $body = $request->get_json_params();
+        $body = is_array($body) ? $body : [];
+
+        $post = ['ID' => $id];
+
+        if (isset($body['title']) && trim((string) $body['title']) !== '') {
+            $post['post_title'] = sanitize_text_field($body['title']);
+        }
+
+        if (array_key_exists('description', $body)) {
+            $post['post_excerpt'] = sanitize_textarea_field((string) $body['description']);
+        }
+
+        if (count($post) > 1) {
+            wp_update_post($post);
+        }
+
+        if (isset($body['fields'])) {
+            SchemaRepository::saveDefinition($id, ['fields' => $body['fields']]);
+        }
+
+        return rest_ensure_response([
+            'component' => Component::get($id),
+            'components' => Component::all(),
+        ]);
+    }
+
+    /**
+     * deletes a component.
+     *
+     * Collections that imported it keep their copy of the fields, because
+     * importing copies rather than references — deleting the original cannot
+     * take content down with it.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function deleteComponent($request)
+    {
+        wp_delete_post(absint($request['id']), true);
+
+        return rest_ensure_response(['deleted' => true, 'components' => Component::all()]);
     }
 
     // --- content types -------------------------------------------------------
@@ -435,5 +601,19 @@ class Rest
         $id = absint($request['id']);
 
         return get_post_type($id) === Schema::POST_TYPE && current_user_can('edit_post', $id);
+    }
+
+    /**
+     * whether the current user may edit a specific component.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return boolean
+     */
+    public function canEditComponent($request)
+    {
+        $id = absint($request['id']);
+
+        return get_post_type($id) === Component::POST_TYPE && current_user_can('edit_post', $id);
     }
 }

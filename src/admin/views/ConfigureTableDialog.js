@@ -5,19 +5,19 @@
  * four depends entirely on the collection — for staff it is name and role, for
  * events it is the date — and only the person who built it knows. So they pick.
  *
- * Order matters as much as inclusion: the first column after the title is the
- * one people actually read, so rows can be dragged as well as ticked. The
- * arrows do the same job for anyone not using a mouse — a list you can only
- * reorder by dragging is a list some people cannot reorder.
+ * Order matters as much as inclusion, so rows are dragged into the order they
+ * should appear in.
  *
  * The first chosen field is the link into the entry, so it wants to be the one
  * that identifies a row — a name, not a date. Updated and Status are not in
  * this list: they are not fields, they are true of every entry.
+ *
+ * Reordering is by drag alone. That does mean it cannot be done from the
+ * keyboard, which is worth knowing.
  */
 
 import { useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
-import { ChevronUp, ChevronDown, GripVertical } from 'lucide-react'
 import { Dialog, Button, Checkbox, Alert, cn } from '../../ui'
 import { move } from '../../shared/utils'
 
@@ -144,13 +144,15 @@ export function ConfigureTableDialog({ fields, columns, fallback = 4, onClose, o
               }}
               onDragEnd={() => setDragging(-1)}
               className={cn(
-                'flex cursor-grab items-center gap-2 px-2 py-1.5 transition-colors',
+                'flex cursor-grab items-center gap-3 px-3 py-3 transition-colors',
                 item.on ? 'bg-background' : 'bg-muted/40',
-                dragging === index && 'cursor-grabbing opacity-40'
+                // the row being dragged becomes the slot it will land in:
+                // an outlined gap in the list, so the destination is a shape
+                // on screen rather than something to infer from the cursor
+                dragging === index &&
+                  'cursor-grabbing rounded-md bg-accent/40 text-transparent outline-dashed outline-2 -outline-offset-2 outline-ring/50'
               )}
             >
-              <GripVertical className="size-3.5 shrink-0 text-muted-foreground/60" />
-
               <Checkbox
                 checked={item.on}
                 aria-label={item.label}
@@ -166,26 +168,6 @@ export function ConfigureTableDialog({ fields, columns, fallback = 4, onClose, o
                 <span className="ml-1.5 text-[11px] text-muted-foreground">{item.type}</span>
               </span>
 
-              <span className="flex shrink-0 items-center">
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={__('Move up', 'schemapress')}
-                  disabled={index === 0}
-                  onClick={() => setItems((current) => move(current, index, index - 1))}
-                >
-                  <ChevronUp />
-                </Button>
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={__('Move down', 'schemapress')}
-                  disabled={index === items.length - 1}
-                  onClick={() => setItems((current) => move(current, index, index + 1))}
-                >
-                  <ChevronDown />
-                </Button>
-              </span>
             </div>
           ))}
         </div>

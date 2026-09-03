@@ -66,6 +66,7 @@ class Plugin
             // is parsed, and the schema post type before content types query it
             'FieldTypes' => FieldTypes::class,
             'Schema' => Schema::class,
+            'Component' => Component::class,
             'ContentType' => ContentType::class,
 
             // reading: Twig functions for themes that use Timber

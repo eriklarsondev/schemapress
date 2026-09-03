@@ -21,3 +21,35 @@ export const fieldTypes = settings.fieldTypes || []
  * @type {Array<{id: string, label: string, icon: string, field: Object}>}
  */
 export const elements = settings.elements || []
+
+/**
+ * Ready-made option lists a select can draw from — countries, US states and so
+ * on. Sent with the page because they are static, so a control can render
+ * without a request and the picker can name them.
+ *
+ * @type {Array<{slug: string, label: string, options: Array}>}
+ */
+export const datasets = settings.datasets || []
+
+/**
+ * The choices a select field offers, from whichever source it names.
+ *
+ * Mirrors Datasets::forField on the server. Having one answer on each side is
+ * what stops a control offering a value the sanitizer will then discard.
+ *
+ * @param {Object} field
+ * @return {Array} Options of {value, label}.
+ */
+export function optionsFor(field) {
+  const source = field?.config?.source
+
+  if (source) {
+    const dataset = datasets.find((set) => set.slug === source)
+
+    if (dataset) {
+      return dataset.options
+    }
+  }
+
+  return field?.config?.options || []
+}
