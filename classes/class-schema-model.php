@@ -230,6 +230,12 @@ class SchemaModel
             // — a half-width field on the RIGHT of an otherwise empty row —
             // needs the offset stated rather than implied
             'offset' => self::normalizeOffset($config['offset'] ?? 0, $width),
+            // whether the control begins a row of its own. a grid packs its
+            // items together, so where a row ENDS cannot be read off the
+            // widths — a half-width control after a third-width one shares that
+            // row whether or not that was the intent. this is how the intent is
+            // stated, and it survives the fields before it being resized
+            'new_row' => !empty($config['new_row']),
             'condition' => self::normalizeCondition($config['condition'] ?? null),
         ];
 

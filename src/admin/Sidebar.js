@@ -25,12 +25,12 @@ export function Sidebar({
   components = [],
   active,
   loading,
-  docsUrl,
   version,
   onSelect,
   onCreate,
   onSelectComponent,
-  onCreateComponent
+  onCreateComponent,
+  onOpenDocs
 }) {
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-background">
@@ -110,12 +110,15 @@ export function Sidebar({
           ))
         )}
 
-        {docsUrl ? (
-          <>
-            <hr className="mx-2 my-4 border-0 border-t border-border" />
-            <Item label={__('Documentation', 'schemapress')} icon={BookOpen} href={docsUrl} />
-          </>
-        ) : null}
+        {/* a screen of the app, not a page elsewhere in wp-admin: looking
+            something up should not cost you the collection you were in */}
+        <hr className="mx-2 my-4 border-0 border-t border-border" />
+        <Item
+          label={__('Documentation', 'schemapress')}
+          icon={BookOpen}
+          active={active?.view === 'docs'}
+          onClick={onOpenDocs}
+        />
       </nav>
 
       {version ? (
@@ -170,7 +173,7 @@ function Group({ icon: Icon, label, count, addLabel, onAdd, className }) {
  * @param {Object} props
  * @return {JSX.Element} The row.
  */
-function Item({ label, icon: Icon, count, active, onClick, href }) {
+function Item({ label, icon: Icon, count, active, onClick }) {
   const className = cn(
     'relative flex w-full items-center gap-2 rounded-md py-2 pl-3 pr-2 text-left text-[13px] transition-colors',
     active
@@ -197,14 +200,6 @@ function Item({ label, icon: Icon, count, active, onClick, href }) {
       ) : null}
     </>
   )
-
-  if (href) {
-    return (
-      <a href={href} className={className}>
-        {body}
-      </a>
-    )
-  }
 
   return (
     <button type="button" onClick={onClick} className={className}>

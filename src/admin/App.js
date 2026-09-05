@@ -23,6 +23,7 @@ import { CreateTypeDialog } from './CreateTypeDialog'
 import { CreateComponentDialog } from './CreateComponentDialog'
 import { TypeView } from './views/TypeView'
 import { ComponentView } from './views/ComponentView'
+import { DocsView } from './views/DocsView'
 
 /**
  * Root component.
@@ -81,31 +82,58 @@ export function App({ settings }) {
   }, [reload])
 
   const selected =
-    route.view === 'component'
+    route.view === 'component' || route.view === 'docs'
       ? null
       : types?.find((type) => type.id === Number(route.id)) || null
+
+  // with collections to show, the screen opens in one. a list of links to the
+  // same collections already in the sidebar is a page that asks you to choose
+  // twice — and after deleting a collection it is where you land, so it is not
+  // only the first visit that would see it
+  useEffect(() => {
+    if (!types || types.length === 0 || selected) {
+      return
+    }
+
+    if (route.view === 'component' || route.view === 'docs') {
+      return
+    }
+
+    navigate('type', types[0].id, true)
+  }, [types, selected, route.view, navigate])
 
   return (
     // `.schemapress` is the scope every Tailwind utility is prefixed with, and
     // that prefix is a descendant selector — so this element carries the class
     // alone, and all layout utilities go on the child inside it
     <div className="schemapress">
-      <div className="flex min-h-[calc(100vh-32px)] bg-muted/30">
+      {/* the shell is exactly the viewport below wp-admin's bar and does not
+          scroll: the sidebar is a map, and a map that scrolls away with the
+          thing you are reading has stopped being one. what scrolls is the pane
+          — and the sidebar's own list, when it outgrows the column */}
+      <div className="flex h-[calc(100vh-32px)] overflow-hidden bg-muted/30">
         <Sidebar
           types={types || []}
           components={components}
           active={{ view: route.view, id: Number(route.id) }}
           loading={types === null}
-          docsUrl={settings.docsUrl}
           version={settings.version}
           onSelect={(id) => open('type', id)}
           onCreate={() => setCreating('type')}
           onSelectComponent={(id) => open('component', id)}
           onCreateComponent={() => setCreating('component')}
+          onOpenDocs={() => open('docs')}
         />
 
-        <main className="min-w-0 flex-1 px-6 py-6 xl:px-8">
-          {types === null ? (
+        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8">
+          {/* the docs do not wait on the sidebar's data, and are still readable
+              when loading it is what failed — the page explaining the plugin is
+              the last thing that should go down with it */}
+          {route.view === 'docs' ? (
+            <ErrorBoundary key="docs">
+              <DocsView docs={settings.docs} />
+            </ErrorBoundary>
+          ) : types === null ? (
             <Loading label={__('Loading…', 'schemapress')} />
           ) : error ? (
             <Alert variant="warning">{error}</Alert>
@@ -121,12 +149,12 @@ export function App({ settings }) {
                 />
               ) : selected ? (
                 <TypeView type={selected} onChanged={reload} onDeleted={() => navigate('')} />
+              ) : types.length === 0 ? (
+                <Welcome onCreate={() => setCreating('type')} />
               ) : (
-                <Welcome
-                  types={types}
-                  onCreate={() => setCreating('type')}
-                  onSelect={(id) => navigate('type', id)}
-                />
+                // a collection exists, so the redirect above is already on its
+                // way into it; anything drawn here would only flash
+                <Loading label={__('Loading…', 'schemapress')} />
               )}
             </ErrorBoundary>
           )}
@@ -159,49 +187,33 @@ export function App({ settings }) {
 }
 
 /**
- * What the screen says before a collection is picked.
+ * What the screen says when there is nothing to open yet.
+ *
+ * Only reached with no collections at all: once one exists, the app opens it
+ * rather than asking which.
  *
  * @param {Object} props
  * @return {JSX.Element} The welcome pane.
  */
-function Welcome({ types, onCreate, onSelect }) {
+function Welcome({ onCreate }) {
   return (
-    <div className="mx-auto max-w-lg py-16 text-center">
-      <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <Database className="size-5" />
+    <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+      <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+        <Database className="size-6" />
       </span>
 
-      <h1 className="mt-4 text-[20px] font-semibold tracking-tight">
-        {types.length === 0
-          ? __('No collections yet', 'schemapress')
-          : __('Pick a collection', 'schemapress')}
+      <h1 className="mt-5 text-[24px] font-semibold tracking-tight">
+        {__('No collections yet', 'schemapress')}
       </h1>
 
-      <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-muted-foreground">
-        {types.length === 0
-          ? __(
-              'A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries.',
-              'schemapress',
-            )
-          : __('Choose one from the sidebar, or create another.', 'schemapress')}
+      <p className="mx-auto mt-2.5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+        {__(
+          'A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries.',
+          'schemapress',
+        )}
       </p>
 
-      {types.length > 0 ? (
-        <div className="mt-5 flex flex-wrap justify-center gap-1.5">
-          {types.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => onSelect(type.id)}
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-accent"
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-6">
+      <div className="mt-7">
         <Button onClick={onCreate}>
           <Plus />
           {__('Create a collection type', 'schemapress')}

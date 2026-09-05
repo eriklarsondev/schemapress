@@ -16,7 +16,7 @@
  * one copy, saving is publishing, and the status card has nothing to say.
  */
 
-import { useEffect, useState } from '@wordpress/element'
+import { Fragment, useEffect, useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
 import { ChevronLeft, Save, Trash2, CircleDot, GitBranch, Undo2, CloudUpload, EyeOff } from 'lucide-react'
 import {
@@ -34,7 +34,7 @@ import { FieldControl } from '../../shared/fields'
 import { emptyValues } from '../../shared/utils'
 import { Ago } from '../../shared/time'
 import { visibleFields } from '../../shared/conditions'
-import { cellClass, gridClass } from '../../shared/layout'
+import { breakBefore, cellClass, gridClass, rowBreakClass } from '../../shared/layout'
 import { api } from '../../shared/api'
 
 /**
@@ -191,19 +191,25 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
               </Alert>
             ) : (
               <div className={gridClass()}>
-                {visible.map((field) => (
-                  <div key={field.key} className={cellClass(field)}>
-                    <FieldControl
-                      field={field}
-                      value={entry.values?.[field.key]}
-                      onChange={(value) =>
-                        setEntry({
-                          ...entry,
-                          values: { ...entry.values, [field.key]: value }
-                        })
-                      }
-                    />
-                  </div>
+                {visible.map((field, index) => (
+                  <Fragment key={field.key}>
+                    {breakBefore(field, index) ? (
+                      <div aria-hidden="true" className={rowBreakClass()} />
+                    ) : null}
+
+                    <div className={cellClass(field)}>
+                      <FieldControl
+                        field={field}
+                        value={entry.values?.[field.key]}
+                        onChange={(value) =>
+                          setEntry({
+                            ...entry,
+                            values: { ...entry.values, [field.key]: value }
+                          })
+                        }
+                      />
+                    </div>
+                  </Fragment>
                 ))}
               </div>
             )}

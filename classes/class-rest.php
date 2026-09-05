@@ -23,6 +23,25 @@ class Rest
     public function __construct()
     {
         add_action('rest_api_init', [$this, 'routes']);
+
+        // a headless setup may serve the public API read-only. these routes are
+        // not that API: they are wp-admin's own transport, gated on editing
+        // capabilities, and the builder cannot save without them
+        add_filter('wpdev_rest_readonly_exempt', [$this, 'exemptFromReadonly']);
+    }
+
+    /**
+     * claims this namespace as one a read-only public API does not cover.
+     *
+     * @param string[] $exempt route prefixes
+     *
+     * @return string[]
+     */
+    public function exemptFromReadonly($exempt)
+    {
+        $exempt[] = '/' . self::NAMESPACE;
+
+        return $exempt;
     }
 
     /**

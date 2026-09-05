@@ -18,9 +18,12 @@ if (!defined('ABSPATH')) {
  *
  *   %%timber_status%%   whether the Twig functions are registered here
  *
- * the screen is server-rendered and loads no bundle. it explains what to do
- * when the admin bundle has not been built and when Timber is missing — both
- * states in which a React screen would itself be blank.
+ * the same compiled text is served two ways. normally it is a screen inside the
+ * React app, which is where the reader already is — the sidebar stays, and
+ * nothing about reading the docs means leaving the builder. when the bundle has
+ * not been built there is no app to put it in, so the standalone page below
+ * renders it server-side instead: that is exactly the state whose way out the
+ * documentation describes, so it must not depend on the thing that is missing.
  */
 class Docs
 {
@@ -40,12 +43,22 @@ class Docs
     }
 
     /**
-     * registers the documentation page under the SchemaPress menu.
+     * registers the fallback page, when there is a reason to have one.
+     *
+     * normally there is not: the docs are a screen in the app, reached from the
+     * app's own sidebar, and a second entry in wp-admin's menu would only be a
+     * different way into the same text. without a bundle there is no app to
+     * hold it, so the page below is registered instead — that is exactly the
+     * state whose way out the documentation describes.
      *
      * @return void
      */
     public function registerMenu()
     {
+        if (Assets::built('admin')) {
+            return;
+        }
+
         add_submenu_page(
             Admin::PAGE_SLUG,
             __('SchemaPress Docs', 'schemapress'),
@@ -54,6 +67,95 @@ class Docs
             self::PAGE_SLUG,
             [$this, 'render']
         );
+    }
+
+    /**
+     * the documentation as the app consumes it: one entry per source file, in
+     * the order the directory names, each already rendered to HTML.
+     *
+     * the split is by file rather than by heading because a file is the unit
+     * the docs are written in — a new topic is a new file, and the contents
+     * list picks it up without anything here being edited.
+     *
+     * @return array
+     */
+    public static function forClient()
+    {
+        return [
+            'sections' => self::sections(),
+            'parser' => self::parserAvailable(),
+        ];
+    }
+
+    /**
+     * every source file as {id, title, html, headings}.
+     *
+     * the leading heading of a file is lifted out of its body: the app renders
+     * it as the section's own title, and leaving it in the HTML would print it
+     * twice.
+     *
+     * @return array
+     */
+    public static function sections()
+    {
+        $sections = [];
+
+        foreach (self::files() as $path) {
+            $markdown = trim((string) file_get_contents($path));
+
+            if ($markdown === '') {
+                continue;
+            }
+
+            $html = self::anchors(self::parse(strtr($markdown, [
+                '%%timber_status%%' => self::timberStatus(),
+            ])));
+
+            $name = preg_replace('/^\d+[-_]/', '', basename($path, '.md'));
+            $id = sanitize_title($name);
+            $title = ucfirst(str_replace('-', ' ', $name));
+
+            if (preg_match('/^\s*<h2 id="([^"]+)">(.*?)<\/h2>/s', $html, $match)) {
+                $id = $match[1];
+                $title = trim(wp_strip_all_tags($match[2]));
+                $html = substr($html, strlen($match[0]));
+            }
+
+            $sections[] = [
+                'id' => $id,
+                'title' => $title,
+                'headings' => self::headings($html),
+                'html' => $html,
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * the subheadings of one section, for the contents list.
+     *
+     * only ids anchors() added are matched, and it leaves code samples alone —
+     * so an <h3> inside a sample is not mistaken for a heading of the page.
+     *
+     * @param string $html
+     *
+     * @return array
+     */
+    private static function headings($html)
+    {
+        preg_match_all('/<h3 id="([^"]+)">(.*?)<\/h3>/s', $html, $matches, PREG_SET_ORDER);
+
+        $headings = [];
+
+        foreach ($matches as $match) {
+            $headings[] = [
+                'id' => $match[1],
+                'title' => trim(wp_strip_all_tags($match[2])),
+            ];
+        }
+
+        return $headings;
     }
 
     /**

@@ -18,6 +18,21 @@ class Assets
     const BUILD_DIR = 'build';
 
     /**
+     * whether an entry has been built.
+     *
+     * screens ask before deciding what to offer: an in-app route is only worth
+     * linking to if the bundle that renders it exists.
+     *
+     * @param string $entry
+     *
+     * @return boolean
+     */
+    public static function built($entry)
+    {
+        return file_exists(SCHEMAPRESS_PATH . self::BUILD_DIR . '/' . $entry . '.js');
+    }
+
+    /**
      * enqueues a built entry and its declared dependencies.
      *
      * @param string $entry handle-safe entry name, e.g. 'schema-builder'
@@ -145,7 +160,13 @@ class Assets
     public static function restContext()
     {
         return [
-            'root' => esc_url_raw(rest_url(Rest::NAMESPACE)),
+            // relative, not absolute. rest_url() answers with the host stored
+            // in site options, and a local install is often reached at another
+            // one — a port, a tunnel, a proxy. an absolute URL then makes every
+            // call cross-origin, which turns each one into a preflight the
+            // browser blocks. the builder only ever talks to the site serving
+            // it, so a path is both correct and immune to the difference
+            'root' => wp_make_link_relative(esc_url_raw(rest_url(Rest::NAMESPACE))),
             'nonce' => wp_create_nonce('wp_rest'),
         ];
     }

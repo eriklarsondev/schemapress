@@ -12,6 +12,11 @@
  *   order   drag a card onto another and they swap places
  *   width   the badge on the card, or drop into a row's leftover space and the
  *           field takes exactly that width
+ *   rows    drop onto the strip between two rows and the field starts a row of
+ *           its own, at the width it already had. a grid packs its items
+ *           together, so where a row ENDS is the one thing widths cannot say —
+ *           without stating it, a half-width field dragged below a third-width
+ *           one simply floats back up into the space beside it
  *   rest    click the card — placeholder, help text, required, when it shows
  *
  * The previous version made width a consequence of how far across a target you
@@ -27,7 +32,7 @@
  * which is this plugin's own to arrange.
  */
 
-import { useEffect, useState } from '@wordpress/element'
+import { Fragment, useEffect, useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
 import { Save, LayoutList, Pencil } from 'lucide-react'
 import {
@@ -48,6 +53,9 @@ import {
 } from '../../ui'
 import { move } from '../../shared/utils'
 import { conditionTargets } from '../../shared/conditions'
+// the canvas must break its rows exactly the way the entry form does, or it is
+// a picture of a layout rather than the layout
+import { breakBefore, rowBreakClass, startsRow } from '../../shared/layout'
 
 /** The types whose control takes a placeholder, mirroring SchemaModel. */
 const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone']
@@ -142,12 +150,14 @@ function fits(span) {
 }
 
 /**
- * Packs fields into rows of twelve, noting the space each row has left over.
+ * Packs fields into rows of twelve, noting the space each row has left over
+ * and where one row gives way to the next.
  *
- * Those leftovers only matter while something is being dragged, which is when
- * they become the answer to "where can this go, and how wide will it be" — a
- * gap has exactly one sensible size, so dropping into one sets the width
- * rather than asking afterwards.
+ * Both only matter while something is being dragged, which is when they become
+ * the answer to "where can this go". A leftover has exactly one sensible size,
+ * so dropping into one sets the width rather than asking afterwards. A row
+ * boundary has no size at all — dropping there keeps the width the field
+ * already had, because starting a row is a decision about position.
  *
  * @param {Array} fields
  * @return {Array} Cells, in order.
@@ -157,14 +167,38 @@ function pack(fields) {
   let used = 0
   let row = []
 
+  /**
+   * Ends the current row: offers what is left of it, then offers the boundary
+   * underneath as a row of its own.
+   *
+   * @param {number} at Where in the order a field dropped here would land.
+   * @return {void}
+   */
+  const close = (at) => {
+    if (used > 0 && used < 12) {
+      cells.push({ gap: 12 - used, at, start: used, row })
+    }
+
+    cells.push({ gap: 12, at, start: 0, row: [], newRow: true })
+
+    used = 0
+    row = []
+  }
+
+  // the boundary above the first row, so a field can be given a row at the top
+  // as readily as anywhere else
+  if (fields.length > 0) {
+    cells.push({ gap: 12, at: 0, start: 0, row: [], newRow: true })
+  }
+
   fields.forEach((field, index) => {
     const offset = offsetOf(field)
     const span = spanOf(field) + offset
 
-    if (used > 0 && used + span > 12) {
-      cells.push({ gap: 12 - used, at: index, start: used, row })
-      used = 0
-      row = []
+    // a field that starts a row ends the one above it, whether or not what it
+    // holds would have fitted — which is the whole point of saying so
+    if (used > 0 && (startsRow(field) || used + span > 12)) {
+      close(index)
     }
 
     // blank space a field's own offset put in front of it. it is as droppable
@@ -179,17 +213,14 @@ function pack(fields) {
     row = [...row, index]
 
     if (used >= 12) {
-      used = 0
-      row = []
+      close(index + 1)
     }
   })
 
-  if (used > 0) {
-    cells.push({ gap: 12 - used, at: fields.length, start: used, row })
+  // a row filled to the twelfth has already offered the boundary under it
+  if (used > 0 || fields.length === 0) {
+    close(fields.length)
   }
-
-  // and a whole row under everything, so a field can always be given one
-  cells.push({ gap: 12, at: fields.length, start: 0, row: [], newRow: true })
 
   return cells
 }
@@ -266,16 +297,66 @@ export function FormTab({ fields, onChange }) {
   }
 
   /**
+   * Drops the dragged field onto a row boundary, giving it a row of its own.
+   *
+   * It keeps the width it had: a row of its own is where the field sits, not
+   * how wide it is, and a field that jumped to full width every time it was
+   * moved down would be a field you cannot move down.
+   *
+   * The field after it is pinned to a new row too. Without that it flows up
+   * into whatever the new row has spare — which is the collapse this whole
+   * mechanism exists to stop, only one field further along.
+   *
+   * @param {Object} cell
+   * @return {void}
+   */
+  const dropInNewRow = (cell) => {
+    setDraft((current) => {
+      const marked = current.map((field, i) =>
+        i === dragging
+          ? { ...field, config: { ...field.config, offset: 0, new_row: true } }
+          : field
+      )
+
+      // moving to a later index counts the field being moved, so the boundary
+      // it was dropped on has already shifted up by one
+      const to = cell.at > dragging ? cell.at - 1 : cell.at
+
+      // only when the field actually came from elsewhere. dropping on the
+      // boundary it already sits against moves nothing, and pinning a
+      // neighbour there would rearrange a row nobody touched
+      if (to === dragging) {
+        return marked
+      }
+
+      return move(marked, dragging, to).map((field, i) =>
+        i === to + 1 ? { ...field, config: { ...field.config, new_row: true } } : field
+      )
+    })
+
+    setDragging(-1)
+  }
+
+  /**
    * Drops the dragged field into a row's leftover space, sizing it to fill.
    *
-   * @param {number} at   Where in the order it lands.
-   * @param {number} span How many twelfths the gap holds.
+   * @param {Object} cell
    * @return {void}
    */
   const dropInGap = (cell) => {
+    if (dragging === -1) {
+      return
+    }
+
+    if (cell.newRow) {
+      dropInNewRow(cell)
+
+      return
+    }
+
     const width = fits(cell.gap)
 
-    if (dragging === -1 || !width) {
+    if (!width) {
       return
     }
 
@@ -295,7 +376,9 @@ export function FormTab({ fields, onChange }) {
               config: {
                 ...field.config,
                 width: width.value,
-                offset: Math.max(0, cell.start - before)
+                offset: Math.max(0, cell.start - before),
+                // it is joining a row, so it is no longer starting one
+                new_row: false
               }
             }
           : field
@@ -335,7 +418,7 @@ export function FormTab({ fields, onChange }) {
     <div className="flex flex-col gap-3">
       <Alert variant="info">
         {__(
-          'Drag a field onto another to reorder, or into a row’s spare space to fill it. Click a card for its placeholder, help text and whether it is required.',
+          'Drag a field onto another to reorder, into a row’s spare space to fill it, or onto a New row strip to give it a row of its own. Click a card for its placeholder, help text and whether it is required.',
           'schemapress'
         )}
       </Alert>
@@ -345,20 +428,30 @@ export function FormTab({ fields, onChange }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
             {pack(draft).map((cell) =>
               cell.field ? (
-                <FieldCard
-                  key={cell.field.key}
-                  field={cell.field}
-                  index={cell.index}
-                  dragging={dragging === cell.index}
-                  onDragStart={() => setDragging(cell.index)}
-                  onDragOver={() => dragOver(cell.index)}
-                  onDragEnd={() => setDragging(-1)}
-                  onWidth={(width) => setWidth(cell.index, width)}
-                  onEdit={() => setEditing(cell.index)}
-                />
+                <Fragment key={cell.field.key}>
+                  {/* the break is what actually holds the row open once the
+                      drop targets are gone: without it the card flows straight
+                      back up into the space left on the row above. mid-drag the
+                      New row strip sitting here is already full width and ends
+                      the row on its own, so the break would only add air */}
+                  {dragging === -1 && breakBefore(cell.field, cell.index) ? (
+                    <div aria-hidden="true" className={rowBreakClass()} />
+                  ) : null}
+
+                  <FieldCard
+                    field={cell.field}
+                    index={cell.index}
+                    dragging={dragging === cell.index}
+                    onDragStart={() => setDragging(cell.index)}
+                    onDragOver={() => dragOver(cell.index)}
+                    onDragEnd={() => setDragging(-1)}
+                    onWidth={(width) => setWidth(cell.index, width)}
+                    onEdit={() => setEditing(cell.index)}
+                  />
+                </Fragment>
               ) : (
                 <Gap
-                  key={`gap-${cell.at}-${cell.gap}${cell.newRow ? '-new' : ''}`}
+                  key={`gap-${cell.at}-${cell.start}-${cell.gap}${cell.newRow ? '-new' : ''}`}
                   span={cell.gap}
                   start={cell.start}
                   newRow={cell.newRow}
@@ -400,14 +493,16 @@ export function FormTab({ fields, onChange }) {
 }
 
 /**
- * A row's leftover space, offered as somewhere to drop.
+ * Somewhere to drop: a row's leftover space, or the boundary between two rows.
  *
  * Only while dragging. Standing on screen the rest of the time, these read as
  * content — empty boxes in a form — rather than as targets, which is what the
  * first version of this tab got wrong.
  *
- * The label is the width the field will become, because that is the whole
- * bargain: the gap is this wide, so the field will be too.
+ * A leftover is labelled with the width the field will become, because that is
+ * the whole bargain: the gap is this wide, so the field will be too. A boundary
+ * makes no such bargain — it is about which row the field is on, and the field
+ * arrives at the width it left with.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The target.
@@ -417,9 +512,39 @@ function Gap({ span, start, newRow, dragging, onDrop }) {
 
   const width = fits(span)
 
-  // a sliver narrower than a third can hold nothing, so it is not offered
-  if (!dragging || !width) {
+  // a sliver narrower than a third can hold nothing, so it is not offered. a
+  // row boundary holds anything, whatever its width
+  if (!dragging || (!newRow && !width)) {
     return null
+  }
+
+  // a strip between two rows, not a hole in one: shallower, and it says what
+  // it does rather than what the field will become — which is nothing, since
+  // dropping here leaves the width alone
+  if (newRow) {
+    return (
+      <div
+        onDragOver={(event) => {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'move'
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          event.preventDefault()
+          setOver(false)
+          onDrop()
+        }}
+        className={cn(
+          'flex min-h-[2.5rem] items-center justify-center rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors sm:col-span-12',
+          over
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-ring/25 bg-accent/10 text-muted-foreground/80'
+        )}
+      >
+        <span>{__('New row', 'schemapress')}</span>
+      </div>
+    )
   }
 
   return (
@@ -442,7 +567,7 @@ function Gap({ span, start, newRow, dragging, onDrop }) {
         over ? 'border-primary bg-primary/10 text-primary' : 'border-ring/40 bg-accent/20 text-muted-foreground'
       )}
     >
-      <span>{newRow ? __('New row', 'schemapress') : __('Fill this space', 'schemapress')}</span>
+      <span>{__('Fill this space', 'schemapress')}</span>
       <Badge variant="outline">{width.label}</Badge>
     </div>
   )
@@ -679,6 +804,16 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
             />
           )}
         </Field>
+
+        <Switch
+          label={__('Start a new row', 'schemapress')}
+          help={__(
+            'Keeps this field at the start of its own row instead of filling the space left over above it.',
+            'schemapress'
+          )}
+          checked={startsRow(draft)}
+          onChange={(next) => update({ config: { new_row: next } })}
+        />
 
         <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3">
           <Switch
