@@ -5,10 +5,11 @@
  * uses, so adding a type is a matter of registering it on both sides.
  */
 
+import { Fragment } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Alert } from '../../ui'
 import { visibleFields } from '../conditions'
-import { cellClass, gridClass } from '../layout'
+import { breakBefore, cellClass, gridClass, rowBreakClass } from '../layout'
 import {
   TextField,
   TextareaField,
@@ -84,15 +85,21 @@ export function FieldList({ fields = [], values = {}, onChange, context }) {
     <div className={gridClass()}>
       {/* a condition names a sibling, so inside a repeater row it is evaluated
           against that row's own values — which is what `values` already is */}
-      {visibleFields(fields, values).map((field) => (
-        <div key={field.key} className={cellClass(field)}>
-          <FieldControl
-            field={field}
-            value={values?.[field.key]}
-            context={context}
-            onChange={(next) => onChange(field.key, next)}
-          />
-        </div>
+      {visibleFields(fields, values).map((field, index) => (
+        <Fragment key={field.key}>
+          {breakBefore(field, index) ? (
+            <div aria-hidden="true" className={rowBreakClass()} />
+          ) : null}
+
+          <div className={cellClass(field)}>
+            <FieldControl
+              field={field}
+              value={values?.[field.key]}
+              context={context}
+              onChange={(next) => onChange(field.key, next)}
+            />
+          </div>
+        </Fragment>
       ))}
     </div>
   )

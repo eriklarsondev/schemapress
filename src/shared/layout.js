@@ -67,6 +67,49 @@ export function offsetOf(field) {
 }
 
 /**
+ * Whether a field insists on starting a row of its own.
+ *
+ * A grid packs its items together, so a half-width field after a third-width
+ * one shares that row whether or not you meant it to. Arranging a form is
+ * partly deciding where a row ENDS, and that is a decision the layout cannot
+ * infer from widths — hence a field can say it, and keep saying it however the
+ * fields before it are later resized.
+ *
+ * @param {Object} field
+ * @return {boolean} True when it starts a row.
+ */
+export function startsRow(field) {
+  return Boolean(field?.config?.new_row)
+}
+
+/**
+ * Whether a row break belongs before a field as it is rendered.
+ *
+ * Never before the first one: there is no row above it to end, and a break
+ * there is an empty row at the top of the form.
+ *
+ * @param {Object} field
+ * @param {number} index Position among the fields actually being rendered.
+ * @return {boolean} True when a break element should precede it.
+ */
+export function breakBefore(field, index) {
+  return index > 0 && startsRow(field)
+}
+
+/**
+ * The classes for that break: an item of no height spanning every column.
+ *
+ * Being full width it cannot share the row above, so it takes what is left of
+ * it and the next field begins a row. Below the breakpoint the grid is a single
+ * column — every field already has a row to itself — so it is not rendered.
+ *
+ * @return {string} A class string.
+ */
+export function rowBreakClass() {
+  return 'hidden h-0 sm:block sm:col-span-12'
+}
+
+/**
  * The grid classes placing one field.
  *
  * @param {Object} field

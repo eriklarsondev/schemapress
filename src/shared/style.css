@@ -211,6 +211,170 @@ body.toplevel_page_schemapress #wpfooter {
   color: hsl(220 9% 46%);
 }
 
+/* --- documentation prose ------------------------------------------------- */
+
+/* the docs screen renders HTML compiled from Markdown, so its elements carry
+   no classes to style with utilities. one block of rules, scoped to the
+   container, is what a stylesheet is for — and it keeps the markup identical
+   to what the Markdown says */
+
+.schemapress .sp-prose {
+  font-size: 14px;
+  line-height: 1.75;
+  color: hsl(var(--sp-foreground) / 0.88);
+}
+
+.schemapress .sp-prose > *:first-child {
+  margin-top: 0;
+}
+
+.schemapress .sp-prose p {
+  margin: 0 0 1rem;
+}
+
+.schemapress .sp-prose h3 {
+  margin: 2rem 0 0.6rem;
+  scroll-margin-top: 4rem;
+  color: hsl(var(--sp-foreground));
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.schemapress .sp-prose strong {
+  color: hsl(var(--sp-foreground));
+  font-weight: 600;
+}
+
+.schemapress .sp-prose a {
+  color: hsl(var(--sp-primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.schemapress .sp-prose ul,
+.schemapress .sp-prose ol {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.schemapress .sp-prose ol {
+  list-style: decimal;
+}
+
+.schemapress .sp-prose li {
+  margin: 0.25rem 0;
+}
+
+.schemapress .sp-prose code {
+  padding: 0.12em 0.36em;
+  border-radius: calc(var(--sp-radius) - 5px);
+  background: hsl(var(--sp-muted));
+  color: hsl(var(--sp-foreground));
+  font-size: 12px;
+}
+
+.schemapress .sp-prose pre {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border: 1px solid hsl(var(--sp-border));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background: hsl(var(--sp-muted) / 0.5);
+}
+
+.schemapress .sp-prose pre code {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* the docs lean on tables to define terms, so they are read as often as the
+   prose is — a plain grid, not a data table with its own chrome */
+.schemapress .sp-prose table {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  border: 1px solid hsl(var(--sp-border));
+  border-radius: calc(var(--sp-radius) - 2px);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.schemapress .sp-prose thead th {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--sp-border));
+  background: hsl(var(--sp-muted) / 0.6);
+  color: hsl(var(--sp-muted-foreground));
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.schemapress .sp-prose tbody td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--sp-border) / 0.6);
+  vertical-align: top;
+}
+
+.schemapress .sp-prose tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.schemapress .sp-prose td:first-child code {
+  white-space: nowrap;
+}
+
+.schemapress .sp-prose blockquote {
+  margin: 0 0 1.25rem;
+  padding-left: 1rem;
+  border-left: 3px solid hsl(var(--sp-border));
+  color: hsl(var(--sp-muted-foreground));
+}
+
+.schemapress .sp-prose hr {
+  margin: 2rem 0;
+  border-top: 1px solid hsl(var(--sp-border));
+}
+
+/* the one callout the sources can print: whether this install can render */
+.schemapress .sp-prose .sp-status {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  margin: 0 0 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid hsl(var(--sp-border));
+  border-radius: calc(var(--sp-radius) - 2px);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.schemapress .sp-prose .sp-status::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.45rem;
+  border-radius: 9999px;
+  background: hsl(var(--sp-muted-foreground));
+}
+
+.schemapress .sp-prose .sp-status--ok {
+  border-color: hsl(142 40% 80%);
+  background: hsl(142 60% 97%);
+  color: hsl(142 60% 22%);
+}
+
+.schemapress .sp-prose .sp-status--ok::before {
+  background: hsl(142 65% 36%);
+}
+
 /* the metabox on a page's edit screen supplies its own frame */
 #schemapress-content .inside {
   margin: 0;

@@ -91,7 +91,10 @@ class Admin
             'datasets' => Datasets::forClient(),
             'elements' => Elements::all(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
-            'docsUrl' => esc_url_raw(admin_url('admin.php?page=' . Docs::PAGE_SLUG)),
+            // the documentation is a screen in the app, so its text ships with
+            // the page rather than costing a request: it is a few files of
+            // Markdown this plugin ships, already compiled
+            'docs' => Docs::forClient(),
             'version' => SCHEMAPRESS_VERSION,
         ]);
     }

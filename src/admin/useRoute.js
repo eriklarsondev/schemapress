@@ -41,8 +41,23 @@ export function useRoute() {
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
-  const navigate = useCallback((view, id = null) => {
-    window.location.hash = id ? `/${view}/${id}` : `/${view}`
+  /**
+   * Goes to a route.
+   *
+   * `replace` swaps the current history entry rather than adding one, which is
+   * what a redirect the reader did not ask for should do — otherwise Back
+   * returns to a route that immediately redirects again.
+   */
+  const navigate = useCallback((view, id = null, replace = false) => {
+    const hash = id ? `/${view}/${id}` : `/${view}`
+
+    if (replace) {
+      window.location.replace(`#${hash}`)
+
+      return
+    }
+
+    window.location.hash = hash
   }, [])
 
   return [route, navigate]
