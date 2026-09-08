@@ -22,7 +22,11 @@ module.exports = {
     extend: {
       colors: {
         border: 'hsl(var(--sp-border))',
-        input: 'hsl(var(--sp-input))',
+        input: {
+          DEFAULT: 'hsl(var(--sp-input))',
+          // the faint recess that lets the border soften; see style.css
+          fill: 'hsl(var(--sp-input-fill))'
+        },
         ring: 'hsl(var(--sp-ring))',
         background: 'hsl(var(--sp-background))',
         foreground: 'hsl(var(--sp-foreground))',

@@ -69,8 +69,11 @@ class Plugin
             'Component' => Component::class,
             'ContentType' => ContentType::class,
 
-            // reading: Twig functions for themes that use Timber
+            // reading: Twig functions for themes that use Timber, and the
+            // content API for everyone else. both read the same Collection, so
+            // a filter means the same thing over HTTP as it does in a template
             'Timber' => Timber::class,
+            'Api' => Api::class,
 
             // admin: screens and transport
             'Rest' => Rest::class,

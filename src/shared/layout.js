@@ -29,16 +29,16 @@ const SPANS = {
   full: 'sm:col-span-12',
 }
 
-const STARTS = {
-  1: 'sm:col-start-1',
-  2: 'sm:col-start-2',
-  3: 'sm:col-start-3',
-  4: 'sm:col-start-4',
-  5: 'sm:col-start-5',
-  6: 'sm:col-start-6',
-  7: 'sm:col-start-7',
-  8: 'sm:col-start-8',
-  9: 'sm:col-start-9',
+/** Written out for the same reason as SPANS: Tailwind cannot see a computed name. */
+const SPACERS = {
+  1: 'sm:col-span-1',
+  2: 'sm:col-span-2',
+  3: 'sm:col-span-3',
+  4: 'sm:col-span-4',
+  5: 'sm:col-span-5',
+  6: 'sm:col-span-6',
+  7: 'sm:col-span-7',
+  8: 'sm:col-span-8',
 }
 
 /**
@@ -112,20 +112,43 @@ export function rowBreakClass() {
 /**
  * The grid classes placing one field.
  *
+ * Width only. A field's leading blank space is drawn as a spacer beside it —
+ * see spacerClass — rather than set here as a column to start at.
+ *
+ * `col-start` was the obvious way to do it and it is wrong: an offset is space
+ * before a field ON ITS ROW, and col-start counts from the left edge of the
+ * grid. A field third along a row with two columns of space in front of it
+ * would be sent to column 3 instead of column 9 — and, being a definite
+ * position earlier than the row had already reached, dropped onto the next row
+ * as well.
+ *
  * @param {Object} field
  * @return {string} A class string.
  */
 export function cellClass(field) {
-  const offset = offsetOf(field)
+  return cn('min-w-0', SPANS[field?.config?.width] || SPANS.full)
+}
 
-  // only when there IS an offset. `col-start-1` on every field is not a no-op:
-  // it pins each one to the first column, so nothing ever shares a row and the
-  // widths look right while the layout is wrong
-  return cn(
-    'min-w-0',
-    SPANS[field?.config?.width] || SPANS.full,
-    offset > 0 && STARTS[offset + 1]
-  )
+/**
+ * How much blank space to draw before a field, in columns.
+ *
+ * @param {Object} field
+ * @return {number} Zero when none.
+ */
+export function leadingSpace(field) {
+  return offsetOf(field)
+}
+
+/**
+ * The classes for that blank space: an item of the right width and nothing in
+ * it. Below the breakpoint the grid is one column and there is no space to
+ * leave, so it is not rendered.
+ *
+ * @param {number} columns
+ * @return {string} A class string.
+ */
+export function spacerClass(columns) {
+  return cn('hidden sm:block', SPACERS[columns] || '')
 }
 
 /**

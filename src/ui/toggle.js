@@ -55,7 +55,7 @@ export function Checkbox({ checked, onChange, label, help, disabled, className, 
         checked={Boolean(checked)}
         onCheckedChange={onChange}
         disabled={disabled}
-        className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border border-input bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+        className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border border-input bg-input-fill transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
         {...props}
       >
         <CheckboxPrimitive.Indicator>

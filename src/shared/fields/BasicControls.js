@@ -105,6 +105,7 @@ export function NumberField({ field, value, onChange }) {
       {(id) => (
         <Input
           id={id}
+          placeholder={field.config?.placeholder || ''}
           type="number"
           min={field.config?.min}
           max={field.config?.max}
@@ -163,7 +164,7 @@ export function SelectField({ field, value, onChange }) {
 
   return (
     <Field label={field.label} help={field.help} required={field.required}>
-      <div className="flex flex-col gap-1.5 rounded-md border border-input p-2.5">
+      <div className="flex flex-col gap-1.5 rounded-md border border-border p-2.5">
         {options.length === 0 ? (
           <p className="text-[12px] text-muted-foreground">No options defined.</p>
         ) : null}

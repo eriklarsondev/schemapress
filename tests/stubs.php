@@ -319,6 +319,18 @@ function get_post_meta($id, $key = '', $single = false)
     return $single ? $value : $value;
 }
 
+function add_post_meta($id, $key, $value)
+{
+    $existing = $GLOBALS['wp_meta'][absint($id)][$key] ?? null;
+
+    // one key, many values — which is how Index stores a multi-select
+    $GLOBALS['wp_meta'][absint($id)][$key] = $existing === null
+        ? $value
+        : array_merge((array) $existing, [$value]);
+
+    return true;
+}
+
 function delete_post_meta($id, $key)
 {
     unset($GLOBALS['wp_meta'][absint($id)][$key]);
@@ -340,6 +352,46 @@ function get_permalink($post) { return 'http://example.test/?p=' . (is_object($p
 
 // --- the plugin --------------------------------------------------------------
 
+/**
+ * Just enough $wpdb for Index::clear(), which finds an entry's index rows by
+ * key prefix — the one thing in the plugin that cannot be expressed with the
+ * post meta functions, since they have no wildcard.
+ */
+class SP_Test_Wpdb
+{
+    public $postmeta = 'wp_postmeta';
+
+    public function esc_like($text)
+    {
+        return addcslashes($text, '_%\\');
+    }
+
+    public function prepare($query, ...$args)
+    {
+        return [$query, $args];
+    }
+
+    public function get_col($prepared)
+    {
+        list($query, $args) = $prepared;
+
+        if (strpos($query, 'meta_key') === false) {
+            return [];
+        }
+
+        $id = absint($args[0]);
+        $prefix = rtrim(str_replace('\\', '', (string) $args[1]), '%');
+
+        $keys = array_keys($GLOBALS['wp_meta'][$id] ?? []);
+
+        return array_values(array_filter($keys, function ($key) use ($prefix) {
+            return strpos($key, $prefix) === 0;
+        }));
+    }
+}
+
+$GLOBALS['wpdb'] = new SP_Test_Wpdb();
+
 require_once SCHEMAPRESS_PATH . 'classes/class-inflector.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-datasets.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-field-types.php';
@@ -350,6 +402,8 @@ require_once SCHEMAPRESS_PATH . 'classes/class-content-sanitizer.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-resolver.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-fields.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entry.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-query.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-index.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entries.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content-type.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-collection.php';

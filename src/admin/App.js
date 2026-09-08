@@ -15,8 +15,9 @@ import { useCallback, useEffect, useState } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Database, Plus } from 'lucide-react'
 import { useRoute } from './useRoute'
-import { Loading, Alert, Button } from '../ui'
+import { Loading, Alert, Button, ConfirmDialog, cn } from '../ui'
 import { api } from '../shared/api'
+import { clearUnsaved, hasUnsaved } from '../shared/unsaved'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { CreateTypeDialog } from './CreateTypeDialog'
@@ -44,6 +45,7 @@ export function App({ settings }) {
   // without this, picking it from the sidebar while three tabs deep leaves you
   // exactly where you were — which is not what clicking a collection means
   const [visit, setVisit] = useState(0)
+  const [leaving, setLeaving] = useState(null)
 
   /**
    * Opens a screen from the sidebar, starting it fresh.
@@ -53,6 +55,15 @@ export function App({ settings }) {
    * @return {void}
    */
   const open = (view, id) => {
+    // the sidebar is the other way out of a half-filled entry form. the screen
+    // being left is the one that knows whether anything would be lost, so it
+    // says so through a flag rather than this having to know what is on it
+    if (hasUnsaved()) {
+      setLeaving({ view, id })
+
+      return
+    }
+
     setVisit((count) => count + 1)
     navigate(view, id)
   }
@@ -115,23 +126,33 @@ export function App({ settings }) {
         <Sidebar
           types={types || []}
           components={components}
-          active={{ view: route.view, id: Number(route.id) }}
+          docs={settings.docs?.sections || []}
+          active={{ view: route.view, id: route.id }}
           loading={types === null}
           version={settings.version}
           onSelect={(id) => open('type', id)}
           onCreate={() => setCreating('type')}
           onSelectComponent={(id) => open('component', id)}
           onCreateComponent={() => setCreating('component')}
-          onOpenDocs={() => open('docs')}
+          onOpenDocs={(id) => open('docs', id)}
         />
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8">
+        {/* the builder screens are cards laid on the muted ground, so the ground
+            is what separates one card from the next. the docs are not cards —
+            they are a column of text, and text wants paper. so the pane itself
+            goes white there rather than the page floating a white block on grey */}
+        <main
+          className={cn(
+            'min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8',
+            route.view === 'docs' && 'bg-background',
+          )}
+        >
           {/* the docs do not wait on the sidebar's data, and are still readable
               when loading it is what failed — the page explaining the plugin is
               the last thing that should go down with it */}
           {route.view === 'docs' ? (
             <ErrorBoundary key="docs">
-              <DocsView docs={settings.docs} />
+              <DocsView docs={settings.docs} page={route.id} />
             </ErrorBoundary>
           ) : types === null ? (
             <Loading label={__('Loading…', 'schemapress')} />
@@ -160,6 +181,25 @@ export function App({ settings }) {
           )}
         </main>
       </div>
+
+      {leaving ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(next) => !next && setLeaving(null)}
+          title={__('Leave without saving?', 'schemapress')}
+          description={__(
+            'The entry you are editing has changes that have not been saved. Leaving loses them.',
+            'schemapress',
+          )}
+          confirmLabel={__('Leave', 'schemapress')}
+          onConfirm={() => {
+            clearUnsaved()
+            setVisit((count) => count + 1)
+            navigate(leaving.view, leaving.id)
+            setLeaving(null)
+          }}
+        />
+      ) : null}
 
       {creating === 'type' ? (
         <CreateTypeDialog

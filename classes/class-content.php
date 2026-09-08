@@ -8,10 +8,15 @@ if (!defined('ABSPATH')) {
 /**
  * the public API.
  *
- * aliased to the global `Content`, so a theme reaches it with no import:
+ * aliased to the global `SchemaPress`, so a theme reaches it with no import:
  *
- *   Content::collection('team_members')->get();
- *   Content::collection('team_members')->find(12);
+ *   SchemaPress::collection('team_members')->get();
+ *   SchemaPress::collection('team_members')->find(12);
+ *
+ * the class is called Content because that is what it returns; the global name
+ * is the plugin's, because that is what a theme author is looking for when they
+ * start typing. `Content` is aliased too — it was the original name and a
+ * template written against it still runs.
  *
  * the point of it is that nothing above this line knows how WordPress stores
  * any of this. entries happen to be posts and values happen to be one meta row,
@@ -23,8 +28,8 @@ class Content
     /**
      * a collection, by either of its machine names.
      *
-     *   Content::collection('team_member')    // the singular key
-     *   Content::collection('team_members')   // the plural reads better in a loop
+     *   SchemaPress::collection('team_member')    // the singular key
+     *   SchemaPress::collection('team_members')   // the plural reads better in a loop
      *
      * both work on purpose. the singular is the identity and the plural is how
      * you address a list of them, and which one a template author reaches for

@@ -57,6 +57,12 @@ class SchemaRepository
         $type_id = absint($type_id);
         $normalized = SchemaModel::normalize($definition);
 
+        // the index is keyed by field key, so renaming or removing a field
+        // leaves rows behind that answer filters about a field the collection
+        // no longer has. compared before the write, rebuilt after it
+        $before = self::definition($type_id)['fields'] ?? [];
+        $changed = $before !== $normalized['fields'];
+
         update_post_meta(
             $type_id,
             Schema::META_DEFINITION,
@@ -72,6 +78,10 @@ class SchemaRepository
          * @param array   $normalized
          */
         do_action('schemapress/definition_saved', $type_id, $normalized);
+
+        if ($changed) {
+            Index::rebuild($type_id);
+        }
 
         return $normalized;
     }

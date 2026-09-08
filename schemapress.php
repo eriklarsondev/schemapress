@@ -37,11 +37,16 @@ define('SCHEMAPRESS_URL', plugin_dir_url(__FILE__));
  * @return void
  */
 spl_autoload_register(function ($class) {
-    // the reading API is reachable as a bare `Content::` from a theme, which
-    // needs a global name. aliasing it here rather than at load time keeps the
-    // class unloaded until something asks for it
-    if ($class === 'Content') {
-        class_alias(Content::class, 'Content');
+    // the reading API is reachable by a bare name from a theme, which needs a
+    // global one. aliasing it here rather than at load time keeps the class
+    // unloaded until something asks for it.
+    //
+    // `SchemaPress` is the name to use and reads as what it is — a global class
+    // and a namespace can share a name, because a namespace is not an entity
+    // PHP resolves separately. `Content` was the original and still answers, so
+    // a template written against it does not break.
+    if ($class === 'SchemaPress' || $class === 'Content') {
+        class_alias(Content::class, $class);
 
         return;
     }

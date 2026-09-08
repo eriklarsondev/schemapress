@@ -60,7 +60,7 @@ export const Input = forwardRef(({ className, ...props }, ref) => (
   <input
     ref={ref}
     className={cn(
-      'block w-full rounded-md border border-input bg-background px-3 py-2 text-[13px] transition-shadow placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
+      'block w-full transition-shadow placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
       className
     )}
     {...props}
@@ -80,7 +80,7 @@ export const Textarea = forwardRef(({ className, ...props }, ref) => (
   <textarea
     ref={ref}
     className={cn(
-      'block w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-[13px] transition-shadow placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
+      'block w-full resize-y transition-shadow placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
       className
     )}
     {...props}

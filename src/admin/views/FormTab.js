@@ -28,11 +28,20 @@
  * as empty content rather than as targets, which is what made the first version
  * of this screen confusing.
  *
+ * The dragging is done with pointer events rather than HTML5 drag-and-drop.
+ * That API hands the browser a drag session of its own, and this screen is the
+ * worst case for it: the list rearranges live, so the node being dragged and
+ * the targets around it are moved, mounted and unmounted throughout. Chrome
+ * came out of that with a session it never closed — the layout could be
+ * rearranged exactly once, and every press afterwards was swallowed with
+ * nothing in the console to say so. A pointer gesture has no such session:
+ * a press, some movement, a release, all of it ours.
+ *
  * Nothing here reaches the front end. It is presentation of the admin screen,
  * which is this plugin's own to arrange.
  */
 
-import { Fragment, useEffect, useState } from '@wordpress/element'
+import { Fragment, useEffect, useRef, useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
 import { Save, LayoutList, Pencil } from 'lucide-react'
 import {
@@ -49,7 +58,7 @@ import {
   Select,
   Switch,
   Popover,
-  cn
+  cn,
 } from '../../ui'
 import { move } from '../../shared/utils'
 import { conditionTargets } from '../../shared/conditions'
@@ -58,14 +67,14 @@ import { conditionTargets } from '../../shared/conditions'
 import { breakBefore, rowBreakClass, startsRow } from '../../shared/layout'
 
 /** The types whose control takes a placeholder, mirroring SchemaModel. */
-const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone']
+const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number']
 
 /** The widths a control may take, in twelfths. */
 const WIDTHS = [
   { value: 'third', span: 4, label: __('⅓', 'schemapress') },
   { value: 'half', span: 6, label: __('½', 'schemapress') },
   { value: 'two-thirds', span: 8, label: __('⅔', 'schemapress') },
-  { value: 'full', span: 12, label: __('Full', 'schemapress') }
+  { value: 'full', span: 12, label: __('Full', 'schemapress') },
 ]
 
 /**
@@ -84,7 +93,7 @@ const SPANS = {
   9: 'sm:col-span-9',
   10: 'sm:col-span-10',
   11: 'sm:col-span-11',
-  12: 'sm:col-span-12'
+  12: 'sm:col-span-12',
 }
 
 /**
@@ -100,7 +109,7 @@ const STARTS = {
   6: 'sm:col-start-6',
   7: 'sm:col-start-7',
   8: 'sm:col-start-8',
-  9: 'sm:col-start-9'
+  9: 'sm:col-start-9',
 }
 
 /**
@@ -159,13 +168,23 @@ function fits(span) {
  * boundary has no size at all — dropping there keeps the width the field
  * already had, because starting a row is a decision about position.
  *
- * @param {Array} fields
+ * Which is why the field being dragged is passed in: a boundary is only worth
+ * offering when dropping on it would move something. A field already sitting at
+ * the start of its own row is in exactly the state the strip promises, so the
+ * two strips it lies between are no-ops — and being full width they are the
+ * likeliest thing under the pointer the instant a drag begins, which made such
+ * a card look like one that could not be dragged at all.
+ *
+ * @param {Array}  fields
+ * @param {number} dragging Index of the field being dragged, or -1.
  * @return {Array} Cells, in order.
  */
-function pack(fields) {
+function pack(fields, dragging = -1) {
   const cells = []
   let used = 0
   let row = []
+  // whether the dragged field already begins a row, flush to the left edge
+  let settled = false
 
   /**
    * Ends the current row: offers what is left of it, then offers the boundary
@@ -205,7 +224,16 @@ function pack(fields) {
     // as any other gap, and without this it was the one hole on the screen
     // with nothing offering to fill it
     if (offset > 0) {
-      cells.push({ gap: offset, at: index, start: used, row })
+      // `lead` marks it as this field's own leading space rather than what a
+      // row had left over: it is part of the layout and has to be drawn even
+      // when nothing is being dragged
+      cells.push({ gap: offset, at: index, start: used, row, lead: true })
+    }
+
+    // read before the field is accounted for, while `used` is still the column
+    // it starts in
+    if (index === dragging) {
+      settled = used === 0 && offset === 0
     }
 
     cells.push({ field, index })
@@ -222,7 +250,97 @@ function pack(fields) {
     close(fields.length)
   }
 
-  return cells
+  if (!settled) {
+    return cells
+  }
+
+  // the boundary just above the dragged field and the one just below it both
+  // land it back where it started
+  return cells.filter((cell) => !cell.newRow || (cell.at !== dragging && cell.at !== dragging + 1))
+}
+
+/**
+ * Where every field currently sits: which row, and which column it begins in.
+ *
+ * The same walk `pack` does, reporting positions instead of drop targets.
+ *
+ * @param {Array} fields
+ * @return {Array<{row: number, start: number}>}
+ */
+function positions(fields) {
+  const at = []
+  let row = 0
+  let used = 0
+
+  fields.forEach((field) => {
+    const offset = offsetOf(field)
+    const span = spanOf(field)
+
+    if (used > 0 && (startsRow(field) || used + offset + span > 12)) {
+      row += 1
+      used = 0
+    }
+
+    at.push({ row: row, start: used + offset })
+    used += offset + span
+  })
+
+  return at
+}
+
+/**
+ * Writes the arrangement that is on screen into the fields themselves.
+ *
+ * A width is stored; a position was not. Everything else about the layout was
+ * inferred from widths at render time, which is why changing one field moved
+ * the others — the grid simply re-packed, and there was nothing recorded to say
+ * that Full Name had been put where it was on purpose.
+ *
+ * So before a width changes, every field is pinned to the column and row it is
+ * already in. The field being resized changes; the rest stay where they were
+ * put, and a gap opens where the width was given back rather than the next
+ * field sliding into it.
+ *
+ * @param {Array} fields    the fields as they will be, with the new width
+ * @param {Array} reference the fields as they are, whose layout to keep
+ * @return {Array} The fields, with row and offset written in.
+ */
+function pin(fields, reference) {
+  const target = positions(reference)
+
+  let row = -1
+  let used = 0
+
+  return fields.map((field, index) => {
+    const want = target[index]
+
+    if (!want) {
+      return field
+    }
+
+    const span = spanOf(field)
+    const breaks = want.row !== row
+
+    if (breaks) {
+      row = want.row
+      used = 0
+    }
+
+    // as far along the row as it used to be, as far as the new width allows
+    const offset = Math.max(0, Math.min(want.start - used, 12 - span))
+
+    used = used + offset + span
+
+    return {
+      ...field,
+      config: {
+        ...field.config,
+        // the first field cannot begin a row: there is none above it to end
+        new_row: index > 0 && breaks,
+        offset,
+      },
+    }
+  })
 }
 
 /**
@@ -235,13 +353,54 @@ export function FormTab({ fields, onChange }) {
   const [draft, setDraft] = useState(fields)
   const [saving, setSaving] = useState(false)
   const [dragging, setDragging] = useState(-1)
+  const [over, setOver] = useState(-1)
   const [editing, setEditing] = useState(-1)
+
+  // the gesture is followed from listeners bound once to the window, so what
+  // they need is held in refs rather than closed over from a render that will
+  // have been replaced several times before the pointer comes back up
+  const press = useRef(null)
+  const draggingRef = useRef(-1)
+  const overRef = useRef(-1)
+  const cellsRef = useRef([])
 
   useEffect(() => {
     setDraft(fields)
   }, [fields])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(fields)
+
+  const cells = pack(draft, dragging)
+
+  // what the listeners hit-test against: the cells as the DOM currently has
+  // them, looked up by the index stamped on each target
+  cellsRef.current = cells
+
+  /**
+   * Sets the field being dragged, keeping the ref the listeners read in step.
+   *
+   * @param {number} value
+   * @return {void}
+   */
+  const setDrag = (value) => {
+    draggingRef.current = value
+    setDragging(value)
+  }
+
+  /**
+   * Sets which drop target the pointer is inside, if any.
+   *
+   * @param {number} value Index into the packed cells, or -1.
+   * @return {void}
+   */
+  const setHover = (value) => {
+    if (overRef.current === value) {
+      return
+    }
+
+    overRef.current = value
+    setOver(value)
+  }
 
   /**
    * Sets one field's width.
@@ -250,11 +409,24 @@ export function FormTab({ fields, onChange }) {
    * @param {string} width
    * @return {void}
    */
+  /**
+   * Marks one field required, or not.
+   *
+   * @param {number}  index
+   * @param {boolean} required
+   * @return {void}
+   */
+  const setRequired = (index, required) =>
+    setDraft((current) => current.map((field, i) => (i === index ? { ...field, required } : field)))
+
   const setWidth = (index, width) =>
     setDraft((current) =>
-      current.map((field, i) =>
-        i === index ? { ...field, config: { ...field.config, width } } : field
-      )
+      pin(
+        current.map((field, i) =>
+          i === index ? { ...field, config: { ...field.config, width } } : field,
+        ),
+        current,
+      ),
     )
 
   /**
@@ -287,13 +459,15 @@ export function FormTab({ fields, onChange }) {
    * @param {number} over
    * @return {void}
    */
-  const dragOver = (over) => {
-    if (dragging === -1 || dragging === over) {
+  const dragOver = (onto) => {
+    const from = draggingRef.current
+
+    if (from === -1 || from === onto) {
       return
     }
 
-    setDraft((current) => move(current, dragging, over))
-    setDragging(over)
+    setDraft((current) => move(current, from, onto))
+    setDrag(onto)
   }
 
   /**
@@ -311,30 +485,30 @@ export function FormTab({ fields, onChange }) {
    * @return {void}
    */
   const dropInNewRow = (cell) => {
+    const from = draggingRef.current
+
     setDraft((current) => {
       const marked = current.map((field, i) =>
-        i === dragging
-          ? { ...field, config: { ...field.config, offset: 0, new_row: true } }
-          : field
+        i === from ? { ...field, config: { ...field.config, offset: 0, new_row: true } } : field,
       )
 
       // moving to a later index counts the field being moved, so the boundary
       // it was dropped on has already shifted up by one
-      const to = cell.at > dragging ? cell.at - 1 : cell.at
+      const to = cell.at > from ? cell.at - 1 : cell.at
 
       // only when the field actually came from elsewhere. dropping on the
       // boundary it already sits against moves nothing, and pinning a
       // neighbour there would rearrange a row nobody touched
-      if (to === dragging) {
+      if (to === from) {
         return marked
       }
 
-      return move(marked, dragging, to).map((field, i) =>
-        i === to + 1 ? { ...field, config: { ...field.config, new_row: true } } : field
+      return move(marked, from, to).map((field, i) =>
+        i === to + 1 ? { ...field, config: { ...field.config, new_row: true } } : field,
       )
     })
 
-    setDragging(-1)
+    setDrag(-1)
   }
 
   /**
@@ -344,7 +518,9 @@ export function FormTab({ fields, onChange }) {
    * @return {void}
    */
   const dropInGap = (cell) => {
-    if (dragging === -1) {
+    const from = draggingRef.current
+
+    if (from === -1) {
       return
     }
 
@@ -357,6 +533,8 @@ export function FormTab({ fields, onChange }) {
     const width = fits(cell.gap)
 
     if (!width) {
+      setDrag(-1)
+
       return
     }
 
@@ -366,11 +544,11 @@ export function FormTab({ fields, onChange }) {
       // the only thing before the gap was the field being moved, it leaves as
       // it arrives, and the space it should sit in has to be stated
       const before = cell.row
-        .filter((index) => index !== dragging)
+        .filter((index) => index !== from)
         .reduce((sum, index) => sum + spanOf(current[index]) + offsetOf(current[index]), 0)
 
       const sized = current.map((field, i) =>
-        i === dragging
+        i === from
           ? {
               ...field,
               config: {
@@ -378,19 +556,168 @@ export function FormTab({ fields, onChange }) {
                 width: width.value,
                 offset: Math.max(0, cell.start - before),
                 // it is joining a row, so it is no longer starting one
-                new_row: false
-              }
+                new_row: false,
+              },
             }
-          : field
+          : field,
       )
 
       // moving to a later index counts the field being moved, so the gap it
       // was dropped into has already shifted left by one
-      return move(sized, dragging, cell.at > dragging ? cell.at - 1 : cell.at)
+      return move(sized, from, cell.at > from ? cell.at - 1 : cell.at)
     })
 
-    setDragging(-1)
+    setDrag(-1)
   }
+
+  /**
+   * Begins a press on a card. Not yet a drag — a press that never travels is
+   * a click, and clicking a card is how its settings open.
+   *
+   * @param {number} index
+   * @param {Object} event
+   * @return {void}
+   */
+  const beginPress = (index, event) => {
+    // the width badge is a control of its own, and pressing it is not a grab
+    if (event.button !== 0 || (event.target.closest && event.target.closest('button'))) {
+      return
+    }
+
+    // a press that is about to become a drag should not also start selecting
+    // the text it passes over
+    event.preventDefault()
+
+    press.current = {
+      index,
+      x: event.clientX,
+      y: event.clientY,
+      moved: false,
+      // what to put back if the gesture is abandoned, since the rearranging
+      // happens live rather than on release
+      order: draft,
+    }
+  }
+
+  /**
+   * The rest of the gesture, followed on the window.
+   *
+   * On the window rather than on the cards because the pointer does not stay
+   * over the card it started on — that is the entire point — and because a
+   * release outside the grid has to end the drag as reliably as one inside it.
+   *
+   * Bound once. Everything these read is a ref or a functional setter, so the
+   * first render's copies behave the same as any later one.
+   */
+  useEffect(() => {
+    /**
+     * Promotes a press into a drag once it has travelled far enough to mean
+     * it, then keeps the layout rearranged under the pointer.
+     *
+     * @param {Object} event
+     * @return {void}
+     */
+    const onMove = (event) => {
+      const gesture = press.current
+
+      if (!gesture) {
+        return
+      }
+
+      if (!gesture.moved) {
+        const travelled = Math.abs(event.clientX - gesture.x) + Math.abs(event.clientY - gesture.y)
+
+        if (travelled < 4) {
+          return
+        }
+
+        gesture.moved = true
+        setDrag(gesture.index)
+      }
+
+      // hit-testing the document rather than tracking enter and leave on every
+      // target: the targets appear, move and vanish as the layout rearranges,
+      // and a target that unmounts under the pointer never sends its leave
+      const under = document.elementFromPoint(event.clientX, event.clientY)
+      const card = under && under.closest('[data-sp-card]')
+
+      if (card) {
+        setHover(-1)
+        dragOver(Number(card.dataset.spCard))
+
+        return
+      }
+
+      const gap = under && under.closest('[data-sp-gap]')
+
+      setHover(gap ? Number(gap.dataset.spGap) : -1)
+    }
+
+    /**
+     * Ends the gesture: a drop into whatever is under the pointer, or — if it
+     * never travelled — the click that opens the card.
+     *
+     * @return {void}
+     */
+    const onUp = () => {
+      const gesture = press.current
+
+      press.current = null
+
+      if (!gesture) {
+        return
+      }
+
+      if (!gesture.moved) {
+        setEditing(gesture.index)
+
+        return
+      }
+
+      const cell = overRef.current === -1 ? null : cellsRef.current[overRef.current]
+
+      setHover(-1)
+
+      // released over a card, or over nothing: the passing-over already put it
+      // where it is, so there is nothing left to apply
+      if (cell && cell.gap) {
+        dropInGap(cell)
+      } else {
+        setDrag(-1)
+      }
+    }
+
+    /**
+     * Abandons the gesture, putting the order back as it was.
+     *
+     * @param {Object} event
+     * @return {void}
+     */
+    const onKey = (event) => {
+      const gesture = press.current
+
+      if (event.key !== 'Escape' || !gesture) {
+        return
+      }
+
+      press.current = null
+      setDraft(gesture.order)
+      setHover(-1)
+      setDrag(-1)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    window.addEventListener('keydown', onKey)
+
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
 
   /**
    * Stores a field list.
@@ -419,15 +746,20 @@ export function FormTab({ fields, onChange }) {
       <Alert variant="info">
         {__(
           'Drag a field onto another to reorder, into a row’s spare space to fill it, or onto a New row strip to give it a row of its own. Click a card for its placeholder, help text and whether it is required.',
-          'schemapress'
+          'schemapress',
         )}
       </Alert>
 
       <Card>
         <CardBody>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-            {pack(draft).map((cell) =>
+            {cells.map((cell, at) =>
               cell.field ? (
+                // keyed by field, not by position. the list reorders under a
+                // pointer that is still holding one of these cards, and it is
+                // the card that has to travel with it — key by position and the
+                // node under the pointer is suddenly a different field, which
+                // hovering then swaps straight back
                 <Fragment key={cell.field.key}>
                   {/* the break is what actually holds the row open once the
                       drop targets are gone: without it the card flows straight
@@ -442,23 +774,28 @@ export function FormTab({ fields, onChange }) {
                     field={cell.field}
                     index={cell.index}
                     dragging={dragging === cell.index}
-                    onDragStart={() => setDragging(cell.index)}
-                    onDragOver={() => dragOver(cell.index)}
-                    onDragEnd={() => setDragging(-1)}
+                    onPointerDown={(event) => beginPress(cell.index, event)}
                     onWidth={(width) => setWidth(cell.index, width)}
-                    onEdit={() => setEditing(cell.index)}
+                    onRequired={(required) => setRequired(cell.index, required)}
                   />
                 </Fragment>
+              ) : cell.lead && dragging === -1 ? (
+                <div
+                  key={`lead-${cell.at}-${cell.start}`}
+                  aria-hidden="true"
+                  className={cn('hidden sm:block', SPANS[cell.gap])}
+                />
               ) : (
                 <Gap
                   key={`gap-${cell.at}-${cell.start}-${cell.gap}${cell.newRow ? '-new' : ''}`}
+                  at={at}
                   span={cell.gap}
                   start={cell.start}
                   newRow={cell.newRow}
                   dragging={dragging !== -1}
-                  onDrop={() => dropInGap(cell)}
+                  over={over === at}
                 />
-              )
+              ),
             )}
           </div>
         </CardBody>
@@ -504,12 +841,15 @@ export function FormTab({ fields, onChange }) {
  * makes no such bargain — it is about which row the field is on, and the field
  * arrives at the width it left with.
  *
+ * Which boundaries exist at all is `pack`'s decision, and it offers only the
+ * ones that would move the field: a strip saying New row that leaves the field
+ * exactly where it was is worse than no strip, because it is full width and
+ * therefore the easiest thing on the screen to drop on by accident.
+ *
  * @param {Object} props
  * @return {JSX.Element|null} The target.
  */
-function Gap({ span, start, newRow, dragging, onDrop }) {
-  const [over, setOver] = useState(false)
-
+function Gap({ at, span, start, newRow, dragging, over }) {
   const width = fits(span)
 
   // a sliver narrower than a third can hold nothing, so it is not offered. a
@@ -524,22 +864,12 @@ function Gap({ span, start, newRow, dragging, onDrop }) {
   if (newRow) {
     return (
       <div
-        onDragOver={(event) => {
-          event.preventDefault()
-          event.dataTransfer.dropEffect = 'move'
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(event) => {
-          event.preventDefault()
-          setOver(false)
-          onDrop()
-        }}
+        data-sp-gap={at}
         className={cn(
           'flex min-h-[2.5rem] items-center justify-center rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors sm:col-span-12',
           over
             ? 'border-primary bg-primary/10 text-primary'
-            : 'border-ring/25 bg-accent/10 text-muted-foreground/80'
+            : 'border-ring/25 bg-accent/10 text-muted-foreground/80',
         )}
       >
         <span>{__('New row', 'schemapress')}</span>
@@ -549,22 +879,14 @@ function Gap({ span, start, newRow, dragging, onDrop }) {
 
   return (
     <div
-      onDragOver={(event) => {
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(event) => {
-        event.preventDefault()
-        setOver(false)
-        onDrop()
-      }}
+      data-sp-gap={at}
       className={cn(
         'flex min-h-[5rem] items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors',
         SPANS[span],
         start > 0 && STARTS[start + 1],
-        over ? 'border-primary bg-primary/10 text-primary' : 'border-ring/40 bg-accent/20 text-muted-foreground'
+        over
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-ring/40 bg-accent/20 text-muted-foreground',
       )}
     >
       <span>{__('Fill this space', 'schemapress')}</span>
@@ -579,16 +901,7 @@ function Gap({ span, start, newRow, dragging, onDrop }) {
  * @param {Object} props
  * @return {JSX.Element} The card.
  */
-function FieldCard({
-  field,
-  index,
-  dragging,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onWidth,
-  onEdit
-}) {
+function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired }) {
   const [sizing, setSizing] = useState(false)
 
   const width = widthOf(field)
@@ -597,36 +910,23 @@ function FieldCard({
 
   return (
     <div
-      draggable
-      // the whole card opens the settings. a drag only fires on movement, so
-      // the two gestures do not collide, and there is no small target to find
-      onClick={onEdit}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = 'move'
-        // Firefox refuses to start a drag without payload
-        event.dataTransfer.setData('text/plain', field.key || String(index))
-        onDragStart()
-      }}
-      onDragOver={(event) => {
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-        onDragOver()
-      }}
-      onDrop={(event) => {
-        event.preventDefault()
-        onDragEnd()
-      }}
-      onDragEnd={onDragEnd}
+      // the whole card both drags and opens the settings: a press that travels
+      // is a grab, one that does not is a click. which is decided on release,
+      // by the window listener, so there is no small target to find here
+      data-sp-card={index}
+      onPointerDown={onPointerDown}
       className={cn(
-        'group relative flex cursor-grab flex-col rounded-lg bg-background p-3 shadow-sm transition-colors',
+        // min-w-0 so a long label can never push the card wider than its
+        // column and over the top of its neighbour; select-none so pressing on
+        // the label starts the drag rather than a text selection
+        'group relative flex min-w-0 cursor-grab select-none flex-col overflow-hidden rounded-lg bg-background p-3 shadow-sm transition-colors',
         SPANS[option.span],
-        offset > 0 && STARTS[offset + 1],
         dragging
           ? // the card being dragged reads as the gap it left behind, so the
             // destination is a shape on screen rather than a guess. thicker
             // than a resting card on purpose: it is a target now, not content
             'cursor-grabbing items-center justify-center border-2 border-dashed border-ring/60 bg-accent/40'
-          : 'border border-border hover:border-primary/40'
+          : 'border border-border hover:border-primary/40',
       )}
     >
       {/* while it is being dragged the card IS a drop target — put it back
@@ -643,7 +943,40 @@ function FieldCard({
       <div className={cn('mb-2 flex min-w-0 items-center gap-1.5', dragging && 'hidden')}>
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{field.label}</span>
 
-        <Badge variant="outline">{field.type}</Badge>
+        <Badge variant="outline" className="min-w-0 truncate">
+          {field.type}
+        </Badge>
+
+        {/* required is the other setting worth a click rather than a dialog,
+            and it is the one you want to SEE without opening anything — an
+            asterisk that is on or off says the state of every field on the
+            screen at once, which a switch buried in a dialog never can */}
+        <button
+          type="button"
+          aria-pressed={Boolean(field.required)}
+          aria-label={sprintf(
+            /* translators: %s: the field's label */
+            __('Required: %s', 'schemapress'),
+            field.label,
+          )}
+          title={
+            field.required
+              ? __('Required — click to make optional', 'schemapress')
+              : __('Optional — click to make required', 'schemapress')
+          }
+          onClick={(event) => {
+            event.stopPropagation()
+            onRequired(!field.required)
+          }}
+          className={cn(
+            'flex size-5 shrink-0 items-center justify-center rounded border text-[13px] font-semibold leading-none transition-colors',
+            field.required
+              ? 'border-destructive/40 bg-destructive/10 text-destructive'
+              : 'border-border text-muted-foreground/50 hover:border-primary/50 hover:text-foreground',
+          )}
+        >
+          <span aria-hidden="true">*</span>
+        </button>
 
         {/* width is the one setting worth changing without opening anything,
             because it is the whole point of this screen — so it is a popover
@@ -660,9 +993,9 @@ function FieldCard({
               aria-label={sprintf(
                 /* translators: %s: the field's label */
                 __('Width of %s', 'schemapress'),
-                field.label
+                field.label,
               )}
-              className="flex h-5 min-w-[1.75rem] items-center justify-center rounded border border-border px-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              className="flex h-5 min-w-[1.75rem] shrink-0 items-center justify-center rounded border border-border px-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
             >
               {option.label}
             </button>
@@ -677,7 +1010,7 @@ function FieldCard({
               }}
               options={WIDTHS.map((candidate) => ({
                 value: candidate.value,
-                label: candidate.label
+                label: candidate.label,
               }))}
             />
           </div>
@@ -690,8 +1023,8 @@ function FieldCard({
           saying nothing about the layout being set */}
       <div
         className={cn(
-          'relative flex h-9 w-full items-center rounded-md border border-input bg-muted px-2.5 text-[12px] text-muted-foreground transition-colors group-hover:border-primary/40',
-          dragging && 'hidden'
+          'relative flex h-9 w-full items-center rounded-md border border-input bg-input-fill px-2.5 text-[12px] text-muted-foreground transition-colors group-hover:border-primary/40',
+          dragging && 'hidden',
         )}
       >
         <span className="min-w-0 flex-1 truncate">{field.config?.placeholder || ''}</span>
@@ -701,7 +1034,6 @@ function FieldCard({
     </div>
   )
 }
-
 
 /**
  * One field's presentation, as a dialog.
@@ -736,7 +1068,7 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
     setDraft((current) => ({
       ...current,
       ...changes,
-      config: { ...current.config, ...changes.config }
+      config: { ...current.config, ...changes.config },
     }))
 
   return (
@@ -745,7 +1077,10 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
       size="md"
       onOpenChange={(next) => !next && onClose()}
       title={draft.label || __('Field', 'schemapress')}
-      description={__('How this field appears on the entry form.', 'schemapress')}
+      description={__(
+        'What this field asks for. Where it sits is set by dragging it on the canvas.',
+        'schemapress',
+      )}
       badge={<Badge variant="outline">{draft.type}</Badge>}
       footer={
         <>
@@ -760,21 +1095,6 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
       }
     >
       <div className="flex flex-col gap-4">
-        <Field
-          label={__('Width', 'schemapress')}
-          help={__('How much of the row the control takes.', 'schemapress')}
-        >
-          {(id) => (
-            <Segmented
-              id={id}
-              stretch
-              value={widthOf(draft)}
-              onChange={(width) => update({ config: { width } })}
-              options={WIDTHS.map((option) => ({ value: option.value, label: option.label }))}
-            />
-          )}
-        </Field>
-
         {takesPlaceholder ? (
           <Field
             label={__('Placeholder', 'schemapress')}
@@ -804,16 +1124,6 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
             />
           )}
         </Field>
-
-        <Switch
-          label={__('Start a new row', 'schemapress')}
-          help={__(
-            'Keeps this field at the start of its own row instead of filling the space left over above it.',
-            'schemapress'
-          )}
-          checked={startsRow(draft)}
-          onChange={(next) => update({ config: { new_row: next } })}
-        />
 
         <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3">
           <Switch
@@ -862,14 +1172,14 @@ function ConditionSettings({ field, siblings, onChange }) {
         label={__('Only show this field sometimes', 'schemapress')}
         help={__(
           'A hidden field keeps whatever was already in it, and still delivers it.',
-          'schemapress'
+          'schemapress',
         )}
         checked={on}
         onChange={(next) =>
           onChange(
             next
               ? { field: targets[0].key, operator: 'filled', value: '' }
-              : { field: '', operator: 'filled', value: '' }
+              : { field: '', operator: 'filled', value: '' },
           )
         }
       />
@@ -889,7 +1199,7 @@ function ConditionSettings({ field, siblings, onChange }) {
               value={condition.field}
               options={targets.map((target) => ({
                 value: target.key,
-                label: target.label || target.key
+                label: target.label || target.key,
               }))}
               onChange={(next) => onChange({ ...condition, field: next })}
             />
@@ -901,7 +1211,7 @@ function ConditionSettings({ field, siblings, onChange }) {
                 { value: 'filled', label: __('filled in', 'schemapress') },
                 { value: 'empty', label: __('empty', 'schemapress') },
                 { value: 'equals', label: __('exactly', 'schemapress') },
-                { value: 'not_equals', label: __('anything but', 'schemapress') }
+                { value: 'not_equals', label: __('anything but', 'schemapress') },
               ]}
               onChange={(next) => onChange({ ...condition, operator: next })}
             />

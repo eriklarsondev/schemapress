@@ -31,6 +31,15 @@ class Collection implements \IteratorAggregate, \Countable
     private $args = [];
 
     /**
+     * filters and sort, in the shape Query understands. the same structures the
+     * REST endpoints build from a query string, so a template and an HTTP
+     * client asking the same question ask it the same way.
+     *
+     * @var array
+     */
+    private $spec = [];
+
+    /**
      * @var Entry[]|null
      */
     private $entries = null;
@@ -82,7 +91,116 @@ class Collection implements \IteratorAggregate, \Countable
      */
     public function orderBy($field, $direction = 'asc')
     {
-        return $this->with(['orderby' => $field, 'order' => $direction]);
+        // title, date and modified live on the post row and are ordered by
+        // WP_Query directly. anything else is one of the collection's own
+        // fields, which is a sort against the index
+        if (in_array($field, ['title', 'date', 'modified'], true)) {
+            return $this->with(['orderby' => $field, 'order' => $direction]);
+        }
+
+        return $this->sort($field, $direction);
+    }
+
+    /**
+     * orders by any indexable field.
+     *
+     *   ->sort('name')            // ascending
+     *   ->sort('joined', 'desc')
+     *
+     * a field that cannot be indexed — a repeater, a group, rich text — is
+     * ignored rather than obeyed: see class-index.php for which those are.
+     *
+     * @param string $field
+     * @param string $direction asc or desc
+     *
+     * @return Collection
+     */
+    public function sort($field, $direction = 'asc')
+    {
+        $sort = $this->spec['sort'] ?? [];
+        $sort[] = [
+            'field' => (string) $field,
+            'direction' => strtolower($direction) === 'desc' ? 'DESC' : 'ASC',
+        ];
+
+        return $this->with([], ['sort' => $sort]);
+    }
+
+    /**
+     * filters by a field's value.
+     *
+     *   ->where('role', 'Engineer')            // equals
+     *   ->where('age', '>=', 30)
+     *   ->where('role', '$in', ['Design', 'Eng'])
+     *
+     * the operators are Strapi's — `$eq`, `$ne`, `$lt`, `$lte`, `$gt`, `$gte`,
+     * `$in`, `$notIn`, `$contains`, `$startsWith`, `$endsWith`, `$null`,
+     * `$notNull`, `$between` — and the plain comparisons are accepted as
+     * aliases, because `>=` is what a PHP author reaches for first.
+     *
+     * @param string $field
+     * @param mixed  $operator the operator, or the value when only two given
+     * @param mixed  $value
+     *
+     * @return Collection
+     */
+    public function where($field, $operator, $value = null)
+    {
+        if (func_num_args() === 2) {
+            $value = $operator;
+            $operator = '$eq';
+        }
+
+        $filters = $this->spec['filters'] ?? [];
+        $filters[(string) $field][self::operator($operator)] = $value;
+
+        return $this->with([], ['filters' => $filters]);
+    }
+
+    /**
+     * a whole filter tree at once, in Strapi's shape.
+     *
+     * for the queries `where()` cannot spell — anything using `$and` or `$or`:
+     *
+     *   ->filter(['$or' => [['role' => ['$eq' => 'Design']], ['lead' => ['$eq' => true]]]])
+     *
+     * @param array $filters
+     *
+     * @return Collection
+     */
+    public function filter(array $filters)
+    {
+        return $this->with([], [
+            'filters' => array_merge($this->spec['filters'] ?? [], $filters),
+        ]);
+    }
+
+    /**
+     * normalizes an operator to the `$`-prefixed form Query speaks.
+     *
+     * @param string $operator
+     *
+     * @return string
+     */
+    private static function operator($operator)
+    {
+        $aliases = [
+            '=' => '$eq',
+            '==' => '$eq',
+            '!=' => '$ne',
+            '<>' => '$ne',
+            '<' => '$lt',
+            '<=' => '$lte',
+            '>' => '$gt',
+            '>=' => '$gte',
+            'in' => '$in',
+            'not in' => '$notIn',
+            'like' => '$contains',
+        ];
+
+        $operator = (string) $operator;
+
+        return $aliases[strtolower($operator)] ?? $operator;
     }
 
     /**
@@ -211,10 +329,11 @@ class Collection implements \IteratorAggregate, \Countable
      *
      * @return Collection
      */
-    private function with(array $args)
+    private function with(array $args, array $spec = [])
     {
         $next = new self($this->typeId);
         $next->args = array_merge($this->args, $args);
+        $next->spec = array_merge($this->spec, $spec);
 
         return $next;
     }
@@ -237,7 +356,7 @@ class Collection implements \IteratorAggregate, \Countable
             return;
         }
 
-        $result = Entries::all($this->typeId, $this->args);
+        $result = Entries::all($this->typeId, $this->args + ['spec' => $this->spec]);
         $fields = $this->fields();
 
         $this->entries = array_map(function ($entry) use ($fields) {

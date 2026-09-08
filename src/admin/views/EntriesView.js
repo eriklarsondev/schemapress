@@ -37,9 +37,76 @@ import { api } from '../../shared/api'
 import { ConfigureTableDialog } from './ConfigureTableDialog'
 
 /**
+ * Field types the database can order by — mirrors Index::TYPES in
+ * class-index.php, which is what decides whether a value is mirrored into a
+ * column of its own.
+ *
+ * Narrower than that list on purpose: an image and a file ARE indexed, so the
+ * API can ask whether one is set, but they are indexed as attachment ids and
+ * ordering by an id is ordering by upload order wearing a photograph. The rest
+ * cannot be indexed at all — rich text is a document, a link and a group hold
+ * several values, and a repeater holds many rows.
+ *
+ * A header that cannot sort says so by not offering. A sort that silently did
+ * nothing would be worse than none.
+ */
+const SORTABLE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'select', 'number', 'toggle']
+
+/**
  * How many field columns the table shows before it stops being scannable.
  */
 const MAX_COLUMNS = 4
+
+/**
+ * One cell, drawn.
+ *
+ * Most values are text and go through `cell` below. An image is the exception:
+ * a column of the word "Set" tells you an avatar exists and nothing about which
+ * one, when the listing already carries the thumbnail.
+ *
+ * Round, because at this size the subject of a photograph is in the middle and
+ * the corners are whatever was behind them.
+ *
+ * A plain function rather than a component, so an empty cell is falsy and the
+ * caller's fallback — the entry's name, or a dash — still works. A JSX element
+ * is always truthy, and returning one for "nothing here" would have quietly
+ * swallowed both.
+ *
+ * @param {Object} field
+ * @param {Object} entry
+ * @return {JSX.Element|string} The cell's contents, or '' when there are none.
+ */
+function cellValue(field, entry) {
+  const value = entry.values?.[field.key]
+
+  if (field.type === 'image') {
+    const image = entry.data?.[field.key]
+    const src = image?.sizes?.thumbnail?.url || image?.url
+
+    if (!src) {
+      // an empty frame, not the entry's name. this column was asked for because
+      // it shows a picture, and printing a name in it makes a column of names
+      // that happens to be headed Avatar
+      return (
+        <span
+          aria-hidden="true"
+          className="block size-7 shrink-0 rounded-full border border-dashed border-border bg-muted/50"
+        />
+      )
+    }
+
+    return (
+      <img
+        src={src}
+        alt={image?.alt || ''}
+        loading="lazy"
+        className="size-7 shrink-0 rounded-full border border-border object-cover"
+      />
+    )
+  }
+
+  return cell(field, value)
+}
 
 /**
  * Renders one cell's value as short, comparable text.
@@ -173,8 +240,11 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
       current.orderby === orderby
         ? { orderby, order: current.order === 'asc' ? 'desc' : 'asc' }
         : // a first click means "show me this column", and what that means
-          // differs: names read A-Z, times read newest first
-          { orderby, order: orderby === 'title' ? 'asc' : 'desc' },
+          // differs: a time reads newest first, everything else reads A-Z
+          {
+            orderby,
+            order: ['modified', 'date'].includes(orderby) ? 'desc' : 'asc',
+          },
     )
   }
 
@@ -219,7 +289,25 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
   // Entries::deriveTitle. only that column can be sorted, because 'title' is
   // the only thing the database has to order by — every other field's value
   // lives inside one JSON blob
-  const titleKey = fields.find((field) => field.type === 'text' || field.type === 'textarea')?.key
+  // the collection's own choice first — that field IS the post title, so
+  // ordering by the post row is the same answer without a meta join
+  const titleKey =
+    settings.titleField ||
+    fields.find((field) => field.type === 'text' || field.type === 'textarea')?.key
+
+  /**
+   * What to sort by when a column's header is clicked, or nothing.
+   *
+   * @param {Object} field
+   * @return {string|undefined} The sort key.
+   */
+  const sortKey = (field) => {
+    if (field.key === titleKey) {
+      return 'title'
+    }
+
+    return SORTABLE_TYPES.includes(field.type) ? field.key : undefined
+  }
 
   const from = (page - 1) * state.perPage + 1
   const to = from + state.entries.length - 1
@@ -308,7 +396,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                 {columns.map((field) => (
                   <Th
                     key={field.key}
-                    sortBy={field.key === titleKey ? 'title' : undefined}
+                    sortBy={sortKey(field)}
                     sort={sort}
                     onSort={sortBy}
                   >
@@ -345,19 +433,24 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                   {columns.map((field, index) => (
                     <td
                       key={field.key}
-                      className="max-w-[16rem] truncate whitespace-nowrap px-3 py-2.5 text-muted-foreground"
+                      className={cn(
+                        'whitespace-nowrap px-3 py-2.5 text-muted-foreground',
+                        // a thumbnail is a fixed size and must not be truncated
+                        field.type === 'image' ? 'w-px' : 'max-w-[16rem] truncate',
+                      )}
                     >
                       {index === 0 ? (
                         // the first column is the way in. an entry whose first
                         // field is blank still has to be openable, so it falls
                         // back to the derived name
-                        <Open entry={entry} onOpen={onOpenEntry}>
-                          {cell(field, entry.values?.[field.key]) ||
-                            entry.title ||
-                            __('Untitled', 'schemapress')}
+                        <Open entry={entry} onOpen={onOpenEntry} label={entry.title}>
+                          {cellValue(field, entry) ||
+                            (field.type === 'image'
+                              ? null
+                              : entry.title || __('Untitled', 'schemapress'))}
                         </Open>
                       ) : (
-                        cell(field, entry.values?.[field.key]) || (
+                        cellValue(field, entry) || (
                           <span className="text-muted-foreground/40">—</span>
                         )
                       )}
@@ -481,10 +574,13 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
  * @param {Object} props
  * @return {JSX.Element} The button.
  */
-function Open({ entry, onOpen, children }) {
+function Open({ entry, onOpen, children, label }) {
   return (
     <button
       type="button"
+      // the contents may be a picture, or an empty frame with nothing to read,
+      // so the entry's name is given to the button rather than drawn in it
+      aria-label={label || __('Untitled', 'schemapress')}
       // the row handles the click too; without this the same entry is opened
       // twice, and it exists mainly so the row is reachable by keyboard
       onClick={(event) => {

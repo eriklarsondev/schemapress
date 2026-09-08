@@ -26,7 +26,7 @@ export function LinkField({ field, value, onChange }) {
 
   return (
     <Field label={field.label} help={field.help} required={field.required}>
-      <div className="flex flex-col gap-3 rounded-md border border-input p-3">
+      <div className="flex flex-col gap-3 rounded-md border border-border p-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={__('URL', 'schemapress')}>
             {(id) => (

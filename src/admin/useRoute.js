@@ -13,7 +13,12 @@ const DEFAULT_ROUTE = { view: 'pages', id: null }
 /**
  * Parses the current fragment into a route.
  *
- * @return {{view: string, id: number|null}} The active route.
+ * The id is left as written. A collection is identified by a post id and a
+ * documentation page by its slug, so coercing to a number here turned every
+ * `#/docs/reading-content` into `#/docs/NaN`. The screens that want a number
+ * ask for one; this only reports what the fragment says.
+ *
+ * @return {{view: string, id: string|null}} The active route.
  */
 function parse() {
   const [view, id] = window.location.hash.replace(/^#\/?/, '').split('/')
@@ -22,13 +27,13 @@ function parse() {
     return DEFAULT_ROUTE
   }
 
-  return { view, id: id ? Number(id) : null }
+  return { view, id: id || null }
 }
 
 /**
  * Tracks the active route and exposes a navigator.
  *
- * @return {[{view: string, id: number|null}, Function]} Route and navigate.
+ * @return {[{view: string, id: string|null}, Function]} Route and navigate.
  */
 export function useRoute() {
   const [route, setRoute] = useState(parse)

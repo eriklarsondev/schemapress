@@ -9,7 +9,7 @@ import { Fragment } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Alert } from '../../ui'
 import { visibleFields } from '../conditions'
-import { breakBefore, cellClass, gridClass, rowBreakClass } from '../layout'
+import { breakBefore, cellClass, gridClass, leadingSpace, rowBreakClass, spacerClass } from '../layout'
 import {
   TextField,
   TextareaField,
@@ -89,6 +89,10 @@ export function FieldList({ fields = [], values = {}, onChange, context }) {
         <Fragment key={field.key}>
           {breakBefore(field, index) ? (
             <div aria-hidden="true" className={rowBreakClass()} />
+          ) : null}
+
+          {leadingSpace(field) > 0 ? (
+            <div aria-hidden="true" className={spacerClass(leadingSpace(field))} />
           ) : null}
 
           <div className={cellClass(field)}>

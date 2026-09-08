@@ -17,7 +17,7 @@
 
 import { useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
-import { GitBranch, Zap, Trash2 } from 'lucide-react'
+import { GitBranch, Zap, Trash2, Globe, Lock } from 'lucide-react'
 import {
   Dialog,
   Card,
@@ -28,9 +28,19 @@ import {
   Button,
   Badge,
   Alert,
+  Select,
   Switch,
+  Copyable,
   ConfirmDialog
 } from '../../ui'
+
+/**
+ * Field types that can name an entry — mirrors SchemaModel::TITLE_TYPES.
+ *
+ * A name is one line of text you can read in a list and put in a heading, so an
+ * image cannot be one, a repeater is many things, and rich text is a document.
+ */
+const TITLE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number', 'select']
 
 /**
  * The settings dialog.
@@ -38,10 +48,12 @@ import {
  * @param {Object} props
  * @return {JSX.Element} The dialog.
  */
-export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
+export function SettingsDialog({ type, fields = [], settings, onClose, onSave, onDelete }) {
   const [name, setName] = useState(type.label || '')
   const [description, setDescription] = useState(type.description || '')
   const [drafts, setDrafts] = useState(settings.draftAndPublish !== false)
+  const [publicApi, setPublicApi] = useState(Boolean(settings.publicApi))
+  const [titleField, setTitleField] = useState(settings.titleField || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirming, setConfirming] = useState('')
@@ -49,7 +61,9 @@ export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
   const dirty =
     name.trim() !== (type.label || '') ||
     description.trim() !== (type.description || '') ||
-    drafts !== (settings.draftAndPublish !== false)
+    drafts !== (settings.draftAndPublish !== false) ||
+    publicApi !== Boolean(settings.publicApi) ||
+    titleField !== (settings.titleField || '')
 
   /**
    * Stores the settings.
@@ -64,7 +78,7 @@ export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
       onSave({
         title: name.trim() || type.label,
         description: description.trim(),
-        settings: { draftAndPublish: drafts }
+        settings: { draftAndPublish: drafts, publicApi, titleField }
       })
     )
       .then(onClose)
@@ -118,6 +132,28 @@ export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <Card>
             <CardBody className="flex flex-col gap-4">
+              <Field
+                label={__('Names its entries by', 'schemapress')}
+                help={__(
+                  'Which field an entry is called by. It becomes the WordPress title and the only name the API reports — leave it as None and an entry has no name, which is right for a collection you would never list by one.',
+                  'schemapress'
+                )}
+              >
+                {(id) => (
+                  <Select
+                    id={id}
+                    value={titleField}
+                    onChange={setTitleField}
+                    options={[
+                      { value: '', label: __('None', 'schemapress') },
+                      ...fields
+                        .filter((field) => TITLE_TYPES.includes(field.type))
+                        .map((field) => ({ value: field.key, label: field.label || field.key }))
+                    ]}
+                  />
+                )}
+              </Field>
+
               <Field
                 label={__('Name', 'schemapress')}
                 help={__(
@@ -198,6 +234,50 @@ export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
                   onChange={(next) => (next ? setDrafts(true) : setConfirming('drafts'))}
                 />
               </div>
+
+              {/* the other decision about who sees this collection, so it sits
+                  with publishing rather than with the name. turning it ON is
+                  the direction that gives something away, so that is the one
+                  that asks — the opposite of the switch above it */}
+              <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-[13px] font-medium">
+                    {publicApi ? (
+                      <Globe className="size-3.5 text-muted-foreground" />
+                    ) : (
+                      <Lock className="size-3.5 text-muted-foreground" />
+                    )}
+                    {__('Public API', 'schemapress')}
+                  </p>
+
+                  <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                    {publicApi
+                      ? __(
+                          'Published entries can be read by anyone, with no key, at the address below. Drafts are never served.',
+                          'schemapress'
+                        )
+                      : __(
+                          'Only this admin can read the collection. Turn this on to serve published entries over HTTP.',
+                          'schemapress'
+                        )}
+                  </p>
+
+                  {publicApi ? (
+                    <Copyable
+                      className="mt-2"
+                      value={`${window.location.origin}/wp-json/schemapress/api/${
+                        type.plural || type.key
+                      }`}
+                    />
+                  ) : null}
+                </div>
+
+                <Switch
+                  checked={publicApi}
+                  aria-label={__('Public API', 'schemapress')}
+                  onChange={(next) => (next ? setConfirming('publicApi') : setPublicApi(false))}
+                />
+              </div>
             </CardBody>
           </Card>
         </div>
@@ -206,6 +286,25 @@ export function SettingsDialog({ type, settings, onClose, onSave, onDelete }) {
       {/* turning drafts off is the direction that loses something: every draft
           in the collection becomes live the next time it is saved, and there is
           no longer a copy to hold work back in */}
+      {confirming === 'publicApi' ? (
+        <ConfirmDialog
+          open
+          destructive={false}
+          onOpenChange={(next) => !next && setConfirming('')}
+          title={__('Publish this collection to the API?', 'schemapress')}
+          description={sprintf(
+            /* translators: %s: the plural name of the collection */
+            __(
+              'Anyone who knows the address will be able to read every published %s without logging in. Drafts and unpublished edits are never served. You can turn this back off at any time.',
+              'schemapress'
+            ),
+            (type.pluralLabel || type.label || '').toLowerCase()
+          )}
+          confirmLabel={__('Turn on', 'schemapress')}
+          onConfirm={() => setPublicApi(true)}
+        />
+      ) : null}
+
       {confirming === 'drafts' ? (
         <ConfirmDialog
           open

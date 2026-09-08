@@ -68,6 +68,23 @@ class Entries
     const META_UID = '_schemapress_uid';
 
     /**
+     * the field key a collection uses to name its entries, when it declares one.
+     */
+    /**
+     * the field a collection names its entries by, or '' when it names none.
+     *
+     * @param integer $type_id
+     *
+     * @return string
+     */
+    public static function titleField($type_id)
+    {
+        $settings = SchemaRepository::definition($type_id)['settings'];
+
+        return isset($settings['titleField']) ? (string) $settings['titleField'] : '';
+    }
+
+    /**
      * how many entries a listing returns when nothing says otherwise.
      *
      * ten, because a page you can see all of at once is a page you can compare
@@ -101,7 +118,16 @@ class Entries
         $page = max(1, (int) ($args['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($args['perPage'] ?? self::PER_PAGE)));
 
-        $query = new \WP_Query([
+        $definition = SchemaRepository::definition($type_id);
+
+        // filters and sort come in as a Query spec and are translated against
+        // the index. they are merged last so a caller asking for them overrides
+        // the plain page/orderby arguments the admin listing uses
+        $spec = isset($args['spec']) && is_array($args['spec'])
+            ? Query::args($args['spec'], $definition['fields'], $view === self::DRAFT)
+            : [];
+
+        $query = new \WP_Query(array_merge([
             'post_type' => $type['postType'],
             // reading the published view means published posts only. a template
             // that forgot to say which view it wanted would otherwise publish
@@ -115,9 +141,8 @@ class Entries
                 : 'modified',
             'order' => strtoupper($args['order'] ?? '') === 'ASC' ? 'ASC' : 'DESC',
             'suppress_filters' => false,
-        ]);
+        ], $spec));
 
-        $definition = SchemaRepository::definition($type_id);
         $entries = [];
 
         foreach ($query->posts as $post) {
@@ -220,7 +245,12 @@ class Entries
             : [];
 
         $live = $existing && $existing->post_status === 'publish';
-        $title = self::deriveTitle($values, $definition['fields'], $data['title'] ?? '');
+        $title = self::deriveTitle(
+            $values,
+            $definition['fields'],
+            $data['title'] ?? '',
+            $definition['settings']['titleField'] ?? ''
+        );
 
         $post = [
             'post_type' => $type['postType'],
@@ -252,8 +282,12 @@ class Entries
         self::uid($id);
         self::write($id, self::META_DRAFT, $values);
 
+        // the draft index tracks every save, published or not; the published one
+        // is written by promote() and only when something actually goes live
+        Index::write($id, $values, $definition['fields'], true);
+
         if ($publish) {
-            self::promote($id, $values, $title);
+            self::promote($id, $values, $title, $definition['fields']);
         } elseif ($live) {
             update_post_meta($id, self::META_DRAFT_TITLE, $title);
             self::retrack($id, $values, $before, $definition['fields']);
@@ -293,7 +327,8 @@ class Entries
         self::promote(
             $post->ID,
             self::sanitized($post->ID, self::META_DRAFT, $definition['fields']),
-            is_string($stored) && $stored !== '' ? $stored : get_the_title($post)
+            is_string($stored) && $stored !== '' ? $stored : get_the_title($post),
+            $definition['fields']
         );
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
@@ -323,11 +358,21 @@ class Entries
             'post_status' => 'draft',
             // nothing is published any more, so the post row's title goes back
             // to describing the only copy left
-            'post_title' => self::deriveTitle($draft, $definition['fields']),
+            'post_title' => self::deriveTitle(
+                $draft,
+                $definition['fields'],
+                '',
+                $definition['settings']['titleField'] ?? ''
+            ),
         ]);
 
         delete_post_meta($post->ID, self::META_VALUES);
         delete_post_meta($post->ID, self::META_PUBLISHED_AT);
+        // nothing is published, so nothing of this entry is live to filter.
+        // leaving the published index behind would let a query return an entry
+        // the API then refuses to show — the draft index stays, because the
+        // entry is still here and the builder still lists it
+        Index::clear($post->ID, Index::PREFIX);
         delete_post_meta($post->ID, self::META_DRAFT_TITLE);
         update_post_meta($post->ID, self::META_AHEAD, 0);
 
@@ -524,9 +569,13 @@ class Entries
      *
      * @return void
      */
-    private static function promote($id, array $values, $title)
+    private static function promote($id, array $values, $title, array $fields = [])
     {
         self::write($id, self::META_VALUES, $values);
+
+        // the index is derived, so it is rebuilt here rather than patched:
+        // whatever is going live is exactly what becomes filterable
+        Index::write($id, $values, $fields);
         update_post_meta($id, self::META_AHEAD, 0);
         update_post_meta($id, self::META_PUBLISHED_AT, gmdate('Y-m-d H:i:s'));
 
@@ -649,7 +698,7 @@ class Entries
      *
      * @return string
      */
-    private static function deriveTitle(array $values, array $fields, $given = '')
+    private static function deriveTitle(array $values, array $fields, $given = '', $named = '')
     {
         $given = sanitize_text_field($given);
 
@@ -657,6 +706,22 @@ class Entries
             return $given;
         }
 
+        // a collection that nominated a field has said what its entries are
+        // called, and that value IS the post title — not a summary of it. no
+        // word trim either: the field is the name, however long it is
+        if ($named !== '' && isset($values[$named]) && is_scalar($values[$named])) {
+            $title = sanitize_text_field((string) $values[$named]);
+
+            if (trim($title) !== '') {
+                return $title;
+            }
+        }
+
+        // nothing declared, so one is invented for WordPress's benefit. it is
+        // the first text a reader would recognise, trimmed to a heading's
+        // length — and it is deliberately NOT in the API response, because
+        // which field it lands on is an accident of field order rather than
+        // anything the schema said. see Api::shape()
         foreach ($fields as $field) {
             if (!in_array($field['type'], ['text', 'textarea'], true)) {
                 continue;

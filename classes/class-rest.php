@@ -442,16 +442,30 @@ class Rest
     public function entries($request)
     {
         $id = absint($request['id']);
+        $orderby = (string) $request->get_param('orderby');
+        $order = strtoupper((string) $request->get_param('order')) === 'ASC' ? 'ASC' : 'DESC';
 
-        return rest_ensure_response(Entries::all($id, [
+        $args = [
             'page' => $request->get_param('page'),
             'perPage' => $request->get_param('perPage'),
             'search' => $request->get_param('search'),
-            'orderby' => $request->get_param('orderby'),
-            'order' => $request->get_param('order'),
+            'orderby' => $orderby,
+            'order' => $order,
             // the builder works on drafts, so it reads that view
             'view' => Entries::DRAFT,
-        ]) + ['definition' => SchemaRepository::definition($id)]);
+        ];
+
+        // title, date and modified live on the post row and WP_Query orders by
+        // them directly. anything else names one of the collection's own
+        // fields, which is a sort against the index — the same one the public
+        // API sorts by, so a column here and `?sort=` out there agree
+        if ($orderby !== '' && !in_array($orderby, ['title', 'date', 'modified'], true)) {
+            $args['spec'] = ['sort' => [['field' => $orderby, 'direction' => $order]]];
+        }
+
+        return rest_ensure_response(
+            Entries::all($id, $args) + ['definition' => SchemaRepository::definition($id)]
+        );
     }
 
     /**

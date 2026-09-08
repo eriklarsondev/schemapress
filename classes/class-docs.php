@@ -107,7 +107,15 @@ class Docs
                 continue;
             }
 
-            $html = self::anchors(self::parse(strtr($markdown, [
+            $group = self::meta($markdown, 'group');
+            $description = self::meta($markdown, 'description');
+
+            // the declaration is metadata, not content. left in, it renders as
+            // an HTML comment ahead of the heading — which is invisible on the
+            // page and still enough to stop the title being found
+            $body = preg_replace('/<!--\s*(?:group|description):.*?-->\s*/is', '', $markdown);
+
+            $html = self::anchors(self::parse(strtr($body, [
                 '%%timber_status%%' => self::timberStatus(),
             ])));
 
@@ -117,19 +125,64 @@ class Docs
 
             if (preg_match('/^\s*<h2 id="([^"]+)">(.*?)<\/h2>/s', $html, $match)) {
                 $id = $match[1];
-                $title = trim(wp_strip_all_tags($match[2]));
+                $title = self::text($match[2]);
                 $html = substr($html, strlen($match[0]));
             }
 
             $sections[] = [
                 'id' => $id,
                 'title' => $title,
+                'group' => $group,
+                'description' => $description,
                 'headings' => self::headings($html),
                 'html' => $html,
             ];
         }
 
         return $sections;
+    }
+
+    /**
+     * the readable text of a fragment of HTML.
+     *
+     * tags off and entities back: a heading reaches the app as a string in a
+     * JSON payload, which is printed rather than parsed, so `&amp;` left in it
+     * shows up as `&amp;` on the screen.
+     *
+     * @param string $html
+     *
+     * @return string
+     */
+    private static function text($html)
+    {
+        return trim(html_entity_decode(wp_strip_all_tags($html), ENT_QUOTES, 'UTF-8'));
+    }
+
+    /**
+     * a value a file declares about itself, on a line of its own:
+     *
+     *   <!-- group: Content API -->
+     *   <!-- description: The addresses, and what may be asked of them. -->
+     *
+     * in the file rather than in a list here, so adding a topic stays a matter
+     * of adding a file — the same bargain the ordering makes with its numeric
+     * prefixes.
+     *
+     * the description is written rather than lifted from the prose. the first
+     * paragraph of a page is written to follow its heading, not to stand alone
+     * on a card somewhere else, and on a page that opens with a table or a
+     * callout there is no first paragraph to lift at all.
+     *
+     * @param string $markdown
+     * @param string $name
+     *
+     * @return string
+     */
+    private static function meta($markdown, $name)
+    {
+        $pattern = '/<!--\s*' . preg_quote($name, '/') . ':\s*([^>]+?)\s*-->/i';
+
+        return preg_match($pattern, $markdown, $match) ? trim($match[1]) : '';
     }
 
     /**
@@ -151,7 +204,7 @@ class Docs
         foreach ($matches as $match) {
             $headings[] = [
                 'id' => $match[1],
-                'title' => trim(wp_strip_all_tags($match[2])),
+                'title' => self::text($match[2]),
             ];
         }
 
@@ -285,12 +338,211 @@ class Docs
             return '<pre class="sp-docs-raw">' . esc_html($markdown) . '</pre>';
         }
 
-        $converter = new \League\CommonMark\GithubFlavoredMarkdownConverter([
+        // both are lifted out first and put back after, so the fences never
+        // reach the parser and what is inside one is still rendered properly.
+        // a raw HTML block would have made its contents literal.
+        //
+        // tabs before callouts: a tab group holds code fences, and lifting it
+        // first keeps those fences from being seen by anything else
+        $blocks = [];
+        $markdown = self::liftTabs($markdown, $blocks);
+        $markdown = self::liftCallouts($markdown, $blocks);
+
+        $html = (string) self::converter()->convert($markdown);
+
+        return self::trimSamples(strtr($html, $blocks));
+    }
+
+    /**
+     * drops the newline a fenced block leaves at the end of its code.
+     *
+     * CommonMark keeps the fence's final line break inside the <code>, and a
+     * <pre> renders it — so every sample sat on a blank line it did not ask
+     * for. the browser only ignores a newline immediately AFTER the opening
+     * tag, never one before the closing one, which is why this has to be
+     * removed rather than left to the renderer.
+     *
+     * @param string $html
+     *
+     * @return string
+     */
+    private static function trimSamples($html)
+    {
+        return (string) preg_replace('/\n+(<\/code><\/pre>)/', '$1', $html);
+    }
+
+    /**
+     * a configured converter.
+     *
+     * @return \League\CommonMark\GithubFlavoredMarkdownConverter
+     */
+    private static function converter()
+    {
+        return new \League\CommonMark\GithubFlavoredMarkdownConverter([
             'html_input' => 'allow',
             'allow_unsafe_links' => false,
         ]);
+    }
 
-        return (string) $converter->convert($markdown);
+    /**
+     * the callout kinds a page may use, and the word each is labelled with.
+     *
+     * the syntax is Docusaurus's, which is what the documentation this reads
+     * like is written in:
+     *
+     *   :::note
+     *   Something worth knowing.
+     *   :::
+     *
+     * @var array<string, string>
+     */
+    private static function callouts()
+    {
+        return [
+            'note' => __('Note', 'schemapress'),
+            'tip' => __('Tip', 'schemapress'),
+            'info' => __('Info', 'schemapress'),
+            'caution' => __('Caution', 'schemapress'),
+            'warning' => __('Warning', 'schemapress'),
+        ];
+    }
+
+    /**
+     * replaces every tab group with a placeholder holding its rendered panes.
+     *
+     * one operation, shown the way each surface spells it — the reader picks the
+     * one they are working in rather than reading past two that do not apply:
+     *
+     *   :::tabs
+     *   ```php PHP
+     *   Content::collection('team_member')->get();
+     *   ```
+     *   ```twig Twig
+     *   {% for p in sp_collection('team_member') %}
+     *   ```
+     *   :::
+     *
+     * the word after the language is the tab's label, and it is optional — the
+     * language's own display name is used when it is left off. the fences are
+     * read here rather than handed to the parser because CommonMark keeps only
+     * the first word of an info string, which is exactly the word that is not
+     * the label.
+     *
+     * @param string $markdown
+     * @param array  $map placeholder => html, filled by reference
+     *
+     * @return string
+     */
+    private static function liftTabs($markdown, array &$map)
+    {
+        return (string) preg_replace_callback(
+            '/^:::tabs[ \t]*\n(.*?)^:::[ \t]*$/ms',
+            function ($match) use (&$map) {
+                $panes = self::panes($match[1]);
+
+                if (!$panes) {
+                    return '';
+                }
+
+                $token = '<!--sp-block-' . count($map) . '-->';
+                $map[$token] = '<div class="sp-tabs">' . implode('', $panes) . '</div>';
+
+                return $token;
+            },
+            $markdown
+        );
+    }
+
+    /**
+     * the panes of one tab group.
+     *
+     * @param string $body the markdown between the :::tabs fences
+     *
+     * @return string[] one div per pane
+     */
+    private static function panes($body)
+    {
+        preg_match_all(
+            '/^```([A-Za-z0-9_+-]+)[ \t]*([^\n]*)\n(.*?)^```[ \t]*$/ms',
+            $body,
+            $matches,
+            PREG_SET_ORDER
+        );
+
+        $panes = [];
+
+        foreach ($matches as $fence) {
+            $language = strtolower($fence[1]);
+            $label = trim($fence[2]) !== '' ? trim($fence[2]) : self::languageName($language);
+
+            $panes[] = sprintf(
+                '<div class="sp-tab" data-label="%1$s"><pre><code class="language-%2$s">%3$s</code></pre></div>',
+                esc_attr($label),
+                esc_attr($language),
+                esc_html(rtrim($fence[3], "\n"))
+            );
+        }
+
+        return $panes;
+    }
+
+    /**
+     * a language's display name, for a tab that did not name itself.
+     *
+     * @param string $language
+     *
+     * @return string
+     */
+    private static function languageName($language)
+    {
+        $names = [
+            'php' => 'PHP',
+            'twig' => 'Twig',
+            'js' => 'JavaScript',
+            'javascript' => 'JavaScript',
+            'json' => 'JSON',
+            'bash' => 'Shell',
+            'sh' => 'Shell',
+            'http' => 'REST',
+        ];
+
+        return $names[$language] ?? strtoupper($language);
+    }
+
+    /**
+     * replaces every callout fence with a placeholder, rendering its contents.
+     *
+     * @param string $markdown
+     * @param array  $map placeholder => html, filled by reference
+     *
+     * @return string the markdown with placeholders in place of the fences
+     */
+    private static function liftCallouts($markdown, array &$map)
+    {
+        $kinds = self::callouts();
+        $names = implode('|', array_keys($kinds));
+
+        return (string) preg_replace_callback(
+            '/^:::(' . $names . ')(?:[ \t]+([^\n]*))?\n(.*?)^:::[ \t]*$/ms',
+            function ($match) use (&$map, $kinds) {
+                $kind = $match[1];
+                $title = trim($match[2] ?? '') !== '' ? trim($match[2]) : $kinds[$kind];
+                $token = '<!--sp-block-' . count($map) . '-->';
+
+                $map[$token] = sprintf(
+                    '<div class="sp-callout sp-callout--%1$s">'
+                        . '<p class="sp-callout__title">%2$s</p>'
+                        . '<div class="sp-callout__body">%3$s</div>'
+                        . '</div>',
+                    esc_attr($kind),
+                    esc_html($title),
+                    (string) self::converter()->convert($match[3])
+                );
+
+                return $token;
+            },
+            $markdown
+        );
     }
 
     /**
@@ -545,9 +797,16 @@ class Docs
     {
         echo '<style>
         .schemapress-docs {
-            --fg: #16181d; --muted: #5c6370; --faint: #8a909c;
-            --line: #e6e8ec; --bg: #fff; --sunk: #f7f8fa;
-            --accent: #3858e9; --radius: 10px;
+            /* the same palette the app uses, written as hex because this page
+               has no bundle to read variables from — the hues and lightnesses
+               are the tokens in src/shared/style.css, converted. keep the two
+               in step: a docs page in last season\'s greys reads as a different
+               product. every pair here is measured, including --faint on
+               --sunk, which is the small uppercase type in table headers and
+               the one that had been failing */
+            --fg: #10141e; --muted: #535c6e; --faint: #667085;
+            --line: #cfd4de; --hairline: #e0e4eb; --bg: #fff; --sunk: #f3f4f7;
+            --code: #e6e9ef; --accent: #214dc4; --radius: 10px;
 
             margin: 0 0 0 -20px; padding: 0 2.5rem 5rem;
             background: var(--bg); color: var(--fg);
@@ -600,7 +859,7 @@ class Docs
             color: var(--muted); font-size: .8125rem; line-height: 1.5;
             text-decoration: none; transition: color .12s, border-color .12s;
         }
-        .schemapress-docs .sp-docs-nav a:hover { color: var(--fg); border-left-color: #c9cdd6; }
+        .schemapress-docs .sp-docs-nav a:hover { color: var(--fg); border-left-color: #abb3c4; }
         .schemapress-docs .sp-docs-nav a:focus { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; }
         .schemapress-docs .sp-docs-nav a.is-current {
             color: var(--accent); border-left-color: var(--accent); font-weight: 550;
@@ -610,7 +869,7 @@ class Docs
 
         /* --- body --- */
         .schemapress-docs .sp-docs-body {
-            max-width: 46rem; font-size: .9375rem; line-height: 1.75; color: #2c303a;
+            max-width: 46rem; font-size: .9375rem; line-height: 1.75; color: var(--fg);
         }
         .schemapress-docs .sp-docs-body > *:first-child { margin-top: 0; }
         .schemapress-docs .sp-docs-body p { margin: 0 0 1.1rem; }
@@ -635,7 +894,7 @@ class Docs
         /* --- code --- */
         .schemapress-docs code {
             padding: .13em .38em; border-radius: 5px;
-            background: #eef0f4; color: #22262e;
+            background: var(--code); color: var(--fg);
             font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
             font-size: .855em;
         }
@@ -645,7 +904,7 @@ class Docs
             background: var(--sunk);
         }
         .schemapress-docs pre code {
-            padding: 0; background: none; border-radius: 0; color: #2c303a;
+            padding: 0; background: none; border-radius: 0; color: var(--fg);
             font-size: .8125rem; line-height: 1.75;
         }
         .schemapress-docs .sp-docs-raw { white-space: pre-wrap; font-size: .75rem; }
@@ -663,12 +922,12 @@ class Docs
             text-transform: uppercase; color: var(--faint); text-align: left;
         }
         .schemapress-docs tbody td {
-            padding: .65rem .85rem; border-bottom: 1px solid #f0f1f4;
+            padding: .65rem .85rem; border-bottom: 1px solid var(--hairline);
             vertical-align: top; line-height: 1.6;
         }
         .schemapress-docs tbody tr:last-child td { border-bottom: 0; }
         .schemapress-docs tbody td:first-child code { white-space: nowrap; }
-        .schemapress-docs td code { background: #eef0f4; }
+        .schemapress-docs td code { background: var(--code); }
 
         /* --- callouts --- */
         .schemapress-docs .sp-status {
@@ -682,13 +941,20 @@ class Docs
             border-radius: 50%;
         }
         .schemapress-docs .sp-status--ok {
-            background: #f2fbf5; border-color: #cdeed8; color: #14562c;
+            background: #ecfdf5; border-color: #6ee7b7; color: #064e3b;
         }
-        .schemapress-docs .sp-status--ok::before { background: #1a9e4b; }
+        .schemapress-docs .sp-status--ok::before { background: #059669; }
         .schemapress-docs .sp-status--error {
-            background: #fef6f6; border-color: #f6d4d5; color: #7a1d1f;
+            background: #fef2f2; border-color: #fca5a5; color: #7f1d1d;
         }
-        .schemapress-docs .sp-status--error::before { background: #d63638; }
+        .schemapress-docs .sp-status--error::before { background: #dc2626; }
+
+        /* emitted by summary() and, until now, styled nowhere: a note fell
+           through to the bare bordered paragraph with a grey dot */
+        .schemapress-docs .sp-status--note {
+            background: #f0f9ff; border-color: #7dd3fc; color: #0c4a6e;
+        }
+        .schemapress-docs .sp-status--note::before { background: #0284c7; }
 
         .schemapress-docs blockquote {
             margin: 0 0 1.35rem; padding: .1rem 0 .1rem 1.1rem;

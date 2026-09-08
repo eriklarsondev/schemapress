@@ -34,7 +34,16 @@ import { FieldControl } from '../../shared/fields'
 import { emptyValues } from '../../shared/utils'
 import { Ago } from '../../shared/time'
 import { visibleFields } from '../../shared/conditions'
-import { breakBefore, cellClass, gridClass, rowBreakClass } from '../../shared/layout'
+import { missingRequired } from '../../shared/required'
+import { clearUnsaved, useUnsavedGuard } from '../../shared/unsaved'
+import {
+  breakBefore,
+  cellClass,
+  gridClass,
+  leadingSpace,
+  rowBreakClass,
+  spacerClass,
+} from '../../shared/layout'
 import { api } from '../../shared/api'
 
 /**
@@ -51,6 +60,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   )
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const [removing, setRemoving] = useState(false)
 
   // what the server last confirmed, so "has anything changed" is a question
@@ -101,6 +111,8 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
       .then((result) => {
         adopt(result.entry)
         setBusy(false)
+        // down before onSaved navigates, not on the next render
+        clearUnsaved()
         onSaved()
       })
       .catch((failure) => {
@@ -145,12 +157,37 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   // a save that would store what is already stored is not a save
   const dirty = JSON.stringify(entry.values || {}) !== saved
 
+  // every required field still empty, anywhere in the form — inside groups and
+  // inside each repeater row, and only counting fields actually on screen
+  const missing = missingRequired(fields, entry.values)
+
+  const incomplete = missing.length > 0
+
+  useUnsavedGuard(dirty)
+
+  /**
+   * What to say on a control that cannot be used yet.
+   *
+   * The names, not a count: "2 required fields" sends you hunting, and on a
+   * long form the empty one is usually below the fold.
+   *
+   * @return {string} The message, or '' when nothing is missing.
+   */
+  const blocked = () =>
+    incomplete
+      ? sprintf(
+          /* translators: %s: a comma-separated list of field names */
+          __('Fill in %s first', 'schemapress'),
+          missing.map((field) => field.label).join(', ')
+        )
+      : ''
+
   return (
     <div className="flex w-full flex-col gap-4">
       <nav className="flex items-center gap-1 text-[12px]">
         <button
           type="button"
-          onClick={onBack}
+          onClick={() => (dirty ? setLeaving(true) : onBack())}
           className="flex items-center gap-1 rounded px-1.5 py-1 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="size-3.5" />
@@ -170,10 +207,14 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
         </h1>
 
         <Tooltip
-          label={dirty || busy ? '' : __('No changes to save', 'schemapress')}
-          disabled={!dirty || busy}
+          label={blocked() || (dirty || busy ? '' : __('No changes to save', 'schemapress'))}
+          disabled={incomplete || (!dirty && !busy)}
         >
-          <Button size="sm" disabled={busy || !dirty} onClick={() => save(false)}>
+          <Button
+            size="sm"
+            disabled={busy || !dirty || incomplete}
+            onClick={() => save(false)}
+          >
             <Save />
             {busy ? __('Saving…', 'schemapress') : __('Save', 'schemapress')}
           </Button>
@@ -195,6 +236,10 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
                   <Fragment key={field.key}>
                     {breakBefore(field, index) ? (
                       <div aria-hidden="true" className={rowBreakClass()} />
+                    ) : null}
+
+                    {leadingSpace(field) > 0 ? (
+                      <div aria-hidden="true" className={spacerClass(leadingSpace(field))} />
                     ) : null}
 
                     <div className={cellClass(field)}>
@@ -221,6 +266,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
             <StatusCard
               entry={entry}
               busy={busy}
+              blocked={blocked()}
               onPublish={() => save(true)}
               onUnpublish={() => run(api.unpublishEntry(type.id, entry.id))}
               onDiscard={() => run(api.discardDraft(type.id, entry.id))}
@@ -253,6 +299,30 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
         </aside>
       </div>
 
+      {leaving ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(next) => !next && setLeaving(false)}
+          title={__('Leave without saving?', 'schemapress')}
+          description={
+            incomplete
+              ? __(
+                  'This entry has changes that have not been saved, and required fields still to fill in. Leaving loses the changes.',
+                  'schemapress'
+                )
+              : __(
+                  'This entry has changes that have not been saved. Leaving loses them.',
+                  'schemapress'
+                )
+          }
+          confirmLabel={__('Leave', 'schemapress')}
+          onConfirm={() => {
+            clearUnsaved()
+            onBack()
+          }}
+        />
+      ) : null}
+
       {removing ? (
         <ConfirmDialog
           open
@@ -264,6 +334,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
             api
               .deleteEntry(type.id, entry.id)
               .then(() => {
+                clearUnsaved()
                 onSaved()
                 onBack()
               })
@@ -285,7 +356,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
  * @param {Object} props
  * @return {JSX.Element} The card.
  */
-function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
+function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard }) {
   const [confirming, setConfirming] = useState('')
 
   const states = {
@@ -309,12 +380,21 @@ function StatusCard({ entry, busy, onPublish, onUnpublish, onDiscard }) {
       icon: CloudUpload,
       variant: 'default',
       wide: true,
-      enabled: entry.state !== 'published',
+      // an entry that has never been saved has no row to promote: publishing
+      // it would have to create it and make it live in one act, which is a
+      // decision the click does not look like it is making. save first, and
+      // from then on publishing saves whatever is on screen as part of the same
+      // step — see EntryView.save
+      enabled: Boolean(entry.id) && entry.state !== 'published' && !blocked,
       onClick: onPublish,
       label: entry.isPublished
         ? __('Publish changes', 'schemapress')
         : __('Publish', 'schemapress'),
-      unavailable: __('Nothing new to publish', 'schemapress'),
+      unavailable:
+        blocked ||
+        (entry.id
+          ? __('Nothing new to publish', 'schemapress')
+          : __('Save this entry first', 'schemapress')),
       confirm: {
         destructive: false,
         title: __('Publish changes?', 'schemapress'),

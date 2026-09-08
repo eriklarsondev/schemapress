@@ -191,6 +191,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
       {configuring ? (
         <SettingsDialog
           type={type}
+          fields={fields}
           settings={definition.settings || {}}
           onClose={() => setConfiguring(false)}
           onSave={update}

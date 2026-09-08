@@ -80,8 +80,59 @@ class SchemaModel
             'draftAndPublish' => array_key_exists('draftAndPublish', $settings)
                 ? (bool) $settings['draftAndPublish']
                 : true,
+            // whether this collection answers on the public content API. off
+            // unless it was explicitly turned on: the one default that cannot
+            // be inferred from what the collection is, because getting it wrong
+            // means publishing content nobody asked to publish
+            'publicApi' => !empty($settings['publicApi']),
+            // which field names an entry. see normalizeTitleField
+            'titleField' => self::normalizeTitleField($settings['titleField'] ?? null, $fields),
             'listColumns' => self::normalizeColumns($settings['listColumns'] ?? null, $fields),
         ];
+    }
+
+    /**
+     * field types that can name an entry.
+     *
+     * a name is something you can read in a list and put in a heading, so it
+     * has to be a single line of text. an image cannot name anything, a
+     * repeater is many things, and rich text is a document rather than a name.
+     *
+     * @var string[]
+     */
+    const TITLE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number', 'select'];
+
+    /**
+     * the field a collection uses to name its entries.
+     *
+     * empty means none, which is not a gap to be filled in: a collection of
+     * settings or of link rows has no name for a single one of them, and
+     * inventing one is what this exists to stop. WordPress still needs a title
+     * for its own row and still derives one — see Entries::deriveTitle — but
+     * nothing about that reaches the API.
+     *
+     * a field key that no longer exists, or one whose type cannot be a name,
+     * resolves to none. deleting the field a collection was named by should
+     * leave it unnamed rather than pointing at nothing.
+     *
+     * @param mixed $key
+     * @param array $fields
+     *
+     * @return string the field key, or ''
+     */
+    private static function normalizeTitleField($key, array $fields)
+    {
+        $key = is_string($key) ? sanitize_key($key) : '';
+
+        if ($key === '') {
+            // a field literally called `title` names its entries without having
+            // to be nominated: it is already saying so
+            $key = self::field($fields, 'title') ? 'title' : '';
+        }
+
+        $field = $key === '' ? null : self::field($fields, $key);
+
+        return $field && in_array($field['type'], self::TITLE_TYPES, true) ? $key : '';
     }
 
     /**

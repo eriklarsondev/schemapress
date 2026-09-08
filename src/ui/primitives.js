@@ -89,10 +89,13 @@ export function Badge({ className, variant, ...props }) {
 const alertVariants = cva('rounded-md border px-3 py-2.5 text-[13px]', {
   variants: {
     variant: {
-      info: 'border-sky-200 bg-sky-50 text-sky-900',
-      warning: 'border-amber-200 bg-amber-50 text-amber-900',
-      error: 'border-red-200 bg-red-50 text-red-900',
-      success: 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      // the border is what makes an alert a distinct object rather than a
+      // faintly tinted paragraph, so it carries the colour and the fill stays
+      // light enough to read dark text on
+      info: 'border-sky-300 bg-sky-50 text-sky-900',
+      warning: 'border-amber-300 bg-amber-50 text-amber-900',
+      error: 'border-red-300 bg-red-50 text-red-900',
+      success: 'border-emerald-300 bg-emerald-50 text-emerald-900'
     }
   },
   defaultVariants: { variant: 'info' }

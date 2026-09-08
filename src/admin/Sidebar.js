@@ -10,6 +10,7 @@
  * information — a missing heading only looks like the sidebar failed to load.
  */
 
+import { Fragment } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Boxes, Database, Blocks, BookOpen, Plus } from 'lucide-react'
 import { cn } from '../ui'
@@ -23,6 +24,7 @@ import { cn } from '../ui'
 export function Sidebar({
   types = [],
   components = [],
+  docs = [],
   active,
   loading,
   version,
@@ -32,6 +34,9 @@ export function Sidebar({
   onCreateComponent,
   onOpenDocs
 }) {
+  // a collection is identified by a post id, a documentation page by its slug,
+  // so the two are compared differently against the same route
+  const activeId = Number(active?.id)
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-background">
       <header className="flex items-center gap-3 px-5 py-5">
@@ -75,7 +80,7 @@ export function Sidebar({
               key={type.id}
               label={type.pluralLabel || type.label}
               count={type.entries}
-              active={active?.view === 'type' && active.id === type.id}
+              active={active?.view === 'type' && activeId === type.id}
               onClick={() => onSelect(type.id)}
             />
           ))
@@ -104,7 +109,7 @@ export function Sidebar({
             <Item
               key={component.id}
               label={component.label}
-              active={active?.view === 'component' && active.id === component.id}
+              active={active?.view === 'component' && activeId === component.id}
               onClick={() => onSelectComponent(component.id)}
             />
           ))
@@ -113,12 +118,42 @@ export function Sidebar({
         {/* a screen of the app, not a page elsewhere in wp-admin: looking
             something up should not cost you the collection you were in */}
         <hr className="mx-2 my-4 border-0 border-t border-border" />
+        {/* the parent opens the front door, not the first topic. a reference
+            opened at its first page assumes you already know it is the first
+            page — the splash is what says what is here */}
         <Item
           label={__('Documentation', 'schemapress')}
           icon={BookOpen}
-          active={active?.view === 'docs'}
-          onClick={onOpenDocs}
+          active={active?.view === 'docs' && !active.id}
+          open={active?.view === 'docs'}
+          onClick={() => onOpenDocs()}
         />
+
+        {/* one row per file in docs/, which is the unit the documentation is
+            written in — a new topic is a new file and it appears here without
+            anything being edited, and so does a new group. they are listed
+            whether or not you are reading them: the point of a sidebar entry is
+            to be the way in, and a list that only exists once you have arrived
+            is not one */}
+        {groups(docs).map(({ name, pages }) => (
+          <Fragment key={name || 'ungrouped'}>
+            {name ? (
+              <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                {name}
+              </p>
+            ) : null}
+
+            {pages.map((section) => (
+              <Item
+                key={section.id}
+                sub
+                label={section.title}
+                active={active?.view === 'docs' && active.id === section.id}
+                onClick={() => onOpenDocs(section.id)}
+              />
+            ))}
+          </Fragment>
+        ))}
       </nav>
 
       {version ? (
@@ -173,12 +208,21 @@ function Group({ icon: Icon, label, count, addLabel, onAdd, className }) {
  * @param {Object} props
  * @return {JSX.Element} The row.
  */
-function Item({ label, icon: Icon, count, active, onClick }) {
+function Item({ label, icon: Icon, count, active, open, sub, onClick }) {
   const className = cn(
-    'relative flex w-full items-center gap-2 rounded-md py-2 pl-3 pr-2 text-left text-[13px] transition-colors',
+    'relative flex w-full items-center gap-2 rounded-md pr-2 text-left transition-colors',
+    // a child row is indented and set smaller, so the pair reads as a heading
+    // with pages under it rather than as two rows of equal standing
+    sub ? 'py-1.5 pl-8 text-[12px]' : 'py-2 pl-3 text-[13px]',
     active
       ? 'bg-accent font-medium text-foreground'
-      : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+      : cn(
+          'hover:bg-accent/60 hover:text-foreground',
+          // the parent of the section you are reading. it says so without
+          // taking the background and the bar, which belong to the one row that
+          // is actually the page on screen
+          open ? 'font-medium text-foreground' : 'text-muted-foreground',
+        ),
   )
 
   const body = (
@@ -206,4 +250,32 @@ function Item({ label, icon: Icon, count, active, onClick }) {
       {body}
     </button>
   )
+}
+
+/**
+ * Documentation pages, gathered under the group each one declares.
+ *
+ * Order comes from the pages themselves — the files are already sorted, so a
+ * group appears where its first page does and nothing here decides the running
+ * order. Adding a group is adding a line to a Markdown file.
+ *
+ * @param {Array} docs
+ * @return {Array<{name: string, pages: Array}>} Groups, in order.
+ */
+function groups(docs) {
+  const order = []
+  const byName = {}
+
+  docs.forEach((section) => {
+    const name = section.group || ''
+
+    if (!byName[name]) {
+      byName[name] = []
+      order.push(name)
+    }
+
+    byName[name].push(section)
+  })
+
+  return order.map((name) => ({ name, pages: byName[name] }))
 }
