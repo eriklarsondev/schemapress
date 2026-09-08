@@ -13,12 +13,25 @@ import { datasets } from '../settings'
 import { Button, Input, Field, Switch, Heading, Select } from '../../ui'
 
 /**
+ * The types a uniqueness rule can be offered for.
+ *
+ * Narrower than the set the index can reach, and narrower on purpose. A toggle
+ * has two values, so a unique one is a collection of at most two entries; a
+ * dropdown exists to be chosen more than once. Neither is a rule anybody means
+ * to write, and offering it invites a collection that cannot take a second row.
+ *
+ * The server enforces whatever the definition says, so this list is about what
+ * is worth asking, not about what is possible.
+ */
+const UNIQUE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number', 'date', 'datetime', 'time']
+
+/**
  * Renders the settings panel for a field's type.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The settings, or null for types with none.
  */
-export function FieldConfig({ field, onChange }) {
+export function FieldConfig({ field, onChange, onField, nested = false }) {
   const config = field.config || {}
 
   /**
@@ -29,6 +42,41 @@ export function FieldConfig({ field, onChange }) {
    */
   const update = (patch) => onChange({ ...config, ...patch })
 
+  const panel = TypeSettings({ field, config, update })
+
+  // uniqueness is a question about the whole collection — "does another entry
+  // already hold this" — and the index it is answered against holds one value
+  // per field per entry. inside a repeater row there is no such value, so the
+  // rule could not be enforced and is not offered
+  const unique = !nested && Boolean(onField) && UNIQUE_TYPES.includes(field.type)
+
+  if (!panel && !unique) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {panel}
+
+      {unique ? (
+        <Switch
+          label={__('Must be unique', 'schemapress')}
+          help={__('No two entries in this collection may hold the same value.', 'schemapress')}
+          checked={Boolean(field.unique)}
+          onChange={(next) => onField({ unique: next })}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * The part of the panel that depends on the field's type.
+ *
+ * @param {Object} props
+ * @return {JSX.Element|null} The settings, or null for types with none.
+ */
+function TypeSettings({ field, config, update }) {
   switch (field.type) {
     case 'text':
     case 'textarea':

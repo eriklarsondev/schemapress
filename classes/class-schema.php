@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 /**
  * registers the schema post type.
  *
- * a schema is stored as a post so it inherits ids, capabilities, revisions and
+ * a schema is stored as a post so it inherits ids, capabilities and
  * trash behaviour for free. it has no admin UI of its own — the React app on
  * the SchemaPress menu page is the only way schemas are edited, and it works
  * exclusively through the REST layer.
@@ -44,7 +44,9 @@ class Schema
             'show_in_menu' => false,
             'show_in_rest' => false,
             'hierarchical' => false,
-            'supports' => ['title', 'revisions'],
+            // title only: a definition is post meta, which WordPress does not
+            // revision — see ContentType::registerPostType
+            'supports' => ['title'],
             'capability_type' => 'page',
             'map_meta_cap' => true,
             'rewrite' => false,

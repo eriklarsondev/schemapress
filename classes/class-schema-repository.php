@@ -87,6 +87,28 @@ class SchemaRepository
     }
 
     /**
+     * changes some of a type's settings, leaving its fields alone.
+     *
+     * saveDefinition normalizes whatever it is handed, so a caller that only
+     * wanted to flip one switch and sent only that would have every field in
+     * the collection normalized out of existence. this reads the stored
+     * definition first and merges into it, which is the difference between
+     * editing a setting and replacing a schema.
+     *
+     * @param integer $type_id
+     * @param array   $settings the keys to change
+     *
+     * @return array the stored definition
+     */
+    public static function saveSettings($type_id, array $settings)
+    {
+        $definition = self::definition($type_id);
+        $definition['settings'] = array_merge($definition['settings'], $settings);
+
+        return self::saveDefinition($type_id, $definition);
+    }
+
+    /**
      * every content type post.
      *
      * @return \WP_Post[]

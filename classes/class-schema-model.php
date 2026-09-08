@@ -80,14 +80,50 @@ class SchemaModel
             'draftAndPublish' => array_key_exists('draftAndPublish', $settings)
                 ? (bool) $settings['draftAndPublish']
                 : true,
-            // whether this collection answers on the public content API. off
-            // unless it was explicitly turned on: the one default that cannot
-            // be inferred from what the collection is, because getting it wrong
-            // means publishing content nobody asked to publish
-            'publicApi' => !empty($settings['publicApi']),
+            // which shapes of read this collection answers on the public content
+            // API. off unless it was explicitly turned on: the one default that
+            // cannot be inferred from what the collection is, because getting it
+            // wrong means publishing content nobody asked to publish
+            'publicApi' => self::normalizePublicApi($settings['publicApi'] ?? null),
             // which field names an entry. see normalizeTitleField
             'titleField' => self::normalizeTitleField($settings['titleField'] ?? null, $fields),
+            // which field the entry's slug is built from. absent means nobody
+            // has chosen and one is picked; PRESENT AND EMPTY is a real choice
+            // and means the uuid — the same distinction listColumns makes
+            'slugField' => array_key_exists('slugField', $settings)
+                ? self::normalizeSlugField($settings['slugField'], $fields)
+                : self::defaultSlugField($fields),
             'listColumns' => self::normalizeColumns($settings['listColumns'] ?? null, $fields),
+        ];
+    }
+
+    /**
+     * which shapes of read a collection publishes to the content API.
+     *
+     * listing a collection and fetching one entry of it give away different
+     * amounts, so they are separate answers: a collection can be readable by id
+     * — for a client that already holds a reference to one — without being
+     * walkable from end to end.
+     *
+     * a BARE BOOLEAN is what this setting was before it was a pair, when one
+     * switch covered both routes. true meant both and still does, so a
+     * collection stored under the old shape keeps answering exactly as it did.
+     *
+     * @param mixed $publicApi
+     *
+     * @return array{list: boolean, single: boolean}
+     */
+    private static function normalizePublicApi($publicApi)
+    {
+        if (!is_array($publicApi)) {
+            $on = !empty($publicApi);
+
+            return ['list' => $on, 'single' => $on];
+        }
+
+        return [
+            'list' => !empty($publicApi['list']),
+            'single' => !empty($publicApi['single']),
         ];
     }
 
@@ -100,7 +136,13 @@ class SchemaModel
      *
      * @var string[]
      */
-    const TITLE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number', 'select'];
+    const TITLE_TYPES = [
+        'text', 'textarea', 'email', 'url', 'phone', 'number', 'select',
+        // a date names an entry in the collections that are a diary — a daily
+        // note, a board meeting, a match report. a bare time does not name
+        // anything, so it is not here
+        'date', 'datetime',
+    ];
 
     /**
      * the field a collection uses to name its entries.
@@ -133,6 +175,74 @@ class SchemaModel
         $field = $key === '' ? null : self::field($fields, $key);
 
         return $field && in_array($field['type'], self::TITLE_TYPES, true) ? $key : '';
+    }
+
+    /**
+     * field types a readable slug can be built from.
+     *
+     * narrower than TITLE_TYPES, and narrower for a reason: an email address
+     * slugifies to `ada-example-com` and a phone number to a run of digits.
+     * both are perfectly good names for an entry and neither is an address
+     * anybody would want to read in a URL.
+     *
+     * @var string[]
+     */
+    const SLUG_TYPES = ['text', 'textarea', 'select', 'number', 'date', 'datetime'];
+
+    /**
+     * the field an entry's slug is built from, or '' for the uuid.
+     *
+     * EMPTY IS A REAL ANSWER. an entry always has a slug — where no field is
+     * chosen it is the uuid, which is unique by construction and needs nothing
+     * filled in to exist. that is the right slug for a collection whose entries
+     * have no name, and it is what a deleted or retyped field falls back to
+     * rather than leaving entries unaddressable.
+     *
+     * @param mixed $key
+     * @param array $fields
+     *
+     * @return string the field key, or ''
+     */
+    private static function normalizeSlugField($key, array $fields)
+    {
+        $key = is_string($key) ? sanitize_key($key) : '';
+        $field = $key === '' ? null : self::field($fields, $key);
+
+        return $field && in_array($field['type'], self::SLUG_TYPES, true) ? $key : '';
+    }
+
+    /**
+     * the slug field a collection gets when nobody has chosen one.
+     *
+     * the first UNIQUE field wins, because a field the collection already
+     * refuses duplicates in is the one that produces slugs which do not collide
+     * — which is the whole job. failing that, the first field that could carry a
+     * name, in the order they were defined: the first field of a collection is
+     * almost always the thing it is called.
+     *
+     * @param array $fields
+     *
+     * @return string
+     */
+    private static function defaultSlugField(array $fields)
+    {
+        $first = '';
+
+        foreach ($fields as $field) {
+            if (!in_array($field['type'], self::SLUG_TYPES, true)) {
+                continue;
+            }
+
+            if (!empty($field['unique'])) {
+                return $field['key'];
+            }
+
+            if ($first === '') {
+                $first = $field['key'];
+            }
+        }
+
+        return $first;
     }
 
     /**
@@ -213,6 +323,11 @@ class SchemaModel
             'type' => $type,
             'help' => isset($field['help']) ? sanitize_text_field($field['help']) : '',
             'required' => !empty($field['required']),
+            // whether two entries may hold the same value here. beside
+            // `required` rather than in the config bag, because both are facts
+            // about the DATA — what the collection will accept — while the
+            // config bag is what the form does with it
+            'unique' => !empty($field['unique']),
             'config' => self::normalizeConfig($field, $type),
         ];
 

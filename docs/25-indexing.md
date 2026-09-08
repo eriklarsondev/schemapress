@@ -10,7 +10,8 @@ entry and the wrong shape for asking questions across a collection. So every sca
 is written a second time where the database can see it, and that mirror is what filters and
 sorts run against.
 
-**Filterable:** Text, Textarea, Email, URL, Phone, Dropdown, Number, Toggle, Image, File.
+**Filterable:** Text, Textarea, Email, URL, Phone, Dropdown, Number, Date, Date and time,
+Time, Toggle, Image, File.
 
 **Not filterable:** Rich text (a blob of markup, which nothing sensible can be asked
 about), Link and Group (several values in one field), and anything inside a Repeater (many

@@ -12,9 +12,12 @@ if (!defined('ABSPATH')) {
  * fields — and holds many entries of that shape.
  *
  * a type registers a post type of its own, so its entries inherit ids,
- * capabilities, revisions, search and trash from WordPress rather than from a
- * table this plugin would have to maintain. the type itself is stored as an
- * `sp_schema` post, which is why its definition gets the same treatment.
+ * capabilities, search and trash from WordPress rather than from a table this
+ * plugin would have to maintain. the type itself is stored as an `sp_schema`
+ * post, which is why its definition gets the same treatment.
+ *
+ * NOT revisions. an entry's values are post meta, and WordPress does not
+ * revision meta — see registerPostType.
  */
 class ContentType
 {
@@ -231,6 +234,8 @@ class ContentType
         foreach (SchemaRepository::all() as $post) {
             $definition = SchemaRepository::definition($post->ID);
             $labels = self::labels($post->ID);
+            // read once: it is two fields below, and each call is a meta read
+            $plural = self::plural($post->ID);
 
             $types[] = [
                 'id' => (int) $post->ID,
@@ -242,11 +247,26 @@ class ContentType
                 'description' => (string) $post->post_excerpt,
                 // the machine names: singular identifies, plural addresses
                 'key' => self::key($post->ID),
-                'plural' => self::plural($post->ID),
+                'plural' => $plural,
+                // the address this collection answers on. the plural, because a
+                // route returns many of the thing, and hyphenated, because that
+                // is what a URL is written with — Api::idFor reads a hyphen as
+                // an underscore precisely so the machine name does not have to
+                // be spelled the way the database spells it.
+                //
+                // derived here rather than in the admin so there is one answer
+                // to "what is this collection's address": a screen that built it
+                // by hand would be a second one, and the copy button would hand
+                // somebody a URL this plugin never agreed to
+                'apiSlug' => str_replace('_', '-', $plural),
                 'postType' => self::postType($post->ID),
                 // whether entries here have a working copy, or saving is
                 // publishing — the entry screen is a different screen either way
                 'draftAndPublish' => !empty($definition['settings']['draftAndPublish']),
+                // which shapes of read this collection publishes. the site
+                // settings screen names the collections a change would affect,
+                // which it can only do if the listing says which they are
+                'publicApi' => $definition['settings']['publicApi'],
                 'fields' => count($definition['fields']),
                 'entries' => null,
             ];
@@ -357,7 +377,13 @@ class ContentType
             'show_in_menu' => false,
             'show_in_rest' => false,
             'hierarchical' => false,
-            'supports' => ['title', 'revisions'],
+            // title only. `revisions` was here and was a claim this plugin
+            // could not keep: an entry's values live in post meta, which
+            // WordPress does not revision, so what it actually stored was a
+            // history of the derived title and a revision row per save. the
+            // draft/published pair is the versioning that does work — see
+            // class-entries.php
+            'supports' => ['title'],
             'capability_type' => 'page',
             'map_meta_cap' => true,
             'rewrite' => false,

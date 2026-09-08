@@ -17,6 +17,7 @@ import { Database, Plus } from 'lucide-react'
 import { useRoute } from './useRoute'
 import { Loading, Alert, Button, ConfirmDialog, cn } from '../ui'
 import { api } from '../shared/api'
+import { can } from '../shared/settings'
 import { clearUnsaved, hasUnsaved } from '../shared/unsaved'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -25,6 +26,15 @@ import { CreateComponentDialog } from './CreateComponentDialog'
 import { TypeView } from './views/TypeView'
 import { ComponentView } from './views/ComponentView'
 import { DocsView } from './views/DocsView'
+import { SettingsView } from './views/SettingsView'
+
+/**
+ * Routes that are a screen of their own rather than a collection.
+ *
+ * They share one property that matters here: none of them is a collection, so
+ * the redirect that opens the first collection must leave them alone.
+ */
+const STANDALONE = ['component', 'docs', 'settings']
 
 /**
  * Root component.
@@ -92,10 +102,9 @@ export function App({ settings }) {
     reload()
   }, [reload])
 
-  const selected =
-    route.view === 'component' || route.view === 'docs'
-      ? null
-      : types?.find((type) => type.id === Number(route.id)) || null
+  const selected = STANDALONE.includes(route.view)
+    ? null
+    : types?.find((type) => type.id === Number(route.id)) || null
 
   // with collections to show, the screen opens in one. a list of links to the
   // same collections already in the sidebar is a page that asks you to choose
@@ -106,7 +115,7 @@ export function App({ settings }) {
       return
     }
 
-    if (route.view === 'component' || route.view === 'docs') {
+    if (STANDALONE.includes(route.view)) {
       return
     }
 
@@ -135,6 +144,7 @@ export function App({ settings }) {
           onSelectComponent={(id) => open('component', id)}
           onCreateComponent={() => setCreating('component')}
           onOpenDocs={(id) => open('docs', id)}
+          onOpenSettings={() => open('settings')}
         />
 
         {/* the builder screens are cards laid on the muted ground, so the ground
@@ -162,7 +172,11 @@ export function App({ settings }) {
             // remounted per screen, so a crash in one does not persist when you
             // navigate to another
             <ErrorBoundary key={`${route.view}-${route.id || 'none'}-${visit}`}>
-              {route.view === 'component' && route.id ? (
+              {route.view === 'settings' ? (
+                // reload, because the sidebar's collections carry which of them
+                // publish to the API and this screen names them
+                <SettingsView types={types} onSaved={reload} />
+              ) : route.view === 'component' && route.id ? (
                 <ComponentView
                   id={Number(route.id)}
                   onChanged={reload}
@@ -253,11 +267,19 @@ function Welcome({ onCreate }) {
         )}
       </p>
 
+      {/* without the capability there is nothing to offer, and a button that
+          would be refused is worse than the sentence saying who to ask */}
       <div className="mt-7">
-        <Button onClick={onCreate}>
-          <Plus />
-          {__('Create a collection type', 'schemapress')}
-        </Button>
+        {can.manageSchema ? (
+          <Button onClick={onCreate}>
+            <Plus />
+            {__('Create a collection type', 'schemapress')}
+          </Button>
+        ) : (
+          <p className="text-[13px] text-muted-foreground">
+            {__('An administrator can create one.', 'schemapress')}
+          </p>
+        )}
       </div>
     </div>
   )

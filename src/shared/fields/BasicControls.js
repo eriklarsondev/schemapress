@@ -121,6 +121,50 @@ export function NumberField({ field, value, onChange }) {
 }
 
 /**
+ * A calendar date, a clock time, or both.
+ *
+ * Each maps to the browser's own picker, which is the one thing here worth not
+ * reinventing: it is localised, keyboard-operable and familiar, and a hand-built
+ * calendar is a month of work to get to the same place.
+ *
+ * The value passes through untouched in both directions. The stored forms are
+ * exactly what these inputs read and write — `2026-09-08`, `19:00:00`,
+ * `2026-09-08T19:00:00` — so there is no conversion to get wrong, and no
+ * timezone shift between what was typed and what comes back. See class-dates.php
+ * on why a stored date is a wall clock rather than an instant.
+ *
+ * @param {string} type  the HTML input type
+ * @param {string} width how much of the row the picker needs
+ * @return {Function} The control.
+ */
+function dated(type, width) {
+  return function DatedField({ field, value, onChange }) {
+    return (
+      <Field label={field.label} help={field.help} required={field.required}>
+        {(id) => (
+          <Input
+            id={id}
+            type={type}
+            className={width}
+            value={value ?? ''}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </Field>
+    )
+  }
+}
+
+/** A day, with no time of day. */
+export const DateField = dated('date', 'sm:max-w-48')
+
+/** A day and a time on it. */
+export const DateTimeField = dated('datetime-local', 'sm:max-w-64')
+
+/** A time of day, on no particular day. */
+export const TimeField = dated('time', 'sm:max-w-36')
+
+/**
  * Boolean switch.
  *
  * @param {Object} props

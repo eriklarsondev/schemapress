@@ -17,7 +17,7 @@ WordPress instead of beside it:
 | Entry / document | **Entry** |
 | Content-Type Builder | The **Schema** tab |
 | Content Manager | The **Entries** tab |
-| REST API + Users & Permissions | **Public API**, switched on per collection |
+| REST API + Users & Permissions | **Public API** — read many and read one per collection, behind one master switch |
 | `GET /api/:pluralApiId` | `GET /wp-json/schemapress/api/:collection` |
 
 Filtering, sorting and paging work the same way, and Strapi's own `filters[…]` bracket

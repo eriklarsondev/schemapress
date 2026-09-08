@@ -62,6 +62,13 @@ class Index
         'url' => 'CHAR',
         'phone' => 'CHAR',
         'select' => 'CHAR',
+        // CHAR, not DATE: the stored forms are ISO-8601, and comparing those as
+        // strings gives the same order as comparing them as dates. going
+        // through MySQL's DATE cast would only add a way for a half-filled
+        // value to become 0000-00-00 and sort before everything
+        'date' => 'CHAR',
+        'datetime' => 'CHAR',
+        'time' => 'CHAR',
         'number' => 'NUMERIC',
         'toggle' => 'NUMERIC',
         'image' => 'NUMERIC',
@@ -252,8 +259,6 @@ class Index
      */
     public static function clear($post_id, $prefix = null)
     {
-        global $wpdb;
-
         foreach ($prefix === null ? [self::PREFIX, self::DRAFT_PREFIX] : [$prefix] as $one) {
             self::clearPrefix($post_id, $one);
         }

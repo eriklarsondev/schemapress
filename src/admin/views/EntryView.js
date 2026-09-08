@@ -133,6 +133,17 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   const save = (publish = false) =>
     run(api.saveEntry(type.id, entry.id, { values: entry.values, publish }))
 
+  // a save that would store what is already stored is not a save.
+  //
+  // this and the guard below sit ABOVE the early return, and have to. an entry
+  // being opened is null until it arrives, so the render that returns Loading
+  // ran one fewer hook than the render after it — which React refuses outright
+  // with "rendered more hooks than during the previous render", and which meant
+  // opening any existing entry threw
+  const dirty = entry ? JSON.stringify(entry.values || {}) !== saved : false
+
+  useUnsavedGuard(dirty)
+
   if (!entry) {
     return error ? (
       <div className="flex flex-col gap-3">
@@ -154,16 +165,11 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   // publish, discard or take down — and no state worth a card
   const drafts = type.draftAndPublish !== false
 
-  // a save that would store what is already stored is not a save
-  const dirty = JSON.stringify(entry.values || {}) !== saved
-
   // every required field still empty, anywhere in the form — inside groups and
   // inside each repeater row, and only counting fields actually on screen
   const missing = missingRequired(fields, entry.values)
 
   const incomplete = missing.length > 0
-
-  useUnsavedGuard(dirty)
 
   /**
    * What to say on a control that cannot be used yet.
@@ -547,6 +553,17 @@ function IdCard({ entry }) {
         <Label>{__('ID', 'schemapress')}</Label>
 
         <Copyable value={entry.id} label={__('Copy entry ID', 'schemapress')} />
+
+        {/* the two ways to address this entry, together. the id is the one the
+            API reports and the slug is the one a front end routes on, and
+            whichever you need you are here to copy it rather than read it */}
+        {entry.slug ? (
+          <>
+            <Label className="mt-1">{__('Slug', 'schemapress')}</Label>
+
+            <Copyable value={entry.slug} label={__('Copy slug', 'schemapress')} />
+          </>
+        ) : null}
       </CardBody>
     </Card>
   )
@@ -587,9 +604,14 @@ function DetailsCard({ entry, drafts }) {
  * @param {Object} props
  * @return {JSX.Element} The heading.
  */
-function Label({ children }) {
+function Label({ children, className }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <p
+      className={cn(
+        'text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
+        className,
+      )}
+    >
       {children}
     </p>
   )

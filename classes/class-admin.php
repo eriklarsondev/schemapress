@@ -16,7 +16,25 @@ if (!defined('ABSPATH')) {
 class Admin
 {
     const PAGE_SLUG = 'schemapress';
+
+    /**
+     * what it takes to open the builder and work on content.
+     */
     const CAPABILITY = 'edit_pages';
+
+    /**
+     * what it takes to change the SHAPE of content, or what the site publishes.
+     *
+     * Strapi separates the Content-Type Builder from the Content Manager, and
+     * for a reason worth copying: filling in a Team Member and deciding what a
+     * Team Member IS are different jobs at different blast radii. renaming a
+     * field orphans every value stored under it; deleting a collection deletes
+     * every entry in it; turning on the content API publishes to the internet.
+     *
+     * one capability covered all of it here, so anyone who could write an entry
+     * could also restructure the data model and delete the lot.
+     */
+    const SCHEMA_CAPABILITY = 'manage_options';
 
     /**
      * the screen hook returned by add_menu_page, used to scope asset loading.
@@ -91,6 +109,14 @@ class Admin
             'datasets' => Datasets::forClient(),
             'elements' => Elements::all(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
+            // the site's own settings, bootstrapped rather than fetched: a
+            // collection's settings dialog reads them to say when the API it is
+            // offering to publish to is switched off, and should not wait on a
+            // request to say so
+            'site' => Settings::all(),
+            // what this user may do beyond editing entries, so the screens can
+            // stop offering what the transport would refuse
+            'can' => ['manageSchema' => current_user_can(self::SCHEMA_CAPABILITY)],
             // the documentation is a screen in the app, so its text ships with
             // the page rather than costing a request: it is a few files of
             // Markdown this plugin ships, already compiled

@@ -12,7 +12,7 @@ beside it:
 | Collection type | Collection type |
 | Content-Type Builder | The **Schema** tab |
 | Content Manager | The **Entries** tab |
-| REST API + Users & Permissions | **Public API**, switched on per collection |
+| REST API + Users & Permissions | **Public API** — read many and read one per collection, behind one master switch |
 | `GET /api/:pluralApiId` | `GET /wp-json/schemapress/api/:collection` |
 
 Underneath it is still WordPress. Entries are posts, so existing queries, capabilities and
@@ -48,7 +48,7 @@ documentation renders as plain text, `vendor/` is missing — run the composer s
 ```bash
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
-php tests/collections.php # the test suite (197 assertions, no framework)
+php tests/collections.php # the test suite (368 assertions, no framework)
 ```
 
 There is no CI yet. Run the suite and the build before you push.
@@ -135,3 +135,8 @@ surfaces read it.
   spelling for it.
 - Repeater contents cannot be filtered or sorted — one meta row cannot hold many values.
   A custom index table is the way in if that is ever needed.
+- No relations. A collection cannot point at another one, which is the largest single gap
+  against Strapi and the next feature in.
+- No single types. An entry is addressed by its slug or its uuid.
+- The content API is read-only and unauthenticated. There are no API tokens, so access is
+  per collection rather than per consumer.

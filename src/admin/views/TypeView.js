@@ -21,6 +21,7 @@ import { __ } from '@wordpress/i18n'
 import { Table2, Wrench, LayoutList, SlidersHorizontal } from 'lucide-react'
 import { Tabs, TabPanel, Loading, Alert, Button } from '../../ui'
 import { api } from '../../shared/api'
+import { can } from '../../shared/settings'
 import { EntriesView } from './EntriesView'
 import { EntryView } from './EntryView'
 import { FieldsTab } from './FieldsTab'
@@ -135,10 +136,17 @@ export function TypeView({ type, onChanged, onDeleted }) {
   // *is* — its name, its description, whether it has drafts, whether it exists
   // at all — is not one of them, so it lives behind the header button instead
   // of taking a quarter of the tab strip
+  // Schema and Form describe what an entry IS and how it is asked for, which is
+  // the builder's job. filling entries in is everyone's, so a content manager
+  // gets the Entries tab and nothing that could reshape what is under it
   const tabs = [
     { value: 'entries', label: __('Entries', 'schemapress'), icon: Table2 },
-    { value: 'fields', label: __('Schema', 'schemapress'), icon: Wrench },
-    { value: 'layout', label: __('Form', 'schemapress'), icon: LayoutList },
+    ...(can.manageSchema
+      ? [
+          { value: 'fields', label: __('Schema', 'schemapress'), icon: Wrench },
+          { value: 'layout', label: __('Form', 'schemapress'), icon: LayoutList },
+        ]
+      : []),
   ]
 
   return (
@@ -152,10 +160,12 @@ export function TypeView({ type, onChanged, onDeleted }) {
             {type.pluralLabel || type.label}
           </h1>
 
-          <Button variant="outline" size="sm" onClick={() => setConfiguring(true)}>
-            <SlidersHorizontal />
-            {__('Settings', 'schemapress')}
-          </Button>
+          {can.manageSchema ? (
+            <Button variant="outline" size="sm" onClick={() => setConfiguring(true)}>
+              <SlidersHorizontal />
+              {__('Settings', 'schemapress')}
+            </Button>
+          ) : null}
         </div>
 
         {/* the machine keys are not here: they are reference material a

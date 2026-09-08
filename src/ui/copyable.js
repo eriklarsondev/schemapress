@@ -20,10 +20,17 @@ import { cn } from './utils'
  * API is simply absent, so this falls back to the old selection trick rather
  * than failing silently on exactly the machines this gets built on.
  *
+ * Exported because the documentation screen builds its code blocks' copy
+ * buttons as DOM rather than as components, and had its own copy of this that
+ * was missing the fallback: `navigator.clipboard?.writeText(…).then(…)` reads
+ * `.then` off undefined the moment the API is absent, so it threw before
+ * reaching the `.catch` meant to report the failure. One implementation, and it
+ * is this one.
+ *
  * @param {string} text
  * @return {Promise<boolean>} Whether it was copied.
  */
-function copy(text) {
+export function copyText(text) {
   if (navigator.clipboard?.writeText) {
     return navigator.clipboard.writeText(text).then(
       () => true,
@@ -57,12 +64,19 @@ function copy(text) {
 /**
  * A monospaced value with a copy button.
  *
+ * What is SHOWN and what is COPIED can differ, because for a URL they want
+ * different things. Pasting one needs the whole absolute address; reading one
+ * in a card needs the part that identifies it, and an origin on the front —
+ * `http://wp-starter.local:10010/` — is a prefix every row shares that pushes
+ * the part you were looking for out past the truncation.
+ *
  * @param {Object} props
- * @param {string} props.value The text shown and copied.
- * @param {string} props.label What the button announces.
+ * @param {string} props.value   The text copied.
+ * @param {string} props.display The text shown, when it differs from the value.
+ * @param {string} props.label   What the button announces.
  * @return {JSX.Element} The row.
  */
-export function Copyable({ value, label = __('Copy', 'schemapress'), className }) {
+export function Copyable({ value, display, label = __('Copy', 'schemapress'), className }) {
   const [copied, setCopied] = useState(false)
   const timer = useRef(null)
 
@@ -76,7 +90,7 @@ export function Copyable({ value, label = __('Copy', 'schemapress'), className }
    * @return {void}
    */
   const run = () =>
-    copy(String(value)).then((ok) => {
+    copyText(String(value)).then((ok) => {
       if (!ok) {
         return
       }
@@ -100,7 +114,7 @@ export function Copyable({ value, label = __('Copy', 'schemapress'), className }
         title={String(value)}
         className="min-w-0 flex-1 truncate font-mono text-muted-foreground"
       >
-        {value}
+        {display ?? value}
       </span>
 
       <button

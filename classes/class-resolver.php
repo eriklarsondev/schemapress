@@ -135,11 +135,21 @@ class Resolver
             return null;
         }
 
+        // the same image appears on many entries — a shared placeholder, one
+        // author's photo down a list of articles — and expanding it once per
+        // appearance was the bulk of the cost on a page of results
+        static $resolved = [];
+
+        if (isset($resolved[$id])) {
+            return $resolved[$id];
+        }
+
         $meta = wp_get_attachment_metadata($id);
+        $url = wp_get_attachment_url($id);
 
         $attachment = [
             'id' => $id,
-            'url' => wp_get_attachment_url($id),
+            'url' => $url,
             'alt' => (string) get_post_meta($id, '_wp_attachment_image_alt', true),
             'title' => get_the_title($id),
             'caption' => wp_get_attachment_caption($id) ?: '',
@@ -150,22 +160,56 @@ class Resolver
         ];
 
         if (wp_attachment_is_image($id)) {
-            foreach (get_intermediate_image_sizes() as $size) {
-                $src = wp_get_attachment_image_src($id, $size);
-
-                if ($src) {
-                    $attachment['sizes'][$size] = [
-                        'url' => $src[0],
-                        'width' => (int) $src[1],
-                        'height' => (int) $src[2],
-                    ];
-                }
-            }
-
+            $attachment['sizes'] = self::sizes($meta, $url);
             $attachment['srcset'] = wp_get_attachment_image_srcset($id, 'full') ?: '';
         }
 
+        $resolved[$id] = $attachment;
+
         return $attachment;
+    }
+
+    /**
+     * every generated size of an image, read from the attachment's own metadata.
+     *
+     * this used to loop get_intermediate_image_sizes() calling
+     * wp_get_attachment_image_src() for each one, which is a filtered call per
+     * size per image per entry — a page of a hundred entries with three images
+     * each and eight registered sizes made two and a half thousand of them, for
+     * a listing that renders one thumbnail.
+     *
+     * the metadata already holds the file, width and height of every size that
+     * was actually generated, and the URLs all sit beside the full-size one. so
+     * one array and some string work replaces the lot, and a size that was never
+     * generated is absent rather than silently reported at the wrong dimensions.
+     *
+     * @param mixed  $meta the attachment metadata
+     * @param string $url  the full-size URL
+     *
+     * @return array
+     */
+    private static function sizes($meta, $url)
+    {
+        if (!is_array($meta) || empty($meta['sizes']) || !is_array($meta['sizes'])) {
+            return [];
+        }
+
+        $base = substr($url, 0, strrpos($url, '/') + 1);
+        $sizes = [];
+
+        foreach ($meta['sizes'] as $name => $size) {
+            if (empty($size['file'])) {
+                continue;
+            }
+
+            $sizes[$name] = [
+                'url' => $base . $size['file'],
+                'width' => isset($size['width']) ? (int) $size['width'] : null,
+                'height' => isset($size['height']) ? (int) $size['height'] : null,
+            ];
+        }
+
+        return $sizes;
     }
 
     /**

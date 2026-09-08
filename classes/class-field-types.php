@@ -99,6 +99,33 @@ class FieldTypes
                     return $value === '' || $value === null ? null : (float) $value;
                 },
             ],
+            // the three date shapes are separate types rather than one type with
+            // a format setting, because which of them a field is changes what
+            // can be asked of it: a date sorts against other dates, a time
+            // sorts within a day, and a datetime is the only one that does both.
+            // storing them apart is also what keeps the control right without a
+            // branch — each maps to one HTML input
+            'date' => [
+                'label' => __('Date', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    return Dates::date($value);
+                },
+            ],
+            'datetime' => [
+                'label' => __('Date and time', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    return Dates::datetime($value);
+                },
+            ],
+            'time' => [
+                'label' => __('Time', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    return Dates::time($value);
+                },
+            ],
             'toggle' => [
                 'label' => __('Toggle', 'schemapress'),
                 'default' => false,

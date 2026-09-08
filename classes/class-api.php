@@ -57,10 +57,25 @@ class Api
      * re-registering anything, and a collection whose API is switched off is
      * refused by the handler rather than by the route not existing.
      *
+     * THE MASTER SWITCH IS THE EXCEPTION. off, nothing here is registered at
+     * all, so `schemapress/api` is absent from the /wp-json/ index and every
+     * address under it answers WordPress's own rest_no_route 404. that is a
+     * stronger thing than a 403 from a handler: the namespace is gone rather
+     * than answering to say it will not help, so nothing advertises that this
+     * site has a content API or which collections it holds.
+     *
+     * the collection-level switches stay handler-side, and deliberately — those
+     * are per collection, and a route list that changed shape as collections
+     * were published would be a different API from one request to the next.
+     *
      * @return void
      */
     public function register()
     {
+        if (!Settings::restEnabled()) {
+            return;
+        }
+
         register_rest_route(self::NAMESPACE, '/(?P<collection>[A-Za-z0-9_-]+)', [
             [
                 'methods' => 'GET',
@@ -91,7 +106,7 @@ class Api
      */
     public function list($request)
     {
-        $type = $this->open($request['collection']);
+        $type = $this->open($request['collection'], 'list');
 
         if (is_wp_error($type)) {
             return $type;
@@ -104,10 +119,8 @@ class Api
             'spec' => $spec,
         ]);
 
-        $named = Entries::titleField($type['id']);
-
-        $data = array_map(function ($entry) use ($named) {
-            return $this->shape($entry, $named);
+        $data = array_map(function ($entry) {
+            return $this->shape($entry);
         }, $result['entries']);
 
         return rest_ensure_response([
@@ -125,7 +138,7 @@ class Api
      */
     public function single($request)
     {
-        $type = $this->open($request['collection']);
+        $type = $this->open($request['collection'], 'single');
 
         if (is_wp_error($type)) {
             return $type;
@@ -144,7 +157,7 @@ class Api
         }
 
         return rest_ensure_response([
-            'data' => $this->shape($entry, Entries::titleField($type['id'])),
+            'data' => $this->shape($entry),
             'meta' => new \stdClass(),
         ]);
     }
@@ -152,19 +165,24 @@ class Api
     // --- internals -----------------------------------------------------------
 
     /**
-     * the collection behind a path segment, if it is open to the public.
+     * the collection behind a path segment, if it is open for this shape of read.
      *
-     * the two refusals say different things on purpose. a collection nobody
-     * named is a 404; one that exists but has its API switched off is a 403
-     * that says where the switch is — this is a plugin someone is building
-     * against, and "not found" for a collection they are looking at in the
-     * admin would send them hunting for a typo that is not there.
+     * only the collection's own pair is consulted here. the site's master
+     * switch is not: with it off these routes were never registered, so
+     * nothing reaches this method to be refused.
      *
-     * @param string $name singular or plural machine name
+     * the refusals say different things on purpose. a collection nobody named
+     * is a 404; one that exists but is closed is a 403 that says where the
+     * switch is — this is a plugin someone is building against, and "not found"
+     * for a collection they are looking at in the admin would send them hunting
+     * for a typo that is not there.
+     *
+     * @param string $name  singular or plural machine name
+     * @param string $route list or single
      *
      * @return array|\WP_Error
      */
-    private function open($name)
+    private function open($name, $route)
     {
         $id = $this->idFor($name);
 
@@ -178,13 +196,18 @@ class Api
 
         $definition = SchemaRepository::definition($id);
 
-        if (empty($definition['settings']['publicApi'])) {
+        if (empty($definition['settings']['publicApi'][$route])) {
             return new \WP_Error(
                 'schemapress_api_disabled',
-                __(
-                    'This collection is not published to the API. Turn on Public API in its Settings.',
-                    'schemapress'
-                ),
+                $route === 'list'
+                    ? __(
+                        'This collection does not answer as a list. Turn on Read many in its Settings.',
+                        'schemapress'
+                    )
+                    : __(
+                        'This collection does not serve single entries. Turn on Read one in its Settings.',
+                        'schemapress'
+                    ),
                 ['status' => 403]
             );
         }
@@ -232,25 +255,21 @@ class Api
      *
      * @return array
      */
-    private function shape(array $entry, $named = '')
+    private function shape(array $entry)
     {
         $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
 
-        $shaped = ['id' => $entry['id']];
-
-        // `title` and `slug` are only real when the collection nominated a
-        // field to name its entries by. WordPress needs a post_title for every row, so one is invented
-        // when none was declared — from whichever text field happens to come
-        // first, which means reordering the schema would silently rename every
-        // entry and change every slug. that is an artifact of storage, not
-        // content, and it has no business in a content API.
+        // `title` is not here. WordPress needs a post_title for every row, so
+        // one is invented when the collection declared no field to name its
+        // entries by — from whichever text field happens to come first, which
+        // means reordering the schema would silently rename every entry. that
+        // is an artifact of storage rather than content.
         //
-        // where one IS nominated it arrives with the rest of the fields below,
-        // under its own key and holding exactly what the post title holds, so
-        // there is nothing to add here but the slug it produced
-        if ($named !== '') {
-            $shaped['slug'] = $entry['slug'];
-        }
+        // `slug` IS here, always. it is a stated setting rather than an
+        // accident — built from the field the collection chose, or the uuid
+        // when it chose none — and it is how a front end addresses an entry,
+        // so an entry that sometimes had one would be a routing bug.
+        $shaped = ['id' => $entry['id'], 'slug' => $entry['slug']];
 
         return array_merge($shaped, $data, [
             'updatedAt' => $entry['modified'],

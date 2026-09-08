@@ -43,6 +43,7 @@ that only needs to loop something does not need a PHP file to hand it over:
 | | |
 | --- | --- |
 | `sp_collection(key)` | the query for a collection |
+| `sp_entry(key, id)` | one entry by id, or nothing |
 | `sp_collections()` | every collection's key |
 | `sp_has_collection(key)` | whether one exists |
 

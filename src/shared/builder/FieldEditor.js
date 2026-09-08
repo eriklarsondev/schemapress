@@ -28,6 +28,9 @@ import {
   Globe,
   Phone,
   Hash,
+  Calendar,
+  CalendarClock,
+  Clock,
   ToggleRight,
   ListChecks,
   Image as ImageIcon,
@@ -55,6 +58,9 @@ const ICONS = {
   url: Globe,
   phone: Phone,
   number: Hash,
+  date: Calendar,
+  datetime: CalendarClock,
+  time: Clock,
   toggle: ToggleRight,
   select: ListChecks,
   image: ImageIcon,
@@ -186,6 +192,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
         type: type.type,
         help: '',
         required: false,
+        unique: false,
         config: {},
         ...(type.children ? { fields: [] } : {}),
       },
@@ -293,6 +300,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
           key={index}
           field={field}
           index={index}
+          nested={nested}
           siblingKeys={fields.filter((_, i) => i !== index).map((f) => f.key)}
           fieldTypes={fieldTypes}
           editing={editing}
@@ -533,6 +541,7 @@ function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, o
 function FieldRow({
   field,
   index,
+  nested,
   siblingKeys,
   fieldTypes,
   editing,
@@ -594,6 +603,10 @@ function FieldRow({
     update({
       type: next,
       config: {},
+      // for the same reason the config goes: a uniqueness rule written for an
+      // email address is not a rule anybody meant about a toggle, and the
+      // switch that would let you see it is not offered for every type
+      unique: false,
       fields: definition?.children ? field.fields || [] : undefined,
     })
   }
@@ -673,6 +686,9 @@ function FieldRow({
             <Badge variant="mono">{field.key}</Badge>
             {field.required ? (
               <Badge variant="warning">{__('required', 'schemapress')}</Badge>
+            ) : null}
+            {field.unique ? (
+              <Badge variant="outline">{__('unique', 'schemapress')}</Badge>
             ) : null}
           </span>
 
@@ -771,7 +787,12 @@ function FieldRow({
           {/* only what the data IS lives here. help text, placeholder, whether
               it is required and when it is shown are all things the FORM does
               with the field, and they are set on the Form tab */}
-          <FieldConfig field={field} onChange={(config) => update({ config })} />
+          <FieldConfig
+            field={field}
+            nested={nested}
+            onChange={(config) => update({ config })}
+            onField={update}
+          />
 
           {nests ? (
             <div className="rounded-md border border-border bg-muted/30 p-3">

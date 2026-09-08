@@ -32,6 +32,67 @@ export const elements = settings.elements || []
 export const datasets = settings.datasets || []
 
 /**
+ * What this user may do beyond editing entries.
+ *
+ * `manageSchema` is the Content-Type Builder half of Strapi's split: defining
+ * collections, changing their fields, deleting them, and deciding what the site
+ * publishes. Filling entries in is the other half, and everyone who can open
+ * this screen can do that.
+ *
+ * The screens read it to stop OFFERING what the transport would refuse. It is
+ * not the check itself — every one of those routes checks for itself, and a
+ * capability sent to the browser is a hint, not a gate.
+ *
+ * @type {{manageSchema: boolean}}
+ */
+export const can = settings.can || {}
+
+/**
+ * The site's own settings, as opposed to a collection's.
+ *
+ * Held here rather than threaded through props because two unrelated screens
+ * read it: the Settings view edits it, and a collection's settings dialog reads
+ * it to say when the API it is offering to publish to is switched off.
+ * Prop-drilling it between those two would pass through three components with
+ * no interest in it.
+ *
+ * Read when a screen opens rather than subscribed to — this is a fact about the
+ * installation that changes on one screen a couple of times a year, and the
+ * dialog that reads it is opened fresh each time.
+ */
+let siteSettings = normalize(settings.site)
+
+/**
+ * Fills in whatever PHP did not send. Mirrors Settings::normalize.
+ *
+ * @param {Object} value
+ * @return {{restApi: boolean}} The settings.
+ */
+function normalize(value) {
+  return { restApi: value?.restApi !== false }
+}
+
+/**
+ * The site's settings as they currently stand.
+ *
+ * @return {{restApi: boolean}} The settings.
+ */
+export function site() {
+  return siteSettings
+}
+
+/**
+ * Adopts what the server stored, so a screen opened after the Settings view was
+ * saved reads the new value rather than the one the page booted with.
+ *
+ * @param {Object} next
+ * @return {void}
+ */
+export function setSite(next) {
+  siteSettings = normalize(next)
+}
+
+/**
  * The choices a select field offers, from whichever source it names.
  *
  * Mirrors Datasets::forField on the server. Having one answer on each side is

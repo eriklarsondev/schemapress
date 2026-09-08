@@ -60,7 +60,9 @@ class Rest
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'createType'],
-                'permission_callback' => [$this, 'canEdit'],
+                // creating a collection is defining one, which is the builder's
+                // job rather than the content manager's
+                'permission_callback' => [$this, 'canManageSchema'],
                 'args' => [
                     'title' => ['type' => 'string', 'required' => true],
                     'description' => ['type' => 'string'],
@@ -72,17 +74,22 @@ class Rest
             [
                 'methods' => 'GET',
                 'callback' => [$this, 'type'],
+                // reading a definition is how the entry form is drawn, so
+                // anyone who may fill one in may read it
                 'permission_callback' => [$this, 'canEditType'],
             ],
             [
                 'methods' => 'POST',
+                // this route takes the definition, so it can rename a field and
+                // orphan every value stored under it
                 'callback' => [$this, 'updateType'],
-                'permission_callback' => [$this, 'canEditType'],
+                'permission_callback' => [$this, 'canManageType'],
             ],
             [
                 'methods' => 'DELETE',
+                // and this one takes every entry in the collection with it
                 'callback' => [$this, 'deleteType'],
-                'permission_callback' => [$this, 'canEditType'],
+                'permission_callback' => [$this, 'canManageType'],
             ],
         ]);
 
@@ -130,7 +137,71 @@ class Rest
             ]
         );
 
+        register_rest_route(self::NAMESPACE, '/settings', [
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'updateSettings'],
+                // this decides what the site serves to the internet
+                'permission_callback' => [$this, 'canManageSchema'],
+            ],
+        ]);
+
         $this->componentRoutes();
+    }
+
+    // --- settings ------------------------------------------------------------
+
+    /**
+     * stores the site's master switch and every collection's own pair.
+     *
+     * one route, because the Settings screen is one form and saving half of it
+     * is not a state anybody asked for — turning the API off while a collection
+     * on the same screen was being opened should not be two requests that can
+     * land in either order.
+     *
+     * the collection pairs are the same setting each collection's own dialog
+     * writes, stored in the same place. nothing is shared between them; what
+     * this adds is doing it in one sitting.
+     *
+     * the body is { restApi: bool, collections: { "<type id>": { list, single } } }.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function updateSettings($request)
+    {
+        $body = $request->get_json_params();
+        $body = is_array($body) ? $body : [];
+
+        $settings = Settings::save($body);
+
+        $collections = isset($body['collections']) && is_array($body['collections'])
+            ? $body['collections']
+            : [];
+
+        foreach ($collections as $id => $publicApi) {
+            $id = absint($id);
+
+            // checked per collection rather than once for the route, because
+            // that is the bar the collection's own dialog sets and this writes
+            // the same setting. a body naming something that is not a
+            // collection, or one this user may not edit, is skipped rather than
+            // trusted — the route says they may edit collections, not that
+            // every id they sent is one of them
+            if (get_post_type($id) !== Schema::POST_TYPE || !current_user_can('edit_post', $id)) {
+                continue;
+            }
+
+            SchemaRepository::saveSettings($id, ['publicApi' => $publicApi]);
+        }
+
+        ContentType::flush();
+
+        return rest_ensure_response([
+            'settings' => $settings,
+            'types' => ContentType::all(),
+        ]);
     }
 
     /**
@@ -149,7 +220,7 @@ class Rest
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'createComponent'],
-                'permission_callback' => [$this, 'canEdit'],
+                'permission_callback' => [$this, 'canManageSchema'],
                 'args' => [
                     'title' => ['type' => 'string', 'required' => true],
                     'description' => ['type' => 'string'],
@@ -166,12 +237,12 @@ class Rest
             [
                 'methods' => 'POST',
                 'callback' => [$this, 'updateComponent'],
-                'permission_callback' => [$this, 'canEditComponent'],
+                'permission_callback' => [$this, 'canManageComponent'],
             ],
             [
                 'methods' => 'DELETE',
                 'callback' => [$this, 'deleteComponent'],
-                'permission_callback' => [$this, 'canEditComponent'],
+                'permission_callback' => [$this, 'canManageComponent'],
             ],
         ]);
     }
@@ -571,6 +642,13 @@ class Rest
     {
         $entry = Entries::save($type_id, $entry_id, is_array($body) ? $body : []);
 
+        // a validation failure already says which field and why, and that
+        // sentence is the whole point of it — replacing it with this route's
+        // generic refusal would throw away the only useful part
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+
         if (!$entry) {
             return new \WP_Error(
                 'schemapress_entry_failed',
@@ -621,6 +699,47 @@ class Rest
     {
         return current_user_can(Admin::CAPABILITY);
     }
+
+    /**
+     * whether the current user may change the shape of content.
+     *
+     * a higher bar than editing entries, and deliberately — see
+     * Admin::SCHEMA_CAPABILITY. everything gated on this either restructures
+     * stored content or decides what the site publishes.
+     *
+     * @return boolean
+     */
+    public function canManageSchema()
+    {
+        return current_user_can(Admin::SCHEMA_CAPABILITY);
+    }
+
+    /**
+     * whether the current user may change a specific collection's shape.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return boolean
+     */
+    public function canManageType($request)
+    {
+        return get_post_type(absint($request['id'])) === Schema::POST_TYPE
+            && $this->canManageSchema();
+    }
+
+    /**
+     * whether the current user may change a specific component's shape.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return boolean
+     */
+    public function canManageComponent($request)
+    {
+        return get_post_type(absint($request['id'])) === Component::POST_TYPE
+            && $this->canManageSchema();
+    }
+
 
     /**
      * whether the current user may edit a specific content type.

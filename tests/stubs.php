@@ -30,6 +30,9 @@ $GLOBALS['wp_meta'] = [];
 $GLOBALS['wp_post_types'] = ['page' => true, 'attachment' => true];
 $GLOBALS['wp_next_id'] = 100;
 $GLOBALS['wp_filters'] = [];
+$GLOBALS['wp_actions'] = [];
+$GLOBALS['wp_options'] = [];
+$GLOBALS['wp_rest_routes'] = [];
 
 /**
  * Empties the store between tests.
@@ -42,9 +45,13 @@ function sp_test_reset()
     $GLOBALS['wp_meta'] = [];
     $GLOBALS['wp_post_types'] = ['page' => true, 'attachment' => true];
     $GLOBALS['wp_next_id'] = 100;
+    $GLOBALS['wp_actions'] = [];
+    $GLOBALS['wp_options'] = [];
+    $GLOBALS['wp_rest_routes'] = [];
 
     SchemaPress\ContentType::flush();
     SchemaPress\SchemaRepository::flush();
+    SchemaPress\Settings::flush();
 }
 
 // --- escaping and sanitizing -------------------------------------------------
@@ -81,6 +88,18 @@ function __($text, $domain = null) { return $text; }
 function esc_html__($text, $domain = null) { return $text; }
 function esc_attr__($text, $domain = null) { return htmlspecialchars((string) $text, ENT_QUOTES); }
 function wp_strip_all_tags($text) { return strip_tags((string) $text); }
+
+// WordPress polyfills this in wp-includes/compat.php when the mbstring
+// extension is absent, so plugin code may call it unguarded. this CLI has no
+// mbstring, which is exactly the case that polyfill exists for
+if (!function_exists('mb_strlen')) {
+    function mb_strlen($text, $encoding = null)
+    {
+        preg_match_all('/./us', (string) $text, $matches);
+
+        return count($matches[0]);
+    }
+}
 function wpautop($value) { return '<p>' . $value . '</p>'; }
 function do_shortcode($value) { return $value; }
 
@@ -93,8 +112,22 @@ function wp_trim_words($text, $count = 55, $more = null)
 
 // --- hooks -------------------------------------------------------------------
 
-function add_action($hook, $callback = null, $priority = 10, $args = 1) {}
-function do_action($hook, ...$args) {}
+/**
+ * Actions really dispatch, because the lifecycle hooks are a feature now: a
+ * test that "fires entry_published" has to be able to hear it.
+ */
+function add_action($hook, $callback = null, $priority = 10, $args = 1)
+{
+    $GLOBALS['wp_actions'][$hook][] = $callback;
+}
+
+function do_action($hook, ...$args)
+{
+    foreach ($GLOBALS['wp_actions'][$hook] ?? [] as $callback) {
+        call_user_func_array($callback, $args);
+    }
+}
+
 function add_filter($hook, $callback = null, $priority = 10, $args = 1) {}
 function apply_filters($hook, $value) { return $value; }
 function current_user_can($cap, $id = null) { return true; }
@@ -103,6 +136,27 @@ function add_submenu_page() { return 'schemapress_page_docs'; }
 function admin_url($path = '') { return 'http://example.test/wp-admin/' . $path; }
 function rest_url($path = '') { return 'http://example.test/wp-json/' . $path; }
 function wp_json_encode($value) { return json_encode($value); }
+
+// --- options -----------------------------------------------------------------
+
+function get_option($name, $default = false)
+{
+    return array_key_exists($name, $GLOBALS['wp_options']) ? $GLOBALS['wp_options'][$name] : $default;
+}
+
+function update_option($name, $value)
+{
+    $GLOBALS['wp_options'][$name] = $value;
+
+    return true;
+}
+
+function delete_option($name)
+{
+    unset($GLOBALS['wp_options'][$name]);
+
+    return true;
+}
 
 function wp_list_pluck($list, $field)
 {
@@ -124,16 +178,71 @@ function wp_generate_uuid4()
 }
 function is_wp_error($value) { return $value instanceof WP_Error; }
 
+// --- REST --------------------------------------------------------------------
+
+// recorded rather than discarded: whether the content API's namespace is
+// registered AT ALL is the master switch's whole behaviour, so a test has to be
+// able to see what was registered
+function register_rest_route($namespace, $route, $args = [])
+{
+    $GLOBALS['wp_rest_routes'][] = $namespace . $route;
+
+    return true;
+}
+
+/**
+ * The response is the payload here, so a test can read it as the array the
+ * handler built rather than unwrapping an object that does nothing else.
+ */
+function rest_ensure_response($data) { return $data; }
+
+/**
+ * Enough of a request for the content API: the path parts it matches on, and
+ * the query string it filters by.
+ */
+class WP_REST_Request implements ArrayAccess
+{
+    private $params;
+    private $query;
+
+    public function __construct(array $params = [], array $query = [])
+    {
+        $this->params = $params;
+        $this->query = $query;
+    }
+
+    public function get_query_params() { return $this->query; }
+    public function get_param($key) { return $this->params[$key] ?? null; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset) { return $this->params[$offset] ?? null; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetExists($offset) { return isset($this->params[$offset]); }
+
+    #[\ReturnTypeWillChange]
+    public function offsetSet($offset, $value) { $this->params[$offset] = $value; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($offset) { unset($this->params[$offset]); }
+}
+
 class WP_Error
 {
     public $code;
     public $message;
+    public $data;
 
     public function __construct($code = '', $message = '', $data = [])
     {
         $this->code = $code;
         $this->message = $message;
+        $this->data = $data;
     }
+
+    public function get_error_code() { return $this->code; }
+    public function get_error_message() { return $this->message; }
+    public function get_error_data() { return $this->data; }
 }
 
 // --- post types --------------------------------------------------------------
@@ -143,16 +252,59 @@ function post_type_exists($type) { return isset($GLOBALS['wp_post_types'][$type]
 
 // --- posts -------------------------------------------------------------------
 
+/**
+ * WordPress uniquifies a post_name within its post type, appending -2, -3 and
+ * so on. The plugin leans on that for slugs, so the stub has to do it too —
+ * without it two entries called the same thing would silently share an address
+ * and the test proving they do not would pass for the wrong reason.
+ *
+ * @param string  $slug
+ * @param string  $type
+ * @param integer $exclude the post being named, which cannot clash with itself
+ *
+ * @return string
+ */
+function sp_test_unique_slug($slug, $type, $exclude = 0)
+{
+    if ($slug === '') {
+        return '';
+    }
+
+    $taken = [];
+
+    foreach ($GLOBALS['wp_posts'] as $post) {
+        if ($post->post_type === $type && (int) $post->ID !== (int) $exclude) {
+            $taken[] = $post->post_name;
+        }
+    }
+
+    $unique = $slug;
+    $suffix = 2;
+
+    while (in_array($unique, $taken, true)) {
+        $unique = $slug . '-' . $suffix;
+        $suffix++;
+    }
+
+    return $unique;
+}
+
 function wp_insert_post($data, $wp_error = false)
 {
     $id = $GLOBALS['wp_next_id']++;
+    $type = $data['post_type'] ?? 'post';
 
     $GLOBALS['wp_posts'][$id] = (object) [
         'ID' => $id,
-        'post_type' => $data['post_type'] ?? 'post',
+        'post_type' => $type,
         'post_title' => $data['post_title'] ?? '',
+        'post_content' => $data['post_content'] ?? '',
         'post_excerpt' => $data['post_excerpt'] ?? '',
-        'post_name' => sanitize_title($data['post_title'] ?? ''),
+        'post_name' => sp_test_unique_slug(
+            $data['post_name'] ?? sanitize_title($data['post_title'] ?? ''),
+            $type,
+            $id
+        ),
         'post_status' => $data['post_status'] ?? 'publish',
         'post_modified_gmt' => '2026-09-02 00:00:00',
     ];
@@ -168,10 +320,18 @@ function wp_update_post($data, $wp_error = false)
         return new WP_Error('invalid_post', 'No such post');
     }
 
-    foreach (['post_title', 'post_excerpt', 'post_status', 'post_type'] as $key) {
+    foreach (['post_title', 'post_content', 'post_excerpt', 'post_status', 'post_type'] as $key) {
         if (isset($data[$key])) {
             $GLOBALS['wp_posts'][$id]->$key = $data[$key];
         }
+    }
+
+    if (isset($data['post_name'])) {
+        $GLOBALS['wp_posts'][$id]->post_name = sp_test_unique_slug(
+            $data['post_name'],
+            $GLOBALS['wp_posts'][$id]->post_type,
+            $id
+        );
     }
 
     return $id;
@@ -233,12 +393,24 @@ function get_posts($args = [])
             && (in_array('any', $statuses, true) || in_array($post->post_status, $statuses, true));
     }));
 
+    if (!empty($args['name'])) {
+        $name = (string) $args['name'];
+
+        $found = array_values(array_filter($found, function ($post) use ($name) {
+            return $post->post_name === $name;
+        }));
+    }
+
     if (!empty($args['meta_key'])) {
         $key = $args['meta_key'];
         $want = $args['meta_value'] ?? '';
 
         $found = array_values(array_filter($found, function ($post) use ($key, $want) {
-            return (string) get_post_meta($post->ID, $key, true) === (string) $want;
+            // one meta key may hold many values — which is how Index stores a
+            // multi-select — so the question is membership, not equality
+            $stored = get_post_meta($post->ID, $key, true);
+
+            return in_array((string) $want, array_map('strval', (array) $stored), true);
         }));
     }
 
@@ -255,6 +427,165 @@ function get_posts($args = [])
     return $found;
 }
 
+// --- meta_query ---------------------------------------------------------------
+
+/**
+ * Whether one post satisfies a meta_query tree.
+ *
+ * This exists because without it the suite could not test filtering AT ALL. A
+ * WP_Query that ignored meta_query returned every row whatever was asked of it,
+ * so a filter test passed whether the filter worked or not — which is how a
+ * check on a stale index came to pass while the index was still stale.
+ *
+ * Nested groups and `relation` are supported, because Query::metaQuery emits
+ * them for `$and` / `$or`.
+ *
+ * @param integer $post_id
+ * @param mixed   $query
+ *
+ * @return boolean
+ */
+function sp_test_meta_matches($post_id, $query)
+{
+    if (!is_array($query) || !$query) {
+        return true;
+    }
+
+    $relation = strtoupper((string) ($query['relation'] ?? 'AND'));
+
+    unset($query['relation']);
+
+    $results = [];
+
+    foreach ($query as $clause) {
+        if (!is_array($clause)) {
+            continue;
+        }
+
+        $results[] = isset($clause['key'])
+            ? sp_test_meta_clause($post_id, $clause)
+            : sp_test_meta_matches($post_id, $clause);
+    }
+
+    if (!$results) {
+        return true;
+    }
+
+    return $relation === 'OR'
+        ? in_array(true, $results, true)
+        : !in_array(false, $results, true);
+}
+
+/**
+ * Whether one clause holds for a post.
+ *
+ * A key may hold several values — which is how Index stores a multi-select —
+ * and the clause holds when ANY of them satisfies it, as it does in SQL.
+ *
+ * @param integer $post_id
+ * @param array   $clause
+ *
+ * @return boolean
+ */
+function sp_test_meta_clause($post_id, array $clause)
+{
+    $stored = get_post_meta($post_id, $clause['key'], true);
+    $values = is_array($stored) ? $stored : [$stored];
+
+    foreach ($values as $value) {
+        if (sp_test_compare(
+            $value,
+            strtoupper((string) ($clause['compare'] ?? '=')),
+            $clause['value'] ?? '',
+            strtoupper((string) ($clause['type'] ?? 'CHAR'))
+        )) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * One comparison, as MySQL would make it.
+ *
+ * Text compares case-insensitively, because WordPress's collation does and the
+ * plugin relies on it — Query::OPERATORS maps $contains and $containsi to the
+ * same LIKE for exactly that reason.
+ *
+ * @param mixed  $value
+ * @param string $compare
+ * @param mixed  $want
+ * @param string $type    NUMERIC or CHAR
+ *
+ * @return boolean
+ */
+function sp_test_compare($value, $compare, $want, $type)
+{
+    $numeric = $type === 'NUMERIC';
+
+    $cast = function ($one) use ($numeric) {
+        return $numeric ? (float) $one : (string) $one;
+    };
+
+    $same = function ($one, $two) use ($numeric) {
+        return $numeric
+            ? (float) $one === (float) $two
+            : strcasecmp((string) $one, (string) $two) === 0;
+    };
+
+    switch ($compare) {
+        case '=':
+            return $same($value, $want);
+
+        case '!=':
+            return !$same($value, $want);
+
+        case '>':
+            return $cast($value) > $cast($want);
+
+        case '>=':
+            return $cast($value) >= $cast($want);
+
+        case '<':
+            return $cast($value) < $cast($want);
+
+        case '<=':
+            return $cast($value) <= $cast($want);
+
+        case 'IN':
+        case 'NOT IN':
+            $in = false;
+
+            foreach ((array) $want as $one) {
+                if ($same($value, $one)) {
+                    $in = true;
+                    break;
+                }
+            }
+
+            return $compare === 'IN' ? $in : !$in;
+
+        case 'LIKE':
+            return stripos((string) $value, (string) $want) !== false;
+
+        case 'NOT LIKE':
+            return stripos((string) $value, (string) $want) === false;
+
+        case 'REGEXP':
+            return (bool) preg_match('/' . str_replace('/', '\\/', (string) $want) . '/i', (string) $value);
+
+        case 'BETWEEN':
+            $range = array_values((array) $want);
+
+            return count($range) >= 2
+                && $cast($value) >= $cast($range[0])
+                && $cast($value) <= $cast($range[1]);
+    }
+
+    return false;
+}
+
 class WP_Query
 {
     public $posts = [];
@@ -266,27 +597,118 @@ class WP_Query
         $types = (array) ($args['post_type'] ?? 'post');
         $statuses = (array) ($args['post_status'] ?? ['publish']);
         $search = (string) ($args['s'] ?? '');
+        $meta = $args['meta_query'] ?? [];
 
-        $all = array_values(array_filter($GLOBALS['wp_posts'], function ($post) use ($types, $statuses, $search) {
-            if (!in_array($post->post_type, $types, true)) {
-                return false;
+        $all = array_values(array_filter(
+            $GLOBALS['wp_posts'],
+            function ($post) use ($types, $statuses, $search, $meta) {
+                if (!in_array($post->post_type, $types, true)) {
+                    return false;
+                }
+
+                if (!in_array($post->post_status, $statuses, true)) {
+                    return false;
+                }
+
+                // title AND content, as WordPress searches — the plugin mirrors
+                // an entry's searchable text into post_content on publish
+                if ($search !== ''
+                    && stripos($post->post_title, $search) === false
+                    && stripos((string) ($post->post_content ?? ''), $search) === false) {
+                    return false;
+                }
+
+                return sp_test_meta_matches($post->ID, $meta);
             }
+        ));
 
-            if (!in_array($post->post_status, $statuses, true)) {
-                return false;
-            }
-
-            return $search === '' || stripos($post->post_title, $search) !== false;
-        }));
-
-        usort($all, function ($a, $b) { return $b->ID <=> $a->ID; });
+        $this->order($all, $args);
 
         $perPage = max(1, (int) ($args['posts_per_page'] ?? 10));
         $page = max(1, (int) ($args['paged'] ?? 1));
+        $offset = isset($args['offset']) ? (int) $args['offset'] : ($page - 1) * $perPage;
 
         $this->found_posts = count($all);
         $this->max_num_pages = (int) ceil($this->found_posts / $perPage);
-        $this->posts = array_slice($all, ($page - 1) * $perPage, $perPage);
+        $this->posts = array_slice($all, $offset, $perPage);
+    }
+
+    /**
+     * Applies the ordering arguments.
+     *
+     * `orderby` arrives as a string from the admin listing and as an ordered map
+     * of field => direction from Query::orderArgs, so both are accepted.
+     *
+     * @param array $posts by reference
+     * @param array $args
+     *
+     * @return void
+     */
+    private function order(array &$posts, array $args)
+    {
+        $orderby = $args['orderby'] ?? 'date';
+        $order = strtoupper((string) ($args['order'] ?? 'DESC'));
+        $clauses = is_array($orderby) ? $orderby : [$orderby => $order];
+
+        $key = (string) ($args['meta_key'] ?? '');
+        $numeric = strtoupper((string) ($args['meta_type'] ?? 'CHAR')) === 'NUMERIC';
+
+        usort($posts, function ($a, $b) use ($clauses, $key, $numeric) {
+            foreach ($clauses as $field => $direction) {
+                $result = $this->compare($a, $b, (string) $field, $key, $numeric);
+
+                if ($result !== 0) {
+                    return strtoupper((string) $direction) === 'DESC' ? -$result : $result;
+                }
+            }
+
+            // newest first, which is what an unordered WP_Query gives
+            return $b->ID <=> $a->ID;
+        });
+    }
+
+    /**
+     * Compares two posts on one ordering field.
+     *
+     * @param object  $a
+     * @param object  $b
+     * @param string  $field
+     * @param string  $key     the meta key, when ordering by one
+     * @param boolean $numeric
+     *
+     * @return integer
+     */
+    private function compare($a, $b, $field, $key, $numeric)
+    {
+        if ($field === 'meta_value' || $field === 'meta_value_num') {
+            $one = get_post_meta($a->ID, $key, true);
+            $two = get_post_meta($b->ID, $key, true);
+
+            // a multi-value row orders by its first value, as MySQL would order
+            // by whichever row the join produced
+            $one = is_array($one) ? reset($one) : $one;
+            $two = is_array($two) ? reset($two) : $two;
+
+            return $numeric || $field === 'meta_value_num'
+                ? ((float) $one <=> (float) $two)
+                : strcasecmp((string) $one, (string) $two);
+        }
+
+        if ($field === 'title') {
+            return strcasecmp($a->post_title, $b->post_title);
+        }
+
+        if ($field === 'name') {
+            return strcasecmp($a->post_name, $b->post_name);
+        }
+
+        if ($field === 'modified') {
+            return strcmp((string) $a->post_modified_gmt, (string) $b->post_modified_gmt);
+        }
+
+        // the store has no post_date, and ids are handed out in order, so the id
+        // is the creation order this is asking about
+        return $a->ID <=> $b->ID;
     }
 }
 
@@ -342,7 +764,19 @@ function delete_post_meta($id, $key)
 
 function wp_attachment_is_image($id) { return get_post_type($id) === 'attachment'; }
 function wp_get_attachment_url($id) { return 'http://example.test/uploads/' . $id . '.jpg'; }
-function wp_get_attachment_metadata($id) { return ['width' => 800, 'height' => 600]; }
+function wp_get_attachment_metadata($id)
+{
+    // the sizes are in here, which is the point: the resolver reads them from
+    // the metadata rather than asking WordPress for each one separately
+    return [
+        'width' => 800,
+        'height' => 600,
+        'file' => $id . '.jpg',
+        'sizes' => [
+            'thumbnail' => ['file' => $id . '-150x150.jpg', 'width' => 150, 'height' => 150],
+        ],
+    ];
+}
 function wp_get_attachment_caption($id) { return ''; }
 function get_post_mime_type($id) { return 'image/jpeg'; }
 function get_intermediate_image_sizes() { return ['thumbnail']; }
@@ -394,11 +828,14 @@ $GLOBALS['wpdb'] = new SP_Test_Wpdb();
 
 require_once SCHEMAPRESS_PATH . 'classes/class-inflector.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-datasets.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-dates.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-field-types.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema-model.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-schema-repository.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-settings.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content-sanitizer.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-validator.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-resolver.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-fields.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entry.php';
@@ -409,6 +846,8 @@ require_once SCHEMAPRESS_PATH . 'classes/class-content-type.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-collection.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-component.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-api.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-upgrade.php';
 
 // field types register on construction
 new SchemaPress\FieldTypes();

@@ -82,6 +82,17 @@ export const api = {
   updateType: (id, data) => request(`/types/${id}`, { method: 'POST', data }),
 
   /**
+   * Stores the site's master switch and every collection's own pair.
+   *
+   * One request, because the Settings screen is one form: { restApi, collections }
+   * where collections is keyed by type id.
+   *
+   * @param {Object} settings
+   * @return {Promise<{settings: Object, types: Array}>} What was stored.
+   */
+  saveSettings: (settings) => request('/settings', { method: 'POST', data: settings }),
+
+  /**
    * Every component, for the sidebar and the field picker.
    *
    * @return {Promise<{components: Array}>} The components.

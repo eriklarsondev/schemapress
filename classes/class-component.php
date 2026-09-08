@@ -53,7 +53,9 @@ class Component
             'show_in_menu' => false,
             'show_in_rest' => false,
             'hierarchical' => false,
-            'supports' => ['title', 'revisions'],
+            // title only: a definition is post meta, which WordPress does not
+            // revision — see ContentType::registerPostType
+            'supports' => ['title'],
             'capability_type' => 'page',
             'map_meta_cap' => true,
             'rewrite' => false,

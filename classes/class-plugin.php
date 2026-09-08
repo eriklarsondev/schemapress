@@ -69,6 +69,10 @@ class Plugin
             'Component' => Component::class,
             'ContentType' => ContentType::class,
 
+            // after the post types exist to be queried, and before anything
+            // reads an entry: it is what stops a public GET minting identifiers
+            'Upgrade' => Upgrade::class,
+
             // reading: Twig functions for themes that use Timber, and the
             // content API for everyone else. both read the same Collection, so
             // a filter means the same thing over HTTP as it does in a template

@@ -422,6 +422,15 @@ body.toplevel_page_schemapress #wpfooter {
   transition: background-color 0.12s, color 0.12s;
 }
 
+/* the icon is built as DOM rather than mounted, so it carries no utility
+   classes of its own and is sized here. without this an SVG with only a
+   viewBox fills whatever box it is given */
+.schemapress .sp-prose .sp-code__copy svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
 .schemapress .sp-prose .sp-code__copy:hover {
   background: hsl(223 40% 20%);
   color: hsl(210 40% 96%);
@@ -561,9 +570,17 @@ body.toplevel_page_schemapress #wpfooter {
 
 .schemapress .sp-prose .sp-tabs__strip {
   display: flex;
+  align-items: center;
   gap: 0.15rem;
   padding: 0.3rem 0.35rem 0;
   border-bottom: 1px solid hsl(223 40% 20%);
+}
+
+/* the copy button shares the tab strip rather than sitting on a row of its own
+   beneath it. pushed to the far end, so the tabs keep reading as a group */
+.schemapress .sp-prose .sp-tabs__strip .sp-code__copy {
+  margin-bottom: 0.2rem;
+  margin-left: auto;
 }
 
 .schemapress .sp-prose .sp-tabs__tab {
@@ -592,18 +609,6 @@ body.toplevel_page_schemapress #wpfooter {
   margin: 0;
   border: 0;
   border-radius: 0;
-}
-
-/* the tab already says which language this is */
-.schemapress .sp-prose .sp-tabs .sp-code__bar {
-  justify-content: flex-end;
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
-  border-bottom: 0;
-}
-
-.schemapress .sp-prose .sp-tabs .sp-code__lang {
-  display: none;
 }
 
 .schemapress .sp-prose .sp-tab[hidden] {

@@ -215,7 +215,9 @@ class Entries
      * @param integer|null $entry_id null creates
      * @param array        $data     values, publish
      *
-     * @return array|null the stored entry, read as a draft
+     * @return array|\WP_Error|null the stored entry read as a draft, a WP_Error
+     *                              naming the rules the values broke, or null
+     *                              when there is nothing here to save into
      */
     public static function save($type_id, $entry_id, array $data)
     {
@@ -236,6 +238,18 @@ class Entries
 
         if ($entry_id && !$existing) {
             return null;
+        }
+
+        // before the first write, not after it. a rejected save must leave
+        // nothing behind — creating the post and then refusing its values would
+        // put an empty entry in the collection as the price of a typo
+        $problems = Validator::check($values, $definition['fields'], [
+            'type_id' => $type_id,
+            'entry_id' => $existing ? $existing->ID : 0,
+        ]);
+
+        if ($problems) {
+            return Validator::error($problems);
         }
 
         // read before the write: whether this save is a change at all can only
@@ -267,6 +281,10 @@ class Entries
         // draft's own name is kept beside it until it is published
         if (!$live) {
             $post['post_title'] = $title;
+            // the searchable text goes where the name goes, and for the same
+            // reason: both belong to the published copy, and an entry that is
+            // not live has no published copy to hold back
+            $post['post_content'] = self::searchText($values, $definition['fields']);
         }
 
         if ($existing) {
@@ -279,7 +297,16 @@ class Entries
             return null;
         }
 
-        self::uid($id);
+        $uid = self::uid($id);
+
+        // the slug settles while the entry is unpublished and freezes once it
+        // is live. a published address is something somebody has linked to, and
+        // renaming an entry should not move it out from under them — which is
+        // also how WordPress treats post_name and how Strapi treats a uid field
+        if (!$live) {
+            self::reslug($id, $values, $definition, $uid);
+        }
+
         self::write($id, self::META_DRAFT, $values);
 
         // the draft index tracks every save, published or not; the published one
@@ -287,7 +314,7 @@ class Entries
         Index::write($id, $values, $definition['fields'], true);
 
         if ($publish) {
-            self::promote($id, $values, $title, $definition['fields']);
+            self::promote($type_id, $id, $values, $title, $definition['fields']);
         } elseif ($live) {
             update_post_meta($id, self::META_DRAFT_TITLE, $title);
             self::retrack($id, $values, $before, $definition['fields']);
@@ -297,7 +324,24 @@ class Entries
             delete_post_meta($id, self::META_DRAFT_TITLE);
         }
 
-        return self::get($type_id, $id, 0, self::DRAFT);
+        /**
+         * fires after an entry's draft is written.
+         *
+         * every save reaches this, published or not — a listener wanting only
+         * what went live wants schemapress/entry_published instead.
+         *
+         * @param integer $id      the entry's post id
+         * @param array   $values  what was stored
+         * @param integer $type_id the collection
+         * @param boolean $created whether this save brought the entry into being
+         */
+        do_action('schemapress/entry_saved', $id, $values, $type_id, $existing === null);
+
+        // by uid, because that is the only reference the reader takes. this is
+        // the one place inside the class holding a post id at the moment it
+        // needs to read an entry back, and it converts rather than asking the
+        // reader to accept both — see resolve()
+        return self::get($type_id, self::uid($id), 0, self::DRAFT);
     }
 
     /**
@@ -325,6 +369,7 @@ class Entries
 
         wp_update_post(['ID' => $post->ID, 'post_status' => 'publish']);
         self::promote(
+            $type_id,
             $post->ID,
             self::sanitized($post->ID, self::META_DRAFT, $definition['fields']),
             is_string($stored) && $stored !== '' ? $stored : get_the_title($post),
@@ -364,6 +409,9 @@ class Entries
                 '',
                 $definition['settings']['titleField'] ?? ''
             ),
+            // nothing is published, so the row describes the draft — which is
+            // what the builder's own search is looking through
+            'post_content' => self::searchText($draft, $definition['fields']),
         ]);
 
         delete_post_meta($post->ID, self::META_VALUES);
@@ -375,6 +423,17 @@ class Entries
         Index::clear($post->ID, Index::PREFIX);
         delete_post_meta($post->ID, self::META_DRAFT_TITLE);
         update_post_meta($post->ID, self::META_AHEAD, 0);
+
+        /**
+         * fires when an entry comes off the front end, its work kept.
+         *
+         * the pair to entry_published: anything that was built from this entry
+         * being live has to come down.
+         *
+         * @param integer $id      the entry's post id
+         * @param integer $type_id the collection
+         */
+        do_action('schemapress/entry_unpublished', $post->ID, $type_id);
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
     }
@@ -395,11 +454,31 @@ class Entries
             return null;
         }
 
-        self::write($post->ID, self::META_DRAFT, self::stored($post->ID, self::META_VALUES));
+        $definition = SchemaRepository::definition($type_id);
+        $values = self::stored($post->ID, self::META_VALUES);
+
+        self::write($post->ID, self::META_DRAFT, $values);
+
+        // the draft index is derived from the draft, so throwing the draft away
+        // has to throw its index away too. without this the builder's own
+        // listing went on filtering and sorting a discarded entry by values
+        // nothing was storing any more — an entry reverted from "Designer" back
+        // to "Engineer" stayed under Designer in the table until its next save
+        Index::write($post->ID, ContentSanitizer::values($values, $definition['fields']), $definition['fields'], true);
+
         update_post_meta($post->ID, self::META_AHEAD, 0);
 
         // the discarded draft's name goes with it, back to the published one
         delete_post_meta($post->ID, self::META_DRAFT_TITLE);
+
+        /**
+         * fires when a draft is thrown away and the entry returns to what is
+         * published.
+         *
+         * @param integer $id      the entry's post id
+         * @param integer $type_id the collection
+         */
+        do_action('schemapress/entry_discarded', $post->ID, $type_id);
 
         return self::get($type_id, $entry_id, 0, self::DRAFT);
     }
@@ -420,7 +499,22 @@ class Entries
             return false;
         }
 
-        return (bool) wp_trash_post($post->ID);
+        if (!wp_trash_post($post->ID)) {
+            return false;
+        }
+
+        /**
+         * fires after an entry is trashed.
+         *
+         * trashed, not erased: the post and its meta are still there, so a
+         * listener that needs to know what the entry held can still read it.
+         *
+         * @param integer $id      the entry's post id
+         * @param integer $type_id the collection
+         */
+        do_action('schemapress/entry_deleted', $post->ID, $type_id);
+
+        return true;
     }
 
     // --- identity ------------------------------------------------------------
@@ -453,11 +547,86 @@ class Entries
     }
 
     /**
+     * an entry's identifier as stored, without minting one.
+     *
+     * the read-side accessor, so that delivering an entry is a read. uid()
+     * mints, which is right when an entry is being created and wrong on the
+     * path a public GET takes — see class-upgrade.php.
+     *
+     * @param integer $post_id
+     *
+     * @return string '' when the entry has never been given one
+     */
+    private static function storedUid($post_id)
+    {
+        $stored = get_post_meta(absint($post_id), self::META_UID, true);
+
+        return is_string($stored) ? $stored : '';
+    }
+
+    /**
+     * gives every entry of a collection an identifier, for the ones that
+     * predate having any.
+     *
+     * @param integer $type_id
+     *
+     * @return integer how many were minted
+     */
+    public static function backfill($type_id)
+    {
+        $type = ContentType::get($type_id);
+
+        if (!$type) {
+            return 0;
+        }
+
+        $minted = 0;
+
+        // trashed entries too: they can be restored, and one restored without
+        // an identifier would be a read that writes all over again
+        foreach (get_posts([
+            'post_type' => $type['postType'],
+            'post_status' => ['publish', 'draft', 'trash'],
+            'numberposts' => -1,
+            'fields' => 'ids',
+            'suppress_filters' => false,
+        ]) as $id) {
+            if (self::storedUid($id) !== '') {
+                continue;
+            }
+
+            self::uid($id);
+            $minted++;
+        }
+
+        return $minted;
+    }
+
+    /**
      * finds the post behind a reference.
      *
-     * the public surface passes a uid. internal callers that already hold a
-     * post id may pass that instead, which is why both are accepted — a numeric
-     * reference is unambiguous because a uuid never is one.
+     * a uid, and NOTHING else.
+     *
+     * this used to take a post id as well, for internal callers that already
+     * hold one. what it also did was let the content API answer
+     * /api/team-members/5, so any published entry could be fetched by counting
+     * 1, 2, 3 — precisely the enumeration the uid exists to prevent,
+     * reintroduced by the convenience of accepting both.
+     *
+     * there is exactly one internal caller that holds a post id, and it is
+     * save(), which converts to a uid itself. one conversion at one call site
+     * is a smaller thing than a reader that cannot tell a public reference from
+     * a private one.
+     *
+     * A SLUG WORKS TOO, and is the point of having one: a front end routing
+     * /team/ada-lovelace has the slug and not the uuid, and would otherwise
+     * have to list the whole collection to translate between them. a slug is a
+     * public identifier in a way a post id never was — it is chosen, it is not
+     * sequential, and it says nothing about how many entries exist.
+     *
+     * the uuid is tried first, because it is the identifier the API reports and
+     * so the one most references are. a collection whose slugs ARE uuids
+     * matches on the first lookup either way.
      *
      * @param integer $type_id
      * @param mixed   $ref
@@ -472,18 +641,30 @@ class Entries
             return null;
         }
 
-        if (is_numeric($ref)) {
-            $post = get_post(absint($ref));
-
-            return $post && $post->post_type === $type['postType'] ? $post : null;
-        }
-
         $found = get_posts([
             'post_type' => $type['postType'],
             'post_status' => ['publish', 'draft'],
             'numberposts' => 1,
             'meta_key' => self::META_UID,
             'meta_value' => (string) $ref,
+            'suppress_filters' => false,
+        ]);
+
+        if (isset($found[0])) {
+            return $found[0];
+        }
+
+        $slug = sanitize_title((string) $ref);
+
+        if ($slug === '') {
+            return null;
+        }
+
+        $found = get_posts([
+            'post_type' => $type['postType'],
+            'post_status' => ['publish', 'draft'],
+            'numberposts' => 1,
+            'name' => $slug,
             'suppress_filters' => false,
         ]);
 
@@ -563,13 +744,14 @@ class Entries
      * makes it mean "the published name" — which is what the front end reads
      * and what WordPress search matches.
      *
+     * @param integer $type_id
      * @param integer $id
      * @param array   $values
-     * @param string  $title  the name being published, already derived
+     * @param string  $title   the name being published, already derived
      *
      * @return void
      */
-    private static function promote($id, array $values, $title, array $fields = [])
+    private static function promote($type_id, $id, array $values, $title, array $fields = [])
     {
         self::write($id, self::META_VALUES, $values);
 
@@ -577,10 +759,31 @@ class Entries
         // whatever is going live is exactly what becomes filterable
         Index::write($id, $values, $fields);
         update_post_meta($id, self::META_AHEAD, 0);
-        update_post_meta($id, self::META_PUBLISHED_AT, gmdate('Y-m-d H:i:s'));
+        update_post_meta($id, self::META_PUBLISHED_AT, gmdate('Y-m-d\TH:i:s\Z'));
 
-        wp_update_post(['ID' => $id, 'post_title' => $title]);
+        wp_update_post([
+            'ID' => $id,
+            'post_title' => $title,
+            // what is searchable is what is published, exactly as the title is.
+            // written here and nowhere else, so a live entry with unpublished
+            // edits cannot be found by words only its draft contains
+            'post_content' => self::searchText($values, $fields),
+        ]);
         delete_post_meta($id, self::META_DRAFT_TITLE);
+
+        /**
+         * fires when an entry's values become what the site is serving.
+         *
+         * this is the one to hang a cache purge or a rebuild on: it fires
+         * whether publishing happened through the publish action or through a
+         * save on a collection that keeps no drafts, and it fires only when
+         * something actually moved onto the front end.
+         *
+         * @param integer $id      the entry's post id
+         * @param array   $values  what is now live
+         * @param integer $type_id the collection
+         */
+        do_action('schemapress/entry_published', $id, $values, $type_id);
     }
 
     /**
@@ -668,7 +871,10 @@ class Entries
             : '';
 
         return [
-            'id' => self::uid($post->ID),
+            // read, not minted. the backfill in class-upgrade.php is what makes
+            // the fallback unreachable: without it, delivering an entry over the
+            // public API wrote a meta row, which is not something a GET should do
+            'id' => self::storedUid($post->ID) ?: self::uid($post->ID),
             'title' => is_string($draftTitle) && $draftTitle !== ''
                 ? $draftTitle
                 : get_the_title($post),
@@ -678,15 +884,151 @@ class Entries
             'isPublished' => $published,
             // how far the draft has diverged from what is live
             'ahead' => $published ? $ahead : 0,
-            'modified' => $post->post_modified_gmt,
+            // ISO-8601, so a client can read them. see Dates::iso — these are
+            // instants, unlike a date FIELD, which is a wall clock
+            'modified' => Dates::iso($post->post_modified_gmt),
             'publishedAt' => $published
-                ? (string) get_post_meta($post->ID, self::META_PUBLISHED_AT, true)
+                ? Dates::iso(get_post_meta($post->ID, self::META_PUBLISHED_AT, true))
                 : '',
             // stored, for the editor to load back into its controls
             'values' => $values,
             // resolved, for a template or a client to render
             'data' => Resolver::values($values, $definition['fields'], $depth),
         ];
+    }
+
+    /**
+     * writes the entry's address, when it does not already have the right one.
+     *
+     * WordPress uniquifies a supplied post_name, so two entries called the same
+     * thing become `ada-lovelace` and `ada-lovelace-2`. that suffix is why the
+     * comparison is a prefix rather than an equality: an entry whose address
+     * already begins with what it should be has the right address, and testing
+     * for equality would rewrite it on every save forever.
+     *
+     * @param integer $id
+     * @param array   $values
+     * @param array   $definition
+     * @param string  $uid
+     *
+     * @return void
+     */
+    private static function reslug($id, array $values, array $definition, $uid)
+    {
+        $slug = self::deriveSlug($values, $definition, $uid);
+        $post = get_post($id);
+
+        if ($slug === '' || !$post || strpos((string) $post->post_name, $slug) === 0) {
+            return;
+        }
+
+        wp_update_post(['ID' => $id, 'post_name' => $slug]);
+    }
+
+    /**
+     * the address an entry should have.
+     *
+     * built from the field the collection nominated, or from the uuid when it
+     * nominated none — see SchemaModel::normalizeSlugField. an entry always has
+     * one, because a slug that can be missing is a routing bug waiting for the
+     * first entry somebody leaves half filled in.
+     *
+     * @param array  $values
+     * @param array  $definition
+     * @param string $uid
+     *
+     * @return string
+     */
+    private static function deriveSlug(array $values, array $definition, $uid)
+    {
+        $key = (string) ($definition['settings']['slugField'] ?? '');
+
+        if ($key === '') {
+            return $uid;
+        }
+
+        $value = $values[$key] ?? null;
+
+        // a multi-select names itself by whichever choice comes first; nothing
+        // sensible can be made of the rest of them in an address
+        if (is_array($value)) {
+            $value = reset($value);
+        }
+
+        $slug = sanitize_title((string) $value);
+
+        // the field is empty, so there is nothing to build an address out of
+        // yet. the uuid holds the place until there is
+        return $slug !== '' ? $slug : $uid;
+    }
+
+    /**
+     * everything about an entry that somebody might search for, as plain text.
+     *
+     * WordPress searches post_title and post_content. an entry's values are a
+     * JSON blob in meta, which neither of those is, so search matched the
+     * derived title and nothing else — and a collection that names its entries
+     * by no field is a list of "Untitled" rows that could not be searched at
+     * all.
+     *
+     * so the searchable text is mirrored into post_content, for the same reason
+     * the index mirrors filterable values into meta rows: the record stays the
+     * blob, and this is a derived copy in the shape the database can reach.
+     *
+     * only the types a person would type a word from. a number, a date and a
+     * toggle are matched by filtering rather than by searching, and an
+     * attachment id is not something anybody searches for.
+     *
+     * @param array $values
+     * @param array $fields
+     *
+     * @return string
+     */
+    private static function searchText(array $values, array $fields)
+    {
+        $parts = [];
+
+        foreach ($fields as $field) {
+            $value = $values[$field['key']] ?? null;
+
+            switch ($field['type']) {
+                case 'group':
+                    $parts[] = self::searchText(is_array($value) ? $value : [], $field['fields']);
+                    break;
+
+                case 'repeater':
+                    foreach (is_array($value) ? $value : [] as $row) {
+                        $parts[] = self::searchText(
+                            isset($row['values']) && is_array($row['values']) ? $row['values'] : [],
+                            $field['fields']
+                        );
+                    }
+                    break;
+
+                case 'link':
+                    // the label is the words; the url is an address, and
+                    // matching one on a search for "about" is noise
+                    $parts[] = is_array($value) ? (string) ($value['label'] ?? '') : '';
+                    break;
+
+                case 'wysiwyg':
+                    $parts[] = wp_strip_all_tags((string) $value);
+                    break;
+
+                case 'text':
+                case 'textarea':
+                case 'email':
+                case 'url':
+                case 'phone':
+                case 'select':
+                    $parts[] = is_array($value)
+                        ? implode(' ', array_map('strval', $value))
+                        : (string) $value;
+                    break;
+            }
+        }
+
+        return trim(preg_replace('/\s+/', ' ', implode(' ', array_filter($parts, 'strlen'))));
     }
 
     /**

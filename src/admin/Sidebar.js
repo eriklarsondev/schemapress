@@ -12,8 +12,9 @@
 
 import { Fragment } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
-import { Boxes, Database, Blocks, BookOpen, Plus } from 'lucide-react'
+import { Boxes, Database, Blocks, BookOpen, Settings, Plus } from 'lucide-react'
 import { cn } from '../ui'
+import { can } from '../shared/settings'
 
 /**
  * Sidebar navigation.
@@ -32,7 +33,8 @@ export function Sidebar({
   onCreate,
   onSelectComponent,
   onCreateComponent,
-  onOpenDocs
+  onOpenDocs,
+  onOpenSettings
 }) {
   // a collection is identified by a post id, a documentation page by its slug,
   // so the two are compared differently against the same route
@@ -58,12 +60,14 @@ export function Sidebar({
         className="flex-1 overflow-y-auto px-3 pb-6"
         aria-label={__('Collections', 'schemapress')}
       >
+        {/* defining a collection is the builder's job, not the content
+            manager's — so whoever cannot do it is not offered the button */}
         <Group
           icon={Database}
           label={__('Collection types', 'schemapress')}
           count={loading ? null : types.length}
           addLabel={__('Create a collection type', 'schemapress')}
-          onAdd={onCreate}
+          onAdd={can.manageSchema ? onCreate : null}
         />
 
         {loading ? (
@@ -96,7 +100,7 @@ export function Sidebar({
           icon={Blocks}
           label={__('Components', 'schemapress')}
           addLabel={__('Create a component', 'schemapress')}
-          onAdd={onCreateComponent}
+          onAdd={can.manageSchema ? onCreateComponent : null}
           className="mt-4"
         />
 
@@ -118,6 +122,20 @@ export function Sidebar({
         {/* a screen of the app, not a page elsewhere in wp-admin: looking
             something up should not cost you the collection you were in */}
         <hr className="mx-2 my-4 border-0 border-t border-border" />
+
+        {/* what every collection publishes, in one table. the same switches as
+            each collection's own dialog, gathered where they can be compared.
+            only for whoever can change them: a row opening a screen where every
+            control is refused is worse than no row */}
+        {can.manageSchema ? (
+          <Item
+            label={__('Settings', 'schemapress')}
+            icon={Settings}
+            active={active?.view === 'settings'}
+            onClick={onOpenSettings}
+          />
+        ) : null}
+
         {/* the parent opens the front door, not the first topic. a reference
             opened at its first page assumes you already know it is the first
             page — the splash is what says what is here */}
@@ -185,15 +203,20 @@ function Group({ icon: Icon, label, count, addLabel, onAdd, className }) {
         ) : null}
       </p>
 
-      <button
-        type="button"
-        title={addLabel}
-        aria-label={addLabel}
-        onClick={onAdd}
-        className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-      >
-        <Plus className="size-3.5" />
-      </button>
+      {/* the heading stays without it: "no collections yet" is information,
+          and a section that vanished for want of a button would read as the
+          sidebar having failed to load */}
+      {onAdd ? (
+        <button
+          type="button"
+          title={addLabel}
+          aria-label={addLabel}
+          onClick={onAdd}
+          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Plus className="size-3.5" />
+        </button>
+      ) : null}
     </div>
   )
 }

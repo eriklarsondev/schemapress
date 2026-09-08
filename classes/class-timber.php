@@ -75,6 +75,11 @@ class Timber
     {
         $exposed = [
             'sp_collection' => [Content::class, 'collection'],
+            // one entry by id. the procedural helper has existed since the
+            // start and this did not, so a Twig template asking for
+            // sp_entry() got an undefined function while the PHP beside it
+            // worked — the two surfaces are meant to be the same API
+            'sp_entry' => [self::class, 'entry'],
             'sp_collections' => [Content::class, 'collections'],
             'sp_has_collection' => [Content::class, 'has'],
         ];
@@ -84,5 +89,20 @@ class Timber
         }
 
         return $functions;
+    }
+
+    /**
+     * one entry of a collection, by id.
+     *
+     * mirrors sp_entry() in includes/helpers.php.
+     *
+     * @param string $key
+     * @param string $id
+     *
+     * @return Entry|null
+     */
+    public static function entry($key, $id)
+    {
+        return Content::collection($key)->find($id);
     }
 }

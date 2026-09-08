@@ -8,14 +8,20 @@ if (!defined('ABSPATH')) {
 /**
  * the element palette.
  *
- * an element is a field expressed as something an author recognises. "Button"
- * is a link field with the action role; "Heading" is a text field with the
- * heading role. picking one from a palette is the same operation as choosing a
- * field type and then a role, minus the two decisions that only make sense if
- * you already know how the schema works.
+ * an element is a field expressed as something an author recognises. "Heading"
+ * is a text field; "Button" is a link field. picking one from a palette is the
+ * same operation as choosing a field type, minus the decision that only makes
+ * sense if you already know how the schema works.
  *
  * the result is an ordinary field, so nothing downstream needs to know an
  * element was involved.
+ *
+ * these carried a `role` — 'heading', 'action', 'background' — and a repeater
+ * `display`, and neither ever existed: SchemaModel::normalizeField does not
+ * carry role through, normalizeConfig does not whitelist display, and nothing
+ * in the admin reads either. so "Button" and "Link" produced identical fields
+ * while the definitions here said otherwise. they are gone rather than
+ * implemented, because a role is only worth having once something renders it.
  */
 class Elements
 {
@@ -34,7 +40,6 @@ class Elements
                 'field' => [
                     'label' => __('Heading', 'schemapress'),
                     'type' => 'text',
-                    'role' => 'heading',
                 ],
             ],
             [
@@ -44,7 +49,6 @@ class Elements
                 'field' => [
                     'label' => __('Eyebrow', 'schemapress'),
                     'type' => 'text',
-                    'role' => 'eyebrow',
                 ],
             ],
             [
@@ -81,7 +85,6 @@ class Elements
                 'field' => [
                     'label' => __('Background', 'schemapress'),
                     'type' => 'image',
-                    'role' => 'background',
                 ],
             ],
             [
@@ -91,7 +94,6 @@ class Elements
                 'field' => [
                     'label' => __('Button', 'schemapress'),
                     'type' => 'link',
-                    'role' => 'action',
                 ],
             ],
             [
@@ -110,9 +112,9 @@ class Elements
                 'field' => [
                     'label' => __('Items', 'schemapress'),
                     'type' => 'repeater',
-                    'config' => ['display' => 'grid', 'button_label' => __('Add item', 'schemapress')],
+                    'config' => ['button_label' => __('Add item', 'schemapress')],
                     'fields' => [
-                        ['label' => __('Title', 'schemapress'), 'type' => 'text', 'role' => 'heading'],
+                        ['label' => __('Title', 'schemapress'), 'type' => 'text'],
                         ['label' => __('Text', 'schemapress'), 'type' => 'textarea'],
                     ],
                 ],

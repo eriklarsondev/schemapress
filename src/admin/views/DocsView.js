@@ -36,7 +36,7 @@ import {
   Code2,
   Braces,
 } from 'lucide-react'
-import { Alert, Empty, cn } from '../../ui'
+import { Alert, Empty, cn, copyText } from '../../ui'
 import Prism from '../../shared/prism'
 
 /**
@@ -461,6 +461,91 @@ function PagerLink({ section, back }) {
 }
 
 /**
+ * The two states of the copy button's icon, as lucide draws them — the same
+ * pair the Copyable component uses, so the gesture looks the same wherever it
+ * appears.
+ *
+ * Markup rather than components because this bar is built as DOM: the code
+ * blocks are rendered Markdown that React never sees, so there is nothing here
+ * to mount an icon into.
+ */
+const COPY_GLYPH =
+  '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>' +
+  '<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'
+
+const CHECK_GLYPH = '<path d="M20 6 9 17l-5-5"/>'
+
+/**
+ * Builds one inline icon.
+ *
+ * @param {string} glyph The paths to draw.
+ * @return {SVGElement} The icon.
+ */
+function icon(glyph) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('fill', 'none')
+  svg.setAttribute('stroke', 'currentColor')
+  svg.setAttribute('stroke-width', '2')
+  svg.setAttribute('stroke-linecap', 'round')
+  svg.setAttribute('stroke-linejoin', 'round')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.innerHTML = glyph
+
+  return svg
+}
+
+/**
+ * A copy button, wired to whatever it should copy at the moment it is pressed.
+ *
+ * The sample is read through a function rather than captured, because a tabbed
+ * group has one button over several panes and what it copies is whichever one
+ * is showing — which is not known when the button is built.
+ *
+ * @param {Function} read Returns the text to copy.
+ * @return {HTMLButtonElement} The button.
+ */
+function copyButton(read) {
+  const button = document.createElement('button')
+
+  button.type = 'button'
+  button.className = 'sp-code__copy'
+
+  const glyph = icon(COPY_GLYPH)
+  const caption = document.createElement('span')
+
+  caption.textContent = __('Copy', 'schemapress')
+  button.append(glyph, caption)
+
+  button.addEventListener('click', () => {
+    // copyText, not navigator.clipboard directly: the Clipboard API needs a
+    // secure context and a local install over plain http is exactly where it is
+    // absent. this button used to reach for it unguarded and threw on those
+    // machines — see src/ui/copyable.js for the fallback
+    copyText(read()).then((ok) => {
+      if (!ok) {
+        caption.textContent = __('Press ⌘C', 'schemapress')
+
+        return
+      }
+
+      glyph.innerHTML = CHECK_GLYPH
+      caption.textContent = __('Copied', 'schemapress')
+      button.dataset.copied = 'true'
+
+      window.setTimeout(() => {
+        glyph.innerHTML = COPY_GLYPH
+        caption.textContent = __('Copy', 'schemapress')
+        delete button.dataset.copied
+      }, 1600)
+    })
+  })
+
+  return button
+}
+
+/**
  * Gives every code block a bar with its language and a copy button.
  *
  * Done to the rendered HTML rather than in the Markdown, because the Markdown
@@ -500,31 +585,7 @@ function useCodeChrome(root, section) {
       label.className = 'sp-code__lang'
       label.textContent = LANGUAGES[language] || language || __('Code', 'schemapress')
 
-      const copy = document.createElement('button')
-      copy.type = 'button'
-      copy.className = 'sp-code__copy'
-      copy.textContent = __('Copy', 'schemapress')
-      copy.addEventListener('click', () => {
-        // the clipboard API needs a secure context; a local install over plain
-        // http is exactly where it is missing, so failure has to be visible
-        // rather than a button that silently does nothing
-        navigator.clipboard
-          ?.writeText(code?.textContent || '')
-          .then(() => {
-            copy.textContent = __('Copied', 'schemapress')
-            copy.dataset.copied = 'true'
-
-            window.setTimeout(() => {
-              copy.textContent = __('Copy', 'schemapress')
-              delete copy.dataset.copied
-            }, 1600)
-          })
-          .catch(() => {
-            copy.textContent = __('Press ⌘C', 'schemapress')
-          })
-      })
-
-      bar.append(label, copy)
+      bar.append(label, copyButton(() => code?.textContent || ''))
       block.parentNode?.insertBefore(shell, block)
       shell.append(bar, block)
     })
@@ -587,6 +648,20 @@ function buildTabs(scope) {
       tab.setAttribute('aria-selected', String(index === 0))
       strip.append(tab)
     })
+
+    // each pane arrived with a bar of its own, which put the copy button on a
+    // second row directly under the tabs and repeated the language the tab had
+    // already named. one header: tabs on the left, one copy button on the
+    // right, copying whichever pane is showing when it is pressed
+    panes.forEach((pane) => pane.querySelector('.sp-code__bar')?.remove())
+
+    strip.append(
+      copyButton(() => {
+        const showing = panes.find((pane) => !pane.hidden)
+
+        return showing?.querySelector('pre code')?.textContent || ''
+      })
+    )
 
     panes.forEach((pane, index) => {
       pane.hidden = index !== 0

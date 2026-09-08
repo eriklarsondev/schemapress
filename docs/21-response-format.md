@@ -73,47 +73,64 @@ Three keys are always present and always mean the same thing:
 | Key | |
 | --- | --- |
 | `id` | A uuid, stable for the life of the entry |
-| `updatedAt` / `publishedAt` | GMT timestamps |
+| `updatedAt` / `publishedAt` | ISO-8601 instants in UTC — `2026-09-08T09:35:00Z` |
 
 Everything else is one of your fields, under the machine key you gave it.
 
 ### Titles and slugs
 
-WordPress needs a title for every row it stores, so one is always derived — but it is **not
-in the response** unless the collection says which field names its entries.
+Two separate settings, under a collection's **Settings** button.
 
-**Settings → Names its entries by.** Pick a field and it becomes the entry's name: its
-value is written straight to the WordPress title, in full rather than summarised, so the
-two cannot disagree. `slug` joins the response because it now derives from something real.
+**Shown as** picks the field an entry is named by. Its value is written straight to the
+WordPress title, in full rather than summarised, so the two cannot disagree. Leave it as
+**No name** and `title` does not appear — the right answer for a collection you would never
+list by name, a set of settings or a group of link rows.
 
-Leave it as **None** and neither `title` nor `slug` appears. That is the right answer for a
-collection you would never list by name — a set of settings, a group of link rows.
+**Addressed by** picks the field the `slug` is built from. Unlike the title, **`slug` is
+always in the response**: an entry that sometimes had an address would be a routing bug, so
+a collection that names no field is addressed by its random id instead.
 
-:::caution Why not just always include it
-With no field nominated, the derived title comes from whichever text field happens to come
-first in the schema. Reorder the fields and every entry silently gets a new title, and a
-new slug with it. That is an artifact of how entries are stored, not something the content
-says, so it is kept out of the API.
+```http
+GET /wp-json/schemapress/api/team-members/ada-lovelace
+```
+
+Both the slug and the `id` reach an entry, so a front end that holds one of them never has
+to list the collection to find the other.
+
+:::caution The title is not always in the response
+WordPress needs a title for every row it stores, so one is derived even when no field is
+nominated — from whichever text field happens to come first in the schema. Reorder the
+fields and every entry silently gets a new one. That is an artifact of how entries are
+stored rather than something the content says, so it is kept out of the API.
+:::
+
+:::note A slug is settled once, on first publish
+It follows the field while an entry is still a draft, then freezes. Renaming a published
+entry leaves its address alone, so a link somebody already has keeps working — the same
+rule WordPress applies to a post's own slug.
+
+Two entries with the same value get a numbered suffix: `ada-lovelace`, `ada-lovelace-2`.
 :::
 
 :::tabs
-```json Named by nothing
-{
-  "id": "86a8d140-…",
-  "full_name": "Ada Lovelace",
-  "role": "Engineer",
-  "updatedAt": "2026-09-06 22:41:15",
-  "publishedAt": "2026-09-06 22:41:15"
-}
-```
-```json Named by full_name
+```json Addressed by full_name
 {
   "id": "86a8d140-…",
   "slug": "ada-lovelace",
   "full_name": "Ada Lovelace",
   "role": "Engineer",
-  "updatedAt": "2026-09-06 22:41:15",
-  "publishedAt": "2026-09-06 22:41:15"
+  "updatedAt": "2026-09-06T22:41:15Z",
+  "publishedAt": "2026-09-06T22:41:15Z"
+}
+```
+```json Addressed by its id
+{
+  "id": "86a8d140-…",
+  "slug": "86a8d140-…",
+  "full_name": "Ada Lovelace",
+  "role": "Engineer",
+  "updatedAt": "2026-09-06T22:41:15Z",
+  "publishedAt": "2026-09-06T22:41:15Z"
 }
 ```
 :::
@@ -135,21 +152,34 @@ stable if content is moved between installs.
 
 ### Values are resolved
 
-An image is its attachment, not an id. A relation is the entries it points at, not their
-ids. A client never holds an identifier it has to spend a second request on, and there is
-no `populate` step to remember.
+An image is its attachment, not an id — url, dimensions, alt text and every registered
+size, already expanded. A client never holds an identifier it has to spend a second request
+on, and there is no `populate` step to remember.
 
 | Field type | JSON |
 | --- | --- |
 | Text, Textarea, Email, URL, Phone | `"a string"` |
 | Rich text | `"<p>HTML</p>"` — shortcodes and paragraphs already applied |
 | Number | `42.0`, or `null` |
+| Date | `"2026-09-08"`, or `""` |
+| Date and time | `"2026-09-08T19:00:00"`, or `""` |
+| Time | `"19:00:00"`, or `""` |
 | Toggle | `true` / `false` |
 | Dropdown | `"value"`, or `["a", "b"]` when it allows several |
 | Image, File | an object (below), or `null` |
 | Link | `{ "url", "label", "target" }`, or `null` |
 | Group | a nested object |
 | Repeater | an array of `{ "id", "data": {…} }` |
+
+:::note Dates are wall clocks, not instants
+A Date, Time or Date and time carries no timezone, and none is applied on the way in or
+out: `19:00:00` is seven in the evening, which is what somebody filling in an event form
+means. `publishedAt` and `updatedAt` are the opposite — they record a moment rather than a
+plan, and are GMT.
+
+The stored shapes sort as text in the same order they sort as dates, so
+`?sort=starts_at:asc` and `?filters[starts_at][$gte]=2026-01-01` both work.
+:::
 
 An image or file:
 

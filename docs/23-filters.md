@@ -16,7 +16,7 @@ A parameter names a field and gives it a value. That is the whole grammar:
 | --- | --- |
 | `?field=value` | entries where the field is that value |
 | `?field=a,b` | entries where it is any of them |
-| `?search=term` | entries whose title matches |
+| `?search=term` | entries whose text matches — any text field, not only the name |
 | `?sort=field` `?sort=-field` | ordering — see **Sorting & pagination** |
 | `?page=` `?limit=` | paging — see **Sorting & pagination** |
 

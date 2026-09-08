@@ -47,7 +47,7 @@ query.
 | `->filter($tree)` | A new query, filtered by a whole `$and`/`$or` tree |
 | `->sort($field, $dir)` | A new query, ordered by any field |
 | `->orderBy($field, $dir)` | The same, and accepts `title`, `date`, `modified` |
-| `->search($term)` | A new query, filtered by title |
+| `->search($term)` | A new query, filtered by the entry’s text |
 | `->total()` | How many entries match, ignoring paging |
 | `->count()` | How many this page returned |
 | `->isEmpty()` | Whether there are none |

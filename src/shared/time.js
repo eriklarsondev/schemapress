@@ -32,10 +32,16 @@ const UNITS = [
 /**
  * Parses a WordPress GMT timestamp.
  *
- * They arrive as "Y-m-d H:i:s" in UTC with no zone marker, which Safari refuses
- * outright and every other browser reads as local time — an hour or eight in
- * the wrong direction, and occasionally in the future. Rebuilding it as an ISO
- * instant is what makes the answer the same everywhere.
+ * The plugin sends ISO-8601 instants — "2026-09-08T09:35:00Z" — and those are
+ * read as they are. WordPress's own "Y-m-d H:i:s" in UTC with no zone marker is
+ * still accepted, because a stamp can come from a row written before the format
+ * was fixed: Safari refuses that outright and every other browser reads it as
+ * local time, an hour or eight in the wrong direction and occasionally in the
+ * future.
+ *
+ * The zone is only added when the stamp does not already name one. Appending it
+ * unconditionally is what an earlier version did, which turned a correct ISO
+ * instant into "…00ZZ" and back into an Invalid Date.
  *
  * @param {string} stamp
  * @return {Date|null} The instant, or null if it is missing or unparseable.
@@ -45,7 +51,9 @@ function parse(stamp) {
     return null
   }
 
-  const at = new Date(`${String(stamp).trim().replace(' ', 'T')}Z`)
+  const text = String(stamp).trim().replace(' ', 'T')
+  const zoned = /(?:Z|[+-]\d{2}:?\d{2})$/.test(text)
+  const at = new Date(zoned ? text : `${text}Z`)
 
   return Number.isNaN(at.getTime()) ? null : at
 }
