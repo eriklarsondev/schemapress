@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     // the console is still where a developer will look, so the detail goes
-    // there in full rather than being summarised into the UI
+    // there in full rather than being summarized into the UI
     // eslint-disable-next-line no-console
     console.error('SchemaPress:', error, info)
   }

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 /**
  * the element palette.
  *
- * an element is a field expressed as something an author recognises. "Heading"
+ * an element is a field expressed as something an author recognizes. "Heading"
  * is a text field; "Button" is a link field. picking one from a palette is the
  * same operation as choosing a field type, minus the decision that only makes
  * sense if you already know how the schema works.

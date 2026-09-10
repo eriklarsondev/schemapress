@@ -94,7 +94,43 @@ class SchemaModel
                 ? self::normalizeSlugField($settings['slugField'], $fields)
                 : self::defaultSlugField($fields),
             'listColumns' => self::normalizeColumns($settings['listColumns'] ?? null, $fields),
+            // which roles may edit this collection's entries. empty is open to
+            // everyone who may edit content, which is what every collection was
+            // before this existed — see Capabilities::canEditCollection
+            'editRoles' => self::normalizeRoles($settings['editRoles'] ?? null),
         ];
+    }
+
+    /**
+     * coerces a list of role slugs.
+     *
+     * the roles are NOT checked against the ones this site has. an export from
+     * a site with a `finance` role, imported somewhere that has not created it
+     * yet, should keep the restriction rather than silently drop it and open the
+     * collection to everybody — a role that does not exist matches no user,
+     * which fails closed.
+     *
+     * @param mixed $roles
+     *
+     * @return string[]
+     */
+    private static function normalizeRoles($roles)
+    {
+        if (!is_array($roles)) {
+            return [];
+        }
+
+        $clean = [];
+
+        foreach ($roles as $role) {
+            $slug = sanitize_key((string) $role);
+
+            if ($slug !== '' && !in_array($slug, $clean, true)) {
+                $clean[] = $slug;
+            }
+        }
+
+        return $clean;
     }
 
     /**
@@ -341,7 +377,7 @@ class SchemaModel
     }
 
     /**
-     * whitelists the type-specific config bag. anything not recognised for the
+     * whitelists the type-specific config bag. anything not recognized for the
      * type is discarded so stored definitions cannot accumulate junk.
      *
      * @param array  $field
@@ -385,9 +421,14 @@ class SchemaModel
         // all. both describe the admin's own screen rather than the delivered
         // content, which is the only reason a presentation value is allowed to
         // live in a definition
-        $width = in_array($config['width'] ?? '', ['third', 'half', 'two-thirds'], true)
+        // a width somebody chose is kept — FULL INCLUDED, which is why it is in
+        // the list: it used to be the fallback rather than a value, and that
+        // was harmless only while every type fell back to it. a field with no
+        // width yet starts at its type's own, see FieldTypes::WIDTHS. every
+        // field already stored has an explicit width, so none of them move
+        $width = in_array($config['width'] ?? '', ['third', 'half', 'two-thirds', 'full'], true)
             ? $config['width']
-            : 'full';
+            : FieldTypes::defaultWidth($type);
 
         $clean = [
             'width' => $width,
@@ -460,6 +501,20 @@ class SchemaModel
                         $clean[$bound] = (float) $config[$bound];
                     }
                 }
+                break;
+
+            case 'gallery':
+                // a ceiling on how many images, for the layouts that only have
+                // room for so many. no minimum: `required` already says "at
+                // least one", and a gallery padded to three empty slots the way
+                // a repeater pads its rows would be three broken images
+                $clean['max'] = isset($config['max']) ? absint($config['max']) : 0;
+                break;
+
+            case 'json':
+                // how tall the editor is, in rows. a payload is usually either
+                // three lines or three hundred, and the field knows which
+                $clean['rows'] = isset($config['rows']) ? max(3, absint($config['rows'])) : 8;
                 break;
         }
 

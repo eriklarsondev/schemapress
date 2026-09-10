@@ -68,6 +68,9 @@ class Resolver
             case 'file':
                 return self::attachment($value);
 
+            case 'gallery':
+                return self::gallery($value);
+
             case 'link':
                 return self::link($value);
 
@@ -210,6 +213,33 @@ class Resolver
         }
 
         return $sizes;
+    }
+
+    /**
+     * expands a list of attachment ids into a list of attachments.
+     *
+     * an id that no longer resolves — the image was deleted from the media
+     * library, or the gallery came in from an export written on another site —
+     * is dropped rather than left as a null in the middle of the list. a
+     * template looping a gallery should never have to test each item.
+     *
+     * @param mixed $value
+     *
+     * @return array
+     */
+    private static function gallery($value)
+    {
+        $images = [];
+
+        foreach (is_array($value) ? $value : [] as $id) {
+            $image = self::attachment($id);
+
+            if ($image) {
+                $images[] = $image;
+            }
+        }
+
+        return $images;
     }
 
     /**

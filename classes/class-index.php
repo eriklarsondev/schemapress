@@ -50,8 +50,10 @@ class Index
      * field types worth mirroring, and how their values compare.
      *
      * absent from this list, and deliberately: wysiwyg (a blob of markup, which
-     * nothing sensible can be asked about), link and group (composite), and
-     * repeater (many values per row, which is a different index).
+     * nothing sensible can be asked about), link and group (composite), repeater
+     * and gallery (many values per row, which is a different index), and json
+     * (a shape this collection does not describe, so there is no column to
+     * compare it as).
      *
      * @var array<string, string> type => NUMERIC or CHAR
      */
@@ -62,6 +64,9 @@ class Index
         'url' => 'CHAR',
         'phone' => 'CHAR',
         'select' => 'CHAR',
+        // a hex string, which compares as one: "give me everything brand red"
+        // is a real question and `$eq` answers it
+        'color' => 'CHAR',
         // CHAR, not DATE: the stored forms are ISO-8601, and comparing those as
         // strings gives the same order as comparing them as dates. going
         // through MySQL's DATE cast would only add a way for a half-filled
@@ -156,7 +161,7 @@ class Index
     }
 
     /**
-     * rebuilds the index for every published entry of a collection.
+     * rebuilds the index for every entry of a collection.
      *
      * called when a collection's fields change, because the index is keyed by
      * field key: rename `role` to `job` and every row still says `role`, which
@@ -167,9 +172,15 @@ class Index
      * rows, and re-saving each one by hand is not a migration — opening the
      * collection's Schema tab and saving is.
      *
+     * A LARGE COLLECTION IS QUEUED rather than done here. this used to hold
+     * every post object of the collection in memory inside the REST request
+     * that saved the schema, which on a collection of any size did not finish —
+     * and left the index rebuilt for the entries it got through and stale for
+     * the rest, with nothing recording where it stopped. see class-batch.php.
+     *
      * @param integer $type_id
      *
-     * @return integer how many entries were reindexed
+     * @return integer how many entries were reindexed, or 0 when it was queued
      */
     public static function rebuild($type_id)
     {
@@ -179,36 +190,58 @@ class Index
             return 0;
         }
 
-        $definition = SchemaRepository::definition($type_id);
+        if (!Batch::inline($type_id)) {
+            Batch::queue('reindex', ['type_id' => $type_id]);
 
-        // trashed entries are included so their rows are cleared rather than
-        // left behind answering questions about content nobody can reach
-        $posts = get_posts([
+            return 0;
+        }
+
+        $ids = get_posts([
             'post_type' => $type['postType'],
+            // trashed entries are included so their rows are cleared rather
+            // than left behind answering questions about content nobody can
+            // reach
             'post_status' => ['publish', 'draft', 'trash'],
             'numberposts' => -1,
+            'fields' => 'ids',
             'suppress_filters' => false,
         ]);
 
-        foreach ($posts as $post) {
-            $live = $post->post_status === 'publish';
+        self::reindex($type_id, $ids);
+
+        return count($ids);
+    }
+
+    /**
+     * rebuilds the index for a specific list of entries.
+     *
+     * the unit of work a queued rebuild advances by, and the whole of one when
+     * the collection is small enough to do at once.
+     *
+     * @param integer   $type_id
+     * @param integer[] $ids
+     *
+     * @return void
+     */
+    public static function reindex($type_id, array $ids)
+    {
+        $definition = SchemaRepository::definition($type_id);
+
+        foreach ($ids as $id) {
+            $status = get_post_status($id);
 
             // the published index belongs to entries that are actually live. an
             // entry that has never been published has no published values, and
             // writing empty rows for it would put it in the published index as
             // a row where every field is blank
-            if ($live) {
-                self::write(
-                    $post->ID,
-                    self::stored($post->ID, Entries::META_VALUES),
-                    $definition['fields']
-                );
+            if ($status === 'publish') {
+                self::write($id, self::stored($id, Entries::META_VALUES), $definition['fields']);
             } else {
-                self::clear($post->ID, self::PREFIX);
+                self::clear($id, self::PREFIX);
             }
 
-            if ($post->post_status === 'trash') {
-                self::clear($post->ID, self::DRAFT_PREFIX);
+            if ($status === 'trash') {
+                self::clear($id, self::DRAFT_PREFIX);
 
                 continue;
             }
@@ -217,15 +250,12 @@ class Index
             // still here has one — from its draft, or from what is live when it
             // has no draft of its own
             self::write(
-                $post->ID,
-                self::stored($post->ID, Entries::META_DRAFT)
-                    ?: self::stored($post->ID, Entries::META_VALUES),
+                $id,
+                self::stored($id, Entries::META_DRAFT) ?: self::stored($id, Entries::META_VALUES),
                 $definition['fields'],
                 true
             );
         }
-
-        return count($posts);
     }
 
     /**
@@ -276,6 +306,7 @@ class Index
     {
         global $wpdb;
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- there is no API for "every meta key matching a prefix": get_post_meta() answers about a key you can already name, and the whole point here is that the keys are whatever the collection's fields USED to be. Caching a list that this method exists to delete would be a cache invalidated by its own caller.
         $keys = $wpdb->get_col(
             $wpdb->prepare(
                 "SELECT DISTINCT meta_key FROM {$wpdb->postmeta}

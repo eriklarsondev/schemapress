@@ -56,6 +56,16 @@ class Settings
     }
 
     /**
+     * the longest a public API response may be cached, in seconds.
+     *
+     * the ceiling is a day. this is a shared cache directive — a CDN, a reverse
+     * proxy — and an hour of an editor wondering why the site still shows the
+     * old text is the most this setting should be able to cost somebody who
+     * turned it up without reading the note beside it.
+     */
+    const MAX_CACHE_AGE = 86400;
+
+    /**
      * whether the content API answers at all.
      *
      * @return boolean
@@ -63,6 +73,26 @@ class Settings
     public static function restEnabled()
     {
         return !empty(self::all()['restApi']);
+    }
+
+    /**
+     * how long a public API response may be considered fresh.
+     *
+     * @return integer seconds; 0 means revalidate every time
+     */
+    public static function cacheMaxAge()
+    {
+        return (int) self::all()['apiCacheMaxAge'];
+    }
+
+    /**
+     * whether deleting the plugin should take this plugin's content with it.
+     *
+     * @return boolean
+     */
+    public static function deletesData()
+    {
+        return !empty(self::all()['deleteDataOnUninstall']);
     }
 
     /**
@@ -85,6 +115,21 @@ class Settings
             'restApi' => array_key_exists('restApi', $settings)
                 ? (bool) $settings['restApi']
                 : true,
+            // how long a shared cache may hold a public API response. ZERO BY
+            // DEFAULT, which is not the same as uncacheable: every response
+            // carries an ETag either way, so a client that asks again gets a
+            // 304 and no body. that is the whole win with none of the staleness,
+            // and turning this up is a decision about a specific site's content
+            // rather than something to inflict on every install
+            'apiCacheMaxAge' => min(
+                self::MAX_CACHE_AGE,
+                max(0, (int) ($settings['apiCacheMaxAge'] ?? 0))
+            ),
+            // whether deleting the plugin erases its content. OFF, and the one
+            // setting in here whose default is not a judgement call: somebody
+            // deactivating a plugin to try something is not saying they want
+            // their collections gone, and there is no undo for guessing wrong
+            'deleteDataOnUninstall' => !empty($settings['deleteDataOnUninstall']),
         ];
     }
 

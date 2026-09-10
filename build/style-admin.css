@@ -284,6 +284,26 @@
     max-width: 1536px;
   }
 }
+.schemapress .sr-only {
+
+  position: absolute;
+
+  width: 1px;
+
+  height: 1px;
+
+  padding: 0;
+
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border-width: 0;
+}
 .schemapress .pointer-events-none {
 
   pointer-events: none;
@@ -386,6 +406,14 @@
 
   left: 0.75rem;
 }
+.schemapress .right-1\.5 {
+
+  right: 0.375rem;
+}
+.schemapress .top-1\.5 {
+
+  top: 0.375rem;
+}
 .schemapress .top-1\/2 {
 
   top: 50%;
@@ -393,6 +421,10 @@
 .schemapress .top-4 {
 
   top: 1rem;
+}
+.schemapress .z-10 {
+
+  z-index: 10;
 }
 .schemapress .z-\[100000\] {
 
@@ -446,9 +478,17 @@
 
   margin-left: -1px;
 }
+.schemapress .mb-1\.5 {
+
+  margin-bottom: 0.375rem;
+}
 .schemapress .mb-2 {
 
   margin-bottom: 0.5rem;
+}
+.schemapress .mb-4 {
+
+  margin-bottom: 1rem;
 }
 .schemapress .mb-8 {
 
@@ -465,6 +505,14 @@
 .schemapress .ml-1\.5 {
 
   margin-left: 0.375rem;
+}
+.schemapress .ml-\[0\.4rem\] {
+
+  margin-left: 0.4rem;
+}
+.schemapress .ml-auto {
+
+  margin-left: auto;
 }
 .schemapress .mr-auto {
 
@@ -559,6 +607,10 @@
 .schemapress .hidden {
 
   display: none;
+}
+.schemapress .aspect-square {
+
+  aspect-ratio: 1 / 1;
 }
 .schemapress .size-1\.5 {
 
@@ -656,6 +708,12 @@
 
   height: 18px;
 }
+.schemapress .size-full {
+
+  width: 100%;
+
+  height: 100%;
+}
 .schemapress .h-0 {
 
   height: 0px;
@@ -664,9 +722,21 @@
 
   height: 0.125rem;
 }
+.schemapress .h-1\.5 {
+
+  height: 0.375rem;
+}
 .schemapress .h-10 {
 
   height: 2.5rem;
+}
+.schemapress .h-16 {
+
+  height: 4rem;
+}
+.schemapress .h-3 {
+
+  height: 0.75rem;
 }
 .schemapress .h-32 {
 
@@ -696,6 +766,10 @@
 
   height: 100%;
 }
+.schemapress .max-h-40 {
+
+  max-height: 10rem;
+}
 .schemapress .max-h-72 {
 
   max-height: 18rem;
@@ -708,17 +782,9 @@
 
   max-height: calc(100vh - 6rem);
 }
-.schemapress .min-h-\[2\.5rem\] {
-
-  min-height: 2.5rem;
-}
 .schemapress .min-h-\[3\.25em\] {
 
   min-height: 3.25em;
-}
-.schemapress .min-h-\[5rem\] {
-
-  min-height: 5rem;
 }
 .schemapress .w-0\.5 {
 
@@ -735,6 +801,10 @@
 .schemapress .w-24 {
 
   width: 6rem;
+}
+.schemapress .w-32 {
+
+  width: 8rem;
 }
 .schemapress .w-56 {
 
@@ -838,6 +908,10 @@
 
   max-width: 36rem;
 }
+.schemapress .max-w-xs {
+
+  max-width: 20rem;
+}
 .schemapress .flex-1 {
 
   flex: 1 1 0%;
@@ -845,6 +919,10 @@
 .schemapress .shrink-0 {
 
   flex-shrink: 0;
+}
+.schemapress .grow {
+
+  flex-grow: 1;
 }
 .schemapress .border-collapse {
 
@@ -904,6 +982,10 @@
 .schemapress .cursor-grabbing {
 
   cursor: grabbing;
+}
+.schemapress .cursor-not-allowed {
+
+  cursor: not-allowed;
 }
 .schemapress .cursor-pointer {
 
@@ -1013,6 +1095,16 @@
 
   gap: 1.25rem;
 }
+.schemapress .gap-x-3 {
+
+  -moz-column-gap: 0.75rem;
+
+       column-gap: 0.75rem;
+}
+.schemapress .gap-y-1\.5 {
+
+  row-gap: 0.375rem;
+}
 .schemapress :is(.divide-y > :not([hidden]) ~ :not([hidden])) {
 
   --tw-divide-y-reverse: 0;
@@ -1052,6 +1144,10 @@
 .schemapress .whitespace-nowrap {
 
   white-space: nowrap;
+}
+.schemapress .break-all {
+
+  word-break: break-all;
 }
 .schemapress .rounded {
 
@@ -1163,10 +1259,6 @@
 
   border-color: rgb(252 165 165 / var(--tw-border-opacity, 1));
 }
-.schemapress .border-ring\/25 {
-
-  border-color: hsl(var(--sp-ring) / 0.25);
-}
 .schemapress .border-ring\/40 {
 
   border-color: hsl(var(--sp-ring) / 0.4);
@@ -1189,13 +1281,9 @@
 
   background-color: hsl(var(--sp-accent));
 }
-.schemapress .bg-accent\/10 {
+.schemapress .bg-accent\/30 {
 
-  background-color: hsl(var(--sp-accent) / 0.1);
-}
-.schemapress .bg-accent\/20 {
-
-  background-color: hsl(var(--sp-accent) / 0.2);
+  background-color: hsl(var(--sp-accent) / 0.3);
 }
 .schemapress .bg-accent\/40 {
 
@@ -1340,6 +1428,10 @@
   --tw-bg-opacity: 1;
 
   background-color: rgb(240 249 255 / var(--tw-bg-opacity, 1));
+}
+.schemapress .bg-transparent {
+
+  background-color: transparent;
 }
 .schemapress .bg-white {
 
@@ -1549,6 +1641,12 @@
 
   padding-bottom: 2rem;
 }
+.schemapress .py-px {
+
+  padding-top: 1px;
+
+  padding-bottom: 1px;
+}
 .schemapress .pb-1 {
 
   padding-bottom: 0.25rem;
@@ -1577,6 +1675,10 @@
 
   padding-left: 0.5rem;
 }
+.schemapress .pl-2\.5 {
+
+  padding-left: 0.625rem;
+}
 .schemapress .pl-3 {
 
   padding-left: 0.75rem;
@@ -1596,6 +1698,10 @@
 .schemapress .pl-8 {
 
   padding-left: 2rem;
+}
+.schemapress .pl-\[2\.75rem\] {
+
+  padding-left: 2.75rem;
 }
 .schemapress .pr-1 {
 
@@ -1740,6 +1846,10 @@
 .schemapress .leading-\[1\.15\] {
 
   line-height: 1.15;
+}
+.schemapress .leading-\[1\.6\] {
+
+  line-height: 1.6;
 }
 .schemapress .leading-none {
 
@@ -1921,6 +2031,10 @@
 
   opacity: 0.5;
 }
+.schemapress .opacity-60 {
+
+  opacity: 0.6;
+}
 .schemapress .shadow {
 
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -1995,6 +2109,48 @@
 
   outline-color: hsl(var(--sp-ring) / 0.5);
 }
+.schemapress .ring {
+
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+.schemapress .ring-1 {
+
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+.schemapress .ring-2 {
+
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+.schemapress .ring-inset {
+
+  --tw-ring-inset: inset;
+}
+.schemapress .ring-black\/15 {
+
+  --tw-ring-color: rgb(0 0 0 / 0.15);
+}
+.schemapress .ring-foreground {
+
+  --tw-ring-color: hsl(var(--sp-foreground));
+}
+.schemapress .blur {
+
+  --tw-blur: blur(8px);
+
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
 .schemapress .blur-3xl {
 
   --tw-blur: blur(64px);
@@ -2048,9 +2204,9 @@
 
 .schemapress {
   /* One cool navy family, hue 218–224 throughout. What separates the tokens is
-     lightness and how much chroma they are allowed to carry — a grey that is
+     lightness and how much chroma they are allowed to carry — a gray that is
      genuinely neutral reads as unfinished next to wp-admin, and three tokens
-     holding the same grey read as no design at all. Every pair below is
+     holding the same gray read as no design at all. Every pair below is
      measured: body text clears 4.5:1, form-control borders and the focus ring
      clear 3:1, and adjacent surfaces stay at least 1.06:1 apart so a panel is
      visibly a panel. */
@@ -2064,17 +2220,17 @@
   --sp-popover: 0 0% 100%;
   --sp-popover-foreground: 224 32% 9%;
 
-  /* the one saturated colour, and it has to work in both directions: as a fill
+  /* the one saturated color, and it has to work in both directions: as a fill
      under white text and as text on white. a near-black navy did the first job
      and quietly failed the second — every accent drawn from it (a hover
      border, a selected state, a drop target) came out looking like more black
-     text, which is what left the screen with no colour on it anywhere */
+     text, which is what left the screen with no color on it anywhere */
   --sp-primary: 224 71% 45%;
   --sp-primary-foreground: 0 0% 100%;
 
   /* three separate jobs, so three separate values: a chip you can see the edge
      of, a panel that sits back, and a hover that tints towards the primary
-     rather than just going a shade greyer */
+     rather than just going a shade grayer */
   --sp-secondary: 220 24% 92%;
   --sp-secondary-foreground: 224 45% 22%;
 
@@ -2173,7 +2329,7 @@
    `.sp-control` class is here so a control that is NOT a native element — a
    Radix select trigger is a <button> — wears exactly the same surface instead
    of a hand-copied approximation of it that drifts a padding at a time */
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']),
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']),
 .schemapress textarea,
 .schemapress select,
 .schemapress .sp-control {
@@ -2223,7 +2379,7 @@
   width: auto;
 }
 
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):focus,
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']):focus,
 .schemapress textarea:focus,
 .schemapress select:focus,
 .schemapress .sp-control:focus,
@@ -2241,6 +2397,55 @@
    elements, so the native control only appears in the multi-select field */
 .schemapress input[type='checkbox'] {
   margin: 0;
+}
+
+/* A COLOR INPUT IS A SWATCH, NOT A TEXT FIELD, and it matched the surface rule
+   above — so it came out 100% wide with a 36px floor: a bar of solid color
+   running the width of the form, with the hex field crushed into a square
+   beside it and the swatch row underneath looking like it belonged to
+   something else.
+
+   Subtracted from that rule rather than fought with a utility. The reset is
+   deliberately specific enough to beat wp-admin, which means it also beats
+   `size-9` on the element, and the class sat there for a release doing
+   nothing — see the note on the escape hatches above. */
+.schemapress input[type='color'] {
+  box-sizing: border-box;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  /* the frame, so a swatch of any lightness sits inside a boundary rather than
+     bleeding into the form when it happens to be near-white */
+  padding: 2px;
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background-color: hsl(var(--sp-background));
+  cursor: pointer;
+}
+
+/* every browser draws the swatch as an inset child carrying its own padding
+   and border, which inside a 36px box is a small square rattling around in a
+   large one. these are the only way to reach it */
+.schemapress input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.schemapress input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--sp-radius) - 5px);
+}
+
+.schemapress input[type='color']::-moz-color-swatch {
+  border: 0;
+  border-radius: calc(var(--sp-radius) - 5px);
+}
+
+.schemapress input[type='color']:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: hsl(var(--sp-ring));
+  box-shadow: 0 0 0 3px hsl(var(--sp-ring) / 0.12);
 }
 
 .schemapress input::-moz-placeholder, .schemapress textarea::-moz-placeholder {
@@ -2510,13 +2715,261 @@ body.toplevel_page_schemapress #wpfooter {
   margin: 0 0 1.25rem;
 }
 
+/* --- the rich text editor ------------------------------------------------- */
+
+/* TinyMCE brings its own skin, and this app's scoped reset is deliberately
+   specific enough to beat wp-admin — which means it is specific enough to beat
+   the editor too. `.schemapress button` and TinyMCE's `.mce-btn button` carry
+   exactly the same weight, so which one wins is decided by whichever stylesheet
+   the browser read last: ours at enqueue time, or the skin TinyMCE injects when
+   it initializes. That is not a thing to leave to chance in a toolbar.
+
+   So inside the editor the reset stands down. Everything here restores a
+   browser default rather than imposing a look — the look is the skin's, and it
+   is the one authors already know from the post editor. */
+.schemapress .schemapress-rte button,
+.schemapress .schemapress-rte input[type='button'] {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* the Text tab is a real textarea, and the control surface every other field
+   wears is wrong on it: it sits inside the editor's own frame, which is already
+   drawing the border and the fill */
+.schemapress .schemapress-rte textarea {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+/* --- the code editor ------------------------------------------------------ */
+
+/* A JSON field is a code editor: a textarea whose text is invisible, sitting
+   exactly over the same text highlighted. The caret, the selection, undo and
+   every keystroke are the browser's real ones — the color is painted
+   underneath, so nothing has to be reimplemented to get it.
+
+   IT IS A FORM FIELD FIRST. The obvious thing is to give it the dark chrome the
+   documentation's code blocks wear, and it was wrong on an entry form: one
+   black rectangle among a column of pale ones does not read as "this field
+   holds code", it reads as something that has gone wrong, or as a panel that
+   belongs to a different screen. So the surface is exactly the one every other
+   control wears — the same border, fill, radius and focus ring, declared from
+   the same tokens — and the only thing that marks it out as code is the
+   monospace text and the color IN it.
+
+   Which is why the palette below is its own, and light. The documentation's
+   tokens are tuned for a near-black block and would be all but invisible
+   here. */
+.schemapress .sp-json {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background-color: hsl(var(--sp-input-fill));
+}
+
+/* the editor pane. `position: relative` lives HERE rather than on .sp-json,
+   because the transparent textarea is positioned against it — once there are
+   two panes, insetting the textarea to the whole field would lay it over the
+   preview and swallow every click meant for the tree */
+.schemapress .sp-json-editor {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* the parsed value, beside the text it was parsed from. `min-width: 0` on both
+   panes because a flex item defaults to min-content — one long unbroken string
+   in the JSON would otherwise push its pane wider than the field and shove the
+   other one off the edge */
+.schemapress .sp-json-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.75rem 0.875rem;
+  border-left: 1px solid hsl(var(--sp-input));
+  background-color: hsl(var(--sp-background));
+}
+
+/* a tree of rows, not a list of bullets */
+.schemapress .sp-json-preview ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+/* the same two-part focus every other control gets: the fill goes white to say
+   you are in it, and the ring says which one */
+.schemapress .sp-json:focus-within {
+  border-color: hsl(var(--sp-ring));
+  background-color: hsl(var(--sp-background));
+  box-shadow: 0 0 0 3px hsl(var(--sp-ring) / 0.12);
+}
+
+.schemapress .sp-json.is-invalid {
+  border-color: hsl(var(--sp-destructive));
+}
+
+/* THE TWO LAYERS HAVE TO AGREE TO THE PIXEL, so every property that decides
+   where a glyph lands is declared once, for both. Split across two rule sets
+   they drift the first time one is edited, and drift here is a caret that sits
+   a character away from the letter it is in front of.
+
+   `pre-wrap` on both rather than `pre` with a scrollbar: a textarea soft-wraps
+   whatever you do, so the highlighted copy underneath has to wrap the same way
+   or a long line desynchronises everything below it. */
+.schemapress .sp-json-layer {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  -moz-tab-size: 2;
+    -o-tab-size: 2;
+       tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-align: left;
+}
+
+/* the highlighted copy is the one in the flow, so it — and therefore the
+   content — decides how tall the editor is. that is what makes the field grow
+   to fit rather than scroll inside a fixed box */
+.schemapress .sp-json pre.sp-json-layer {
+  position: relative;
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+  color: hsl(var(--sp-foreground));
+  pointer-events: none;
+}
+
+/* `.schemapress code` sets 11px, an element selector this <code> matches. one
+   pixel of font-size is a fraction of a pixel per character and a whole
+   character by the end of a long line, which is the caret sitting next to the
+   letter it claims to be in front of rather than on it. everything about how
+   this text is set comes from the layer, so the <code> contributes nothing but
+   the tokens inside it */
+.schemapress .sp-json pre.sp-json-layer code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+/* wins on specificity over the `.schemapress textarea` reset above, which it
+   has to: that rule sets a border, a fill and a font size, and any one of them
+   would put this layer out of step with the one under it */
+.schemapress textarea.sp-json-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  /* the glyphs are transparent and the caret is not: what you see is the layer
+     underneath, and what you steer is this one */
+  color: transparent;
+  caret-color: hsl(var(--sp-foreground));
+}
+
+.schemapress textarea.sp-json-layer:focus {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* translucent, so the highlighted text shows THROUGH a selection. an opaque
+   one paints over the only layer with any color in it, and selecting a line
+   blanks it */
+.schemapress textarea.sp-json-layer::-moz-selection {
+  background: hsl(var(--sp-ring) / 0.22);
+}
+.schemapress textarea.sp-json-layer::selection {
+  background: hsl(var(--sp-ring) / 0.22);
+}
+
+.schemapress textarea.sp-json-layer::-moz-placeholder {
+  color: hsl(var(--sp-muted-foreground));
+}
+
+.schemapress textarea.sp-json-layer::placeholder {
+  color: hsl(var(--sp-muted-foreground));
+}
+
+/* The JSON field's own palette, on a pale field rather than a dark block.
+
+   Measured against the field AT REST — hsl(220 24% 96.5%) — which is the darker
+   of its two backgrounds and therefore the harder one; each color gains about
+   half a point when the field goes white on focus. The ratio is recorded beside
+   every one, as everywhere else in this file. Syntax color that has to be
+   squinted at is decoration.
+
+   Only the tokens the JSON grammar actually emits are here. It produces eight —
+   property, string, number, punctuation, operator, boolean, null and comment —
+   and a rule for anything else would be a color nothing can wear. */
+
+/* the structure: braces, brackets, commas and the colon. deliberately the
+   quietest thing in the field, because it is the part you read past. the same
+   value as --sp-muted-foreground, which is doing the same job elsewhere */
+.schemapress .sp-json .token.punctuation,
+.schemapress .sp-json .token.operator {
+  color: hsl(220 14% 38%); /* 6.14:1 */
+}
+
+/* a key is a label, and the one thing on a line you scan for. the app's one
+   saturated color, which is what makes this field look like it belongs to the
+   same screen as everything else */
+.schemapress .sp-json .token.property {
+  color: hsl(224 71% 45%); /* 6.61:1 */
+}
+
+.schemapress .sp-json .token.string {
+  color: hsl(160 84% 24%); /* 5.57:1 */
+}
+
+.schemapress .sp-json .token.number {
+  color: hsl(24 90% 32%); /* 6.04:1 */
+}
+
+/* true, false and null: the three literals, told apart from strings at a glance
+   because "false" and "\"false\"" are not the same value and the bug that
+   confuses them is a quiet one */
+.schemapress .sp-json .token.boolean,
+.schemapress .sp-json .token.null {
+  color: hsl(280 62% 42%); /* 6.76:1 */
+}
+
+/* not valid JSON, so this is never stored — but the grammar tokenises it, and
+   text on screen with no color rule inherits the body color and reads as
+   ordinary content */
+.schemapress .sp-json .token.comment {
+  color: hsl(220 13% 42%); /* 5.27:1 */
+  font-style: italic;
+}
+
 /* --- syntax highlighting -------------------------------------------------- */
 
 /* Prism supplies the token classes; what they look like is declared here rather
    than pulled in as one of its themes, so the palette is the app's and a theme
    stylesheet cannot arrive with its own background and fight the block above.
-   every colour below clears 4.5:1 on that background — a code sample is text,
-   and syntax colour that has to be squinted at is decoration */
+   every color below clears 4.5:1 on that background — a code sample is text,
+   and syntax color that has to be squinted at is decoration */
 
 .schemapress .sp-prose .token.comment,
 .schemapress .sp-prose .token.prolog,
@@ -2576,7 +3029,7 @@ body.toplevel_page_schemapress #wpfooter {
 }
 
 /* a JSON key is a string to the grammar and a label to the reader, so it takes
-   the property colour rather than disappearing into the values around it */
+   the property color rather than disappearing into the values around it */
 .schemapress .sp-prose .language-json .token.property {
   color: hsl(199 80% 74%);
 }
@@ -2593,7 +3046,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* one operation, spelled for each surface. the strip is built by DocsView from
    the panes below it — before that runs, every pane is visible, which is the
-   right thing to degrade to: three labelled code blocks stacked is worse than
+   right thing to degrade to: three labeled code blocks stacked is worse than
    tabs and much better than nothing */
 .schemapress .sp-prose .sp-tabs {
   margin: 0 0 1.5rem;
@@ -2652,7 +3105,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* --- callouts ------------------------------------------------------------ */
 
-/* :::note … ::: in the Markdown. the left border carries the colour and the
+/* :::note … ::: in the Markdown. the left border carries the color and the
    fill stays light enough to read dark text on — the same bargain the alerts
    in the app make */
 .schemapress .sp-prose .sp-callout {
@@ -2676,7 +3129,7 @@ body.toplevel_page_schemapress #wpfooter {
   text-transform: uppercase;
 }
 
-/* a chip in the callout's own colour: at a glance the kind is read from the
+/* a chip in the callout's own color: at a glance the kind is read from the
    left edge, before the word naming it has been */
 .schemapress .sp-prose .sp-callout__title::before {
   content: '';
@@ -2822,7 +3275,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* the three the sources can print, in the same values class-docs.php uses for
    the standalone page — written as hex on both sides so the two are greppable
-   against each other. the border carries the colour: a callout is an object on
+   against each other. the border carries the color: a callout is an object on
    the page, not a tinted paragraph */
 .schemapress .sp-prose .sp-status--ok {
   border-color: #6ee7b7;
@@ -2835,7 +3288,7 @@ body.toplevel_page_schemapress #wpfooter {
 }
 
 /* summary() prints this one, and nothing here had ever styled it — a note fell
-   through to the bare border and the grey dot */
+   through to the bare border and the gray dot */
 .schemapress .sp-prose .sp-status--note {
   border-color: #7dd3fc;
   background: #f0f9ff;
@@ -2890,6 +3343,11 @@ body.toplevel_page_schemapress #wpfooter {
   border-width: 0px;
 }
 
+.schemapress .empty\:mb-0:empty {
+
+  margin-bottom: 0px;
+}
+
 .schemapress .focus-within\:opacity-100:focus-within {
 
   opacity: 1;
@@ -2898,6 +3356,15 @@ body.toplevel_page_schemapress #wpfooter {
 .schemapress .hover\:-translate-y-px:hover {
 
   --tw-translate-y: -1px;
+
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.schemapress .hover\:scale-110:hover {
+
+  --tw-scale-x: 1.1;
+
+  --tw-scale-y: 1.1;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
@@ -2970,6 +3437,11 @@ body.toplevel_page_schemapress #wpfooter {
 .schemapress .hover\:bg-primary\/10:hover {
 
   background-color: hsl(var(--sp-primary) / 0.1);
+}
+
+.schemapress .hover\:bg-primary\/5:hover {
+
+  background-color: hsl(var(--sp-primary) / 0.05);
 }
 
 .schemapress .hover\:bg-primary\/90:hover {
@@ -3316,9 +3788,9 @@ body.toplevel_page_schemapress #wpfooter {
     display: block;
   }
 
-  .schemapress .sm\:w-72 {
+  .schemapress .sm\:w-64 {
 
-    width: 18rem;
+    width: 16rem;
   }
 
   .schemapress .sm\:max-w-36 {
@@ -3341,6 +3813,11 @@ body.toplevel_page_schemapress #wpfooter {
     max-width: 16rem;
   }
 
+  .schemapress .sm\:max-w-\[12rem\] {
+
+    max-width: 12rem;
+  }
+
   .schemapress .sm\:grid-cols-12 {
 
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -3354,6 +3831,11 @@ body.toplevel_page_schemapress #wpfooter {
   .schemapress .sm\:grid-cols-3 {
 
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .schemapress .sm\:grid-cols-4 {
+
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -3398,6 +3880,21 @@ body.toplevel_page_schemapress #wpfooter {
 
     padding-right: 2rem;
   }
+}
+
+.schemapress .\[\&\:\:-moz-progress-bar\]\:bg-primary::-moz-progress-bar {
+
+  background-color: hsl(var(--sp-primary));
+}
+
+.schemapress .\[\&\:\:-webkit-progress-bar\]\:bg-border::-webkit-progress-bar {
+
+  background-color: hsl(var(--sp-border));
+}
+
+.schemapress .\[\&\:\:-webkit-progress-value\]\:bg-primary::-webkit-progress-value {
+
+  background-color: hsl(var(--sp-primary));
 }
 
 .schemapress :is(.\[\&\>span\]\:truncate>span) {

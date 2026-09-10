@@ -30,10 +30,11 @@ import {
   Alert,
   Select,
   Switch,
+  Checkbox,
   Copyable,
   ConfirmDialog
 } from '../../ui'
-import { site } from '../../shared/settings'
+import { site, roles } from '../../shared/settings'
 
 /**
  * Field types that can name an entry — mirrors SchemaModel::TITLE_TYPES.
@@ -99,6 +100,89 @@ function labelFor(fields, key) {
 }
 
 /**
+ * Whether a field refuses duplicates.
+ *
+ * The rule itself lives on the Schema tab, next to the field it governs — this
+ * only reads it, because whether a value may repeat is a fact about the content
+ * and not about the URL.
+ *
+ * @param {Array}  fields
+ * @param {string} key
+ * @return {boolean} True when the field is marked unique.
+ */
+function isUnique(fields, key) {
+  return Boolean(fields.find((one) => one.key === key)?.unique)
+}
+
+/**
+ * The fields a URL can be built from, the ones that make stable addresses first.
+ *
+ * A field the collection already refuses duplicates in is the one that produces
+ * addresses which cannot collide — which is the whole job — so those are
+ * offered first and say so. The rest are still offered: requiring uniqueness to
+ * get a readable URL would mean a Team Members collection could not be addressed
+ * by name without also refusing to store a second John Smith, and refusing the
+ * person is a great deal worse than `john-smith-2`. WordPress makes the same
+ * trade with post_name, and everybody already reads `/hello-world-2`.
+ *
+ * @param {Array} fields
+ * @return {Array<{value: string, label: string}>} The options.
+ */
+function slugOptions(fields) {
+  const usable = fields.filter((field) => SLUG_TYPES.includes(field.type))
+
+  return [...usable.filter((one) => one.unique), ...usable.filter((one) => !one.unique)].map(
+    (field) => ({
+      value: field.key,
+      label: field.unique
+        ? sprintf(
+            /* translators: %s: the name of a field that refuses duplicate values */
+            __('%s · unique', 'schemapress'),
+            field.label || field.key,
+          )
+        : field.label || field.key,
+    }),
+  )
+}
+
+/**
+ * What addressing a collection by a field that repeats actually means.
+ *
+ * Said HERE, at the moment the choice is made, rather than discovered later as
+ * a second entry that arrived at `engineer-2`. Which of two entries gets the
+ * bare address and which gets the number depends on the order they were created
+ * in, so it is not a property of the content and cannot be reasoned about from
+ * the entry itself.
+ *
+ * It points at the rule rather than offering it. Whether a value may repeat is
+ * a question about the content — a Grants collection with two grants under one
+ * reference number is a data problem whatever its URLs look like — so it
+ * belongs beside the field on the Schema tab, and duplicating the toggle here
+ * would be two switches over one stored boolean.
+ *
+ * @param {Object} props
+ * @return {JSX.Element|null} The note.
+ */
+function SlugNote({ fields, slugField }) {
+  if (!slugField || isUnique(fields, slugField)) {
+    return null
+  }
+
+  return (
+    <p className="text-[12px] leading-relaxed text-muted-foreground">
+      {sprintf(
+        /* translators: %s: the name of the field the URL is built from */
+        __(
+          'Two entries can share the same %s, and the second one gets a number added to its address. Mark the field “Must be unique” on the Schema tab if that should not be possible.',
+          'schemapress',
+        ),
+        labelFor(fields, slugField),
+      )}
+    </p>
+  )
+}
+
+/**
  * Reads the stored setting, which was one boolean covering both routes before
  * it was a pair.
  *
@@ -126,6 +210,9 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
   const [publicApi, setPublicApi] = useState(() => asPair(settings.publicApi))
   const [titleField, setTitleField] = useState(settings.titleField || '')
   const [slugField, setSlugField] = useState(settings.slugField || '')
+  const [editRoles, setEditRoles] = useState(() =>
+    Array.isArray(settings.editRoles) ? settings.editRoles : [],
+  )
 
   // whether the URL is being built from a different field than the name. read
   // from what is stored rather than defaulted, so a collection somebody already
@@ -147,7 +234,8 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
     drafts !== (settings.draftAndPublish !== false) ||
     JSON.stringify(publicApi) !== JSON.stringify(asPair(settings.publicApi)) ||
     titleField !== (settings.titleField || '') ||
-    slugField !== (settings.slugField || '')
+    slugField !== (settings.slugField || '') ||
+    JSON.stringify(editRoles) !== JSON.stringify(settings.editRoles || [])
 
   /**
    * The slug field that follows a chosen name field.
@@ -207,7 +295,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
       onSave({
         title: name.trim() || type.label,
         description: description.trim(),
-        settings: { draftAndPublish: drafts, publicApi, titleField, slugField }
+        settings: { draftAndPublish: drafts, publicApi, titleField, slugField, editRoles }
       })
     )
       .then(onClose)
@@ -355,14 +443,19 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                         onChange={setSlugField}
                         options={[
                           { value: '', label: __('A random ID', 'schemapress') },
-                          ...fields
-                            .filter((field) => SLUG_TYPES.includes(field.type))
-                            .map((field) => ({ value: field.key, label: field.label || field.key }))
+                          ...slugOptions(fields)
                         ]}
                       />
                     )}
                   </Field>
                 ) : null}
+
+                {/* OUTSIDE the picker, so it is shown on the default path too.
+                    The URL follows the name field unless the switch above is
+                    turned on, which means most collections are addressed by a
+                    field nobody ever opened a dropdown to choose — and would
+                    never have been told what that field repeating implies */}
+                <SlugNote fields={fields} slugField={slugField} />
               </div>
 
               <div className="flex flex-col gap-1.5 border-t border-border pt-4">
@@ -416,6 +509,42 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                   aria-label={__('Draft and publish', 'schemapress')}
                   onChange={(next) => (next ? setDrafts(true) : setConfirming('drafts'))}
                 />
+              </div>
+
+              {/* who may work on this collection, which is a question about
+                  this collection rather than about the site — a Grants
+                  collection can belong to finance while News belongs to comms,
+                  and one capability covering every collection could not say so */}
+              <div className="border-t border-border pt-4">
+                <p className="text-[13px] font-medium">{__('Who can edit these', 'schemapress')}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                  {editRoles.length === 0
+                    ? __(
+                        'Anyone who can edit content. Tick a role to narrow it to those people.',
+                        'schemapress',
+                      )
+                    : __(
+                        'Only these roles, plus anyone who can change the shape of content — somebody who can delete this collection is not meaningfully kept out of its entries.',
+                        'schemapress',
+                      )}
+                </p>
+
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  {roles.map((role) => (
+                    <Checkbox
+                      key={role.value}
+                      checked={editRoles.includes(role.value)}
+                      label={role.label}
+                      onChange={() =>
+                        setEditRoles((current) =>
+                          current.includes(role.value)
+                            ? current.filter((one) => one !== role.value)
+                            : [...current, role.value],
+                        )
+                      }
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* the other decision about who sees this collection, so it sits

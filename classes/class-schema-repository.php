@@ -60,14 +60,34 @@ class SchemaRepository
         // the index is keyed by field key, so renaming or removing a field
         // leaves rows behind that answer filters about a field the collection
         // no longer has. compared before the write, rebuilt after it
-        $before = self::definition($type_id)['fields'] ?? [];
-        $changed = $before !== $normalized['fields'];
+        $before = self::definition($type_id);
+        $changed = ($before['fields'] ?? []) !== $normalized['fields'];
+        $moved = $before !== $normalized;
+
+        // a collection taking up a slug field has said what its entries should
+        // be called, and every entry it already has was addressed under the old
+        // answer. the setting used to change and nothing act on it
+        $reslug = ($before['settings']['slugField'] ?? '') !== ($normalized['settings']['slugField'] ?? '');
 
         update_post_meta(
             $type_id,
             Schema::META_DEFINITION,
             wp_slash(wp_json_encode($normalized))
         );
+
+        // THE POST'S MODIFIED STAMP IS THE DEFINITION'S VERSION, and until this
+        // line nothing ever moved it. a definition is post META, and writing
+        // meta does not touch the post row — so the conflict check that reads
+        // that stamp (Rest::staleDefinition) compared a version that could only
+        // change when somebody renamed the collection. it was inert: two people
+        // with the same Schema tab open still overwrote each other silently,
+        // which is the exact loss it was written to stop.
+        //
+        // only when the definition actually MOVED. a save that stores what was
+        // already stored is not a version somebody else has to reload past
+        if ($moved) {
+            wp_update_post(['ID' => $type_id]);
+        }
 
         self::$cache[$type_id] = $normalized;
 
@@ -81,6 +101,12 @@ class SchemaRepository
 
         if ($changed) {
             Index::rebuild($type_id);
+        }
+
+        // after the index, and after the cache is filled: this reads the
+        // definition back to work out what each entry should now be called
+        if ($reslug) {
+            Entries::reslugAll($type_id);
         }
 
         return $normalized;

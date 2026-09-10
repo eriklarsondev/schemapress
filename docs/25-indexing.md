@@ -10,12 +10,13 @@ entry and the wrong shape for asking questions across a collection. So every sca
 is written a second time where the database can see it, and that mirror is what filters and
 sorts run against.
 
-**Filterable:** Text, Textarea, Email, URL, Phone, Dropdown, Number, Date, Date and time,
-Time, Toggle, Image, File.
+**Filterable:** Text, Textarea, Email, URL, Phone, Dropdown, Color, Number, Date, Date and
+time, Time, Toggle, Image, File.
 
 **Not filterable:** Rich text (a blob of markup, which nothing sensible can be asked
-about), Link and Group (several values in one field), and anything inside a Repeater (many
-values per entry, which one row cannot hold).
+about), Link and Group (several values in one field), JSON (a shape this collection does not
+describe, so there is no column to compare it as), and anything inside a Repeater or a
+Gallery (many values per entry, which one row cannot hold).
 
 A filter or sort naming a field that cannot be indexed is **dropped**, and so is one naming
 a field that does not exist. The query then runs without it — which means it returns
@@ -40,3 +41,8 @@ If you have entries that predate this API, open the collection's **Schema** tab 
 once. That rebuilds the index for the whole collection, and is the only migration step
 there is.
 :::
+
+Above 200 entries the rebuild is queued rather than done during the save, so filters and
+sorts on the changed field give the wrong answer until it finishes. The admin says so while
+it is running, and `wp schemapress reindex` runs it to completion for a deploy step — see
+**Running it**.

@@ -87,6 +87,12 @@ export function ComponentView({ id, onChanged, onDeleted }) {
    * fields and the layout are one definition, and saving half of it would
    * silently drop whatever the other tab was holding.
    *
+   * `expectedModified` is the version this editor was built on. A component
+   * save replaces the WHOLE field list, so without it two people with the same
+   * component open in two tabs meant the second save deleted whatever the first
+   * had added — and a component is imported by copy, so that loss travels into
+   * every collection that imports it afterwards.
+   *
    * @param {Array} fields the field list to store, defaulting to the draft
    * @return {Promise<void>} Resolves once stored.
    */
@@ -98,6 +104,7 @@ export function ComponentView({ id, onChanged, onDeleted }) {
       .updateComponent(id, {
         title: draft.label.trim() || component.label,
         description: draft.description.trim(),
+        expectedModified: component.modified,
         fields,
       })
       .then((result) => {
@@ -187,6 +194,7 @@ export function ComponentView({ id, onChanged, onDeleted }) {
               .updateComponent(id, {
                 title: changes.label,
                 description: changes.description,
+                expectedModified: component.modified,
                 // the fields go up too: the name and the shape are one
                 // definition, and posting half would drop the other half
                 fields: draft.fields,

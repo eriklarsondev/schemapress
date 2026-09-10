@@ -28,6 +28,14 @@
  * as empty content rather than as targets, which is what made the first version
  * of this screen confusing.
  *
+ * And only ONE of them is drawn at a time — whichever the pointer is nearest.
+ * Drawing them all was the second version's mistake and a worse one: press a
+ * card on a form of any size and a dozen dashed boxes bloomed at once, so the
+ * layout you were reading vanished behind the scaffolding for changing it. The
+ * question stopped being "where do I want this" and became "which of these is
+ * the one I want", which is a question about the tool rather than the work.
+ * Every target is still mounted and still reachable; see `probable`.
+ *
  * The dragging is done with pointer events rather than HTML5 drag-and-drop.
  * That API hands the browser a drag session of its own, and this screen is the
  * worst case for it: the list rearranges live, so the node being dragged and
@@ -64,7 +72,12 @@ import { move } from '../../shared/utils'
 import { conditionTargets } from '../../shared/conditions'
 // the canvas must break its rows exactly the way the entry form does, or it is
 // a picture of a layout rather than the layout
-import { breakBefore, rowBreakClass, startsRow } from '../../shared/layout'
+import {
+  breakBefore,
+  rowBreakClass,
+  startsRow,
+  widthOf as drawnWidth,
+} from '../../shared/layout'
 
 /** The types whose control takes a placeholder, mirroring SchemaModel. */
 const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number']
@@ -113,13 +126,17 @@ const STARTS = {
 }
 
 /**
- * The width a field is set to, defaulting to full.
+ * The width a field is set to, or its type's starting width when it has none.
+ *
+ * Through the shared layout helper, so the Layout tab and the entry form agree
+ * about a field nobody has sized yet — this used to say full while the server
+ * saved it at its type's width, and the field moved on the first save.
  *
  * @param {Object} field
  * @return {string} The width token.
  */
 function widthOf(field) {
-  const width = field.config?.width
+  const width = drawnWidth(field)
 
   return WIDTHS.some((option) => option.value === width) ? width : 'full'
 }
@@ -260,6 +277,65 @@ function pack(fields, dragging = -1) {
 }
 
 /**
+ * How far the pointer may be from a target and still be taken to mean it.
+ *
+ * About a row's height. Inside the canvas the pointer is always within this of
+ * something, which is the point — the dead space between rows is a dozen pixels
+ * and nobody aims at it. Beyond it there is no answer, so dragging out into the
+ * page and letting go drops nothing rather than picking the last strip on the
+ * screen by default.
+ */
+const REACH = 96
+
+/**
+ * The one target a drag most likely means.
+ *
+ * EVERY LEGAL TARGET USED TO BE DRAWN AT ONCE. On a form of any size that is a
+ * dozen dashed boxes appearing the instant you press a card — the layout you
+ * were reading disappears behind the scaffolding for changing it, and the
+ * question stops being "where do I want this" and becomes "which of these is
+ * the one I want". They are all still here, and all still hittable; only the
+ * likeliest is drawn.
+ *
+ * Nearest wins, measured to the rectangle rather than to its middle, so a wide
+ * strip is not beaten by a small gap that happens to be centred closer. A
+ * pointer inside a target is at distance zero and always wins outright.
+ *
+ * The targets are measured rather than calculated because they are on screen
+ * already: the DOM knows where a grid put them and this would otherwise be a
+ * second implementation of the same twelve columns, free to disagree with the
+ * first.
+ *
+ * @param {Element|null} canvas
+ * @param {number}       x
+ * @param {number}       y
+ * @return {number} The target's index into the packed cells, or -1.
+ */
+function probable(canvas, x, y) {
+  if (!canvas) {
+    return -1
+  }
+
+  let best = -1
+  let nearest = Infinity
+
+  canvas.querySelectorAll('[data-sp-gap]').forEach((node) => {
+    const rect = node.getBoundingClientRect()
+    // zero on both axes when the pointer is inside
+    const dx = Math.max(rect.left - x, 0, x - rect.right)
+    const dy = Math.max(rect.top - y, 0, y - rect.bottom)
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    if (distance < nearest) {
+      nearest = distance
+      best = Number(node.dataset.spGap)
+    }
+  })
+
+  return nearest <= REACH ? best : -1
+}
+
+/**
  * Where every field currently sits: which row, and which column it begins in.
  *
  * The same walk `pack` does, reporting positions instead of drop targets.
@@ -363,6 +439,9 @@ export function FormTab({ fields, onChange }) {
   const draggingRef = useRef(-1)
   const overRef = useRef(-1)
   const cellsRef = useRef([])
+  // the grid itself, so measuring the targets cannot stray into another one —
+  // the same tab is rendered for a collection and for a component
+  const canvas = useRef(null)
 
   useEffect(() => {
     setDraft(fields)
@@ -498,7 +577,7 @@ export function FormTab({ fields, onChange }) {
 
       // only when the field actually came from elsewhere. dropping on the
       // boundary it already sits against moves nothing, and pinning a
-      // neighbour there would rearrange a row nobody touched
+      // neighbor there would rearrange a row nobody touched
       if (to === from) {
         return marked
       }
@@ -641,6 +720,8 @@ export function FormTab({ fields, onChange }) {
       const under = document.elementFromPoint(event.clientX, event.clientY)
       const card = under && under.closest('[data-sp-card]')
 
+      // over a card the answer is already on screen: passing over one has
+      // swapped the two, so there is nothing to offer and nothing to draw
       if (card) {
         setHover(-1)
         dragOver(Number(card.dataset.spCard))
@@ -648,9 +729,11 @@ export function FormTab({ fields, onChange }) {
         return
       }
 
-      const gap = under && under.closest('[data-sp-gap]')
-
-      setHover(gap ? Number(gap.dataset.spGap) : -1)
+      // NEAREST, not whatever the pointer is literally inside. a strip between
+      // two rows is a dozen pixels tall and nobody lands on one on purpose;
+      // asking which target is closest is the same question the person
+      // dragging is answering, and it has one answer instead of a dozen
+      setHover(probable(canvas.current, event.clientX, event.clientY))
     }
 
     /**
@@ -752,7 +835,7 @@ export function FormTab({ fields, onChange }) {
 
       <Card>
         <CardBody>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+          <div ref={canvas} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
             {cells.map((cell, at) =>
               cell.field ? (
                 // keyed by field, not by position. the list reorders under a
@@ -836,10 +919,24 @@ export function FormTab({ fields, onChange }) {
  * content — empty boxes in a form — rather than as targets, which is what the
  * first version of this tab got wrong.
  *
- * A leftover is labelled with the width the field will become, because that is
+ * ONLY ONE OF THEM IS DRAWN. Every legal target is mounted, because that is what
+ * makes them measurable and therefore reachable, but a target nobody is aiming
+ * at draws nothing at all: it holds its place in the grid and stays invisible.
+ * Lit up all at once they buried the layout under the scaffolding for changing
+ * it — a dozen dashed boxes, each as loud as the fields they were supposed to
+ * be arranged around.
+ *
+ * The one that is drawn keeps the same box as the one that is not, border
+ * included, so lighting up moves nothing. A target that resized as the pointer
+ * approached would shift the row underneath it, which moves the target away
+ * from the pointer, which un-picks it — and the two states flicker against each
+ * other forever.
+ *
+ * A leftover is labeled with the width the field will become, because that is
  * the whole bargain: the gap is this wide, so the field will be too. A boundary
  * makes no such bargain — it is about which row the field is on, and the field
- * arrives at the width it left with.
+ * arrives at the width it left with. Its label is drawn OUT of the flow, so a
+ * strip a dozen pixels tall can carry a word without becoming a box.
  *
  * Which boundaries exist at all is `pack`'s decision, and it offers only the
  * ones that would move the field: a strip saying New row that leaves the field
@@ -858,21 +955,26 @@ function Gap({ at, span, start, newRow, dragging, over }) {
     return null
   }
 
-  // a strip between two rows, not a hole in one: shallower, and it says what
-  // it does rather than what the field will become — which is nothing, since
-  // dropping here leaves the width alone
+  // a strip between two rows, not a hole in one: a line rather than a box,
+  // because it is a position and not a space. it says what it does rather than
+  // what the field will become — which is nothing, since dropping here leaves
+  // the width alone
   if (newRow) {
     return (
       <div
         data-sp-gap={at}
         className={cn(
-          'flex min-h-[2.5rem] items-center justify-center rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors sm:col-span-12',
-          over
-            ? 'border-primary bg-primary/10 text-primary'
-            : 'border-ring/25 bg-accent/10 text-muted-foreground/80',
+          'relative flex h-3 items-center justify-center rounded-full transition-colors sm:col-span-12',
+          over ? 'bg-primary' : 'bg-transparent',
         )}
       >
-        <span>{__('New row', 'schemapress')}</span>
+        {over ? (
+          // out of the flow and deaf to the pointer: it must not add height to
+          // the strip, and it must not be what elementFromPoint finds there
+          <span className="pointer-events-none absolute whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium leading-tight text-primary-foreground">
+            {__('New row', 'schemapress')}
+          </span>
+        ) : null}
       </div>
     )
   }
@@ -881,16 +983,22 @@ function Gap({ at, span, start, newRow, dragging, over }) {
     <div
       data-sp-gap={at}
       className={cn(
-        'flex min-h-[5rem] items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors',
+        'flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-[12px] font-medium transition-colors',
         SPANS[span],
         start > 0 && STARTS[start + 1],
+        // the same border either way, in a color that is not there: the box has
+        // to be the same size lit as unlit
         over
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-ring/40 bg-accent/20 text-muted-foreground',
+          : 'border-transparent text-transparent',
       )}
     >
-      <span>{__('Fill this space', 'schemapress')}</span>
-      <Badge variant="outline">{width.label}</Badge>
+      {over ? (
+        <>
+          <span>{__('Fill this space', 'schemapress')}</span>
+          <Badge variant="outline">{width.label}</Badge>
+        </>
+      ) : null}
     </div>
   )
 }
@@ -917,7 +1025,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
       onPointerDown={onPointerDown}
       className={cn(
         // min-w-0 so a long label can never push the card wider than its
-        // column and over the top of its neighbour; select-none so pressing on
+        // column and over the top of its neighbor; select-none so pressing on
         // the label starts the drag rather than a text selection
         'group relative flex min-w-0 cursor-grab select-none flex-col overflow-hidden rounded-lg bg-background p-3 shadow-sm transition-colors',
         SPANS[option.span],
@@ -931,8 +1039,8 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
     >
       {/* while it is being dragged the card IS a drop target — put it back
           here — so it says so, like every other target on the screen. hiding
-          its contents and leaving a blank dashed box was the one unlabelled
-          shape in a row of labelled ones */}
+          its contents and leaving a blank dashed box was the one unlabeled
+          shape in a row of labeled ones */}
       {dragging ? (
         <span className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
           {__('Fill this space', 'schemapress')}
@@ -1019,7 +1127,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
 
       {/* the control, roughly. every one is the same height on purpose: this
           screen arranges fields across the row, and a textarea drawn taller
-          than its neighbour only makes the cards in a row line up badly while
+          than its neighbor only makes the cards in a row line up badly while
           saying nothing about the layout being set */}
       <div
         className={cn(
@@ -1099,7 +1207,7 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
           <Field
             label={__('Placeholder', 'schemapress')}
             hint={__('Optional', 'schemapress')}
-            help={__('Greyed-out text inside the empty control.', 'schemapress')}
+            help={__('Grayed-out text inside the empty control.', 'schemapress')}
           >
             {(id) => (
               <Input

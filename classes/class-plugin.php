@@ -62,12 +62,20 @@ class Plugin
     private function registerServices()
     {
         $services = [
+            // before anything asks what the current user may do, which every
+            // route and every screen does
+            'Capabilities' => Capabilities::class,
+
             // the model: field types must be registered before any definition
             // is parsed, and the schema post type before content types query it
             'FieldTypes' => FieldTypes::class,
             'Schema' => Schema::class,
             'Component' => Component::class,
             'ContentType' => ContentType::class,
+
+            // the queue has to be listening before anything can queue onto it,
+            // and the upgrade below is one of the things that does
+            'Batch' => Batch::class,
 
             // after the post types exist to be queried, and before anything
             // reads an entry: it is what stops a public GET minting identifiers

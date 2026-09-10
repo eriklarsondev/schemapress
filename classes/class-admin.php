@@ -19,8 +19,15 @@ class Admin
 
     /**
      * what it takes to open the builder and work on content.
+     *
+     * these two were `edit_pages` and `manage_options` borrowed from WordPress.
+     * borrowing meant they could not be widened without widening everything else
+     * those capabilities govern, and could not be narrowed at all — so the
+     * documentation's advice for letting an editor build schemas was to grant
+     * them `manage_options`, which is the whole site. they are the plugin's own
+     * now; see class-capabilities.php.
      */
-    const CAPABILITY = 'edit_pages';
+    const CAPABILITY = Capabilities::EDIT;
 
     /**
      * what it takes to change the SHAPE of content, or what the site publishes.
@@ -34,7 +41,7 @@ class Admin
      * one capability covered all of it here, so anyone who could write an entry
      * could also restructure the data model and delete the lot.
      */
-    const SCHEMA_CAPABILITY = 'manage_options';
+    const SCHEMA_CAPABILITY = Capabilities::MANAGE;
 
     /**
      * the screen hook returned by add_menu_page, used to scope asset loading.
@@ -116,7 +123,14 @@ class Admin
             'site' => Settings::all(),
             // what this user may do beyond editing entries, so the screens can
             // stop offering what the transport would refuse
-            'can' => ['manageSchema' => current_user_can(self::SCHEMA_CAPABILITY)],
+            'can' => ['manageSchema' => Capabilities::canManage()],
+            // every role a collection can be restricted to, for its settings
+            // dialog. the site's own list, so a role added by another plugin is
+            // offered without this one knowing about it
+            'roles' => Capabilities::roles(),
+            // long-running work already in flight when the screen loads, so a
+            // reindex started before a reload is still visible after it
+            'jobs' => Batch::status(),
             // the documentation is a screen in the app, so its text ships with
             // the page rather than costing a request: it is a few files of
             // Markdown this plugin ships, already compiled
@@ -147,6 +161,9 @@ class Admin
                 'label' => $definition['label'],
                 'children' => !empty($definition['children']),
                 'repeatable' => !empty($definition['repeatable']),
+                // so the form draws a new field at the width it will be saved
+                // at, rather than full until the first save moves it
+                'width' => FieldTypes::defaultWidth($slug),
             ];
         }
 

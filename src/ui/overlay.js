@@ -72,7 +72,12 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   onConfirm,
-  destructive = true
+  destructive = true,
+  // a choice that belongs to the decision rather than before it — "and restore
+  // the entries too" is part of answering "import this?", and putting it on the
+  // screen behind would mean setting it, opening the dialog, and being asked
+  // about something you have already said
+  children
 }) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -80,7 +85,7 @@ export function ConfirmDialog({
         <DialogPrimitive.Overlay
           className={cn('fixed inset-0 bg-black/40', LAYERS.confirmOverlay)}
         />
-        {/* centred by flex rather than by a transform, which the open
+        {/* centered by flex rather than by a transform, which the open
             animation would otherwise overwrite — see Dialog */}
         <div
           className={cn(
@@ -99,6 +104,8 @@ export function ConfirmDialog({
                 {description}
               </DialogPrimitive.Description>
             ) : null}
+
+            {children ? <div className="mt-4">{children}</div> : null}
 
             <div className="mt-5 flex justify-end gap-2">
               <DialogPrimitive.Close asChild>

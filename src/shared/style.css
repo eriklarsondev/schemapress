@@ -13,9 +13,9 @@
 
 .schemapress {
   /* One cool navy family, hue 218–224 throughout. What separates the tokens is
-     lightness and how much chroma they are allowed to carry — a grey that is
+     lightness and how much chroma they are allowed to carry — a gray that is
      genuinely neutral reads as unfinished next to wp-admin, and three tokens
-     holding the same grey read as no design at all. Every pair below is
+     holding the same gray read as no design at all. Every pair below is
      measured: body text clears 4.5:1, form-control borders and the focus ring
      clear 3:1, and adjacent surfaces stay at least 1.06:1 apart so a panel is
      visibly a panel. */
@@ -29,17 +29,17 @@
   --sp-popover: 0 0% 100%;
   --sp-popover-foreground: 224 32% 9%;
 
-  /* the one saturated colour, and it has to work in both directions: as a fill
+  /* the one saturated color, and it has to work in both directions: as a fill
      under white text and as text on white. a near-black navy did the first job
      and quietly failed the second — every accent drawn from it (a hover
      border, a selected state, a drop target) came out looking like more black
-     text, which is what left the screen with no colour on it anywhere */
+     text, which is what left the screen with no color on it anywhere */
   --sp-primary: 224 71% 45%;
   --sp-primary-foreground: 0 0% 100%;
 
   /* three separate jobs, so three separate values: a chip you can see the edge
      of, a panel that sits back, and a hover that tints towards the primary
-     rather than just going a shade greyer */
+     rather than just going a shade grayer */
   --sp-secondary: 220 24% 92%;
   --sp-secondary-foreground: 224 45% 22%;
 
@@ -138,7 +138,7 @@
    `.sp-control` class is here so a control that is NOT a native element — a
    Radix select trigger is a <button> — wears exactly the same surface instead
    of a hand-copied approximation of it that drifts a padding at a time */
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']),
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']),
 .schemapress textarea,
 .schemapress select,
 .schemapress .sp-control {
@@ -188,7 +188,7 @@
   width: auto;
 }
 
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):focus,
+.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']):focus,
 .schemapress textarea:focus,
 .schemapress select:focus,
 .schemapress .sp-control:focus,
@@ -206,6 +206,55 @@
    elements, so the native control only appears in the multi-select field */
 .schemapress input[type='checkbox'] {
   margin: 0;
+}
+
+/* A COLOR INPUT IS A SWATCH, NOT A TEXT FIELD, and it matched the surface rule
+   above — so it came out 100% wide with a 36px floor: a bar of solid color
+   running the width of the form, with the hex field crushed into a square
+   beside it and the swatch row underneath looking like it belonged to
+   something else.
+
+   Subtracted from that rule rather than fought with a utility. The reset is
+   deliberately specific enough to beat wp-admin, which means it also beats
+   `size-9` on the element, and the class sat there for a release doing
+   nothing — see the note on the escape hatches above. */
+.schemapress input[type='color'] {
+  box-sizing: border-box;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  /* the frame, so a swatch of any lightness sits inside a boundary rather than
+     bleeding into the form when it happens to be near-white */
+  padding: 2px;
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background-color: hsl(var(--sp-background));
+  cursor: pointer;
+}
+
+/* every browser draws the swatch as an inset child carrying its own padding
+   and border, which inside a 36px box is a small square rattling around in a
+   large one. these are the only way to reach it */
+.schemapress input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.schemapress input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--sp-radius) - 5px);
+}
+
+.schemapress input[type='color']::-moz-color-swatch {
+  border: 0;
+  border-radius: calc(var(--sp-radius) - 5px);
+}
+
+.schemapress input[type='color']:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: hsl(var(--sp-ring));
+  box-shadow: 0 0 0 3px hsl(var(--sp-ring) / 0.12);
 }
 
 .schemapress input::placeholder,
@@ -475,13 +524,252 @@ body.toplevel_page_schemapress #wpfooter {
   margin: 0 0 1.25rem;
 }
 
+/* --- the rich text editor ------------------------------------------------- */
+
+/* TinyMCE brings its own skin, and this app's scoped reset is deliberately
+   specific enough to beat wp-admin — which means it is specific enough to beat
+   the editor too. `.schemapress button` and TinyMCE's `.mce-btn button` carry
+   exactly the same weight, so which one wins is decided by whichever stylesheet
+   the browser read last: ours at enqueue time, or the skin TinyMCE injects when
+   it initializes. That is not a thing to leave to chance in a toolbar.
+
+   So inside the editor the reset stands down. Everything here restores a
+   browser default rather than imposing a look — the look is the skin's, and it
+   is the one authors already know from the post editor. */
+.schemapress .schemapress-rte button,
+.schemapress .schemapress-rte input[type='button'] {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* the Text tab is a real textarea, and the control surface every other field
+   wears is wrong on it: it sits inside the editor's own frame, which is already
+   drawing the border and the fill */
+.schemapress .schemapress-rte textarea {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+/* --- the code editor ------------------------------------------------------ */
+
+/* A JSON field is a code editor: a textarea whose text is invisible, sitting
+   exactly over the same text highlighted. The caret, the selection, undo and
+   every keystroke are the browser's real ones — the color is painted
+   underneath, so nothing has to be reimplemented to get it.
+
+   IT IS A FORM FIELD FIRST. The obvious thing is to give it the dark chrome the
+   documentation's code blocks wear, and it was wrong on an entry form: one
+   black rectangle among a column of pale ones does not read as "this field
+   holds code", it reads as something that has gone wrong, or as a panel that
+   belongs to a different screen. So the surface is exactly the one every other
+   control wears — the same border, fill, radius and focus ring, declared from
+   the same tokens — and the only thing that marks it out as code is the
+   monospace text and the color IN it.
+
+   Which is why the palette below is its own, and light. The documentation's
+   tokens are tuned for a near-black block and would be all but invisible
+   here. */
+.schemapress .sp-json {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid hsl(var(--sp-input));
+  border-radius: calc(var(--sp-radius) - 2px);
+  background-color: hsl(var(--sp-input-fill));
+}
+
+/* the editor pane. `position: relative` lives HERE rather than on .sp-json,
+   because the transparent textarea is positioned against it — once there are
+   two panes, insetting the textarea to the whole field would lay it over the
+   preview and swallow every click meant for the tree */
+.schemapress .sp-json-editor {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* the parsed value, beside the text it was parsed from. `min-width: 0` on both
+   panes because a flex item defaults to min-content — one long unbroken string
+   in the JSON would otherwise push its pane wider than the field and shove the
+   other one off the edge */
+.schemapress .sp-json-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.75rem 0.875rem;
+  border-left: 1px solid hsl(var(--sp-input));
+  background-color: hsl(var(--sp-background));
+}
+
+/* a tree of rows, not a list of bullets */
+.schemapress .sp-json-preview ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+/* the same two-part focus every other control gets: the fill goes white to say
+   you are in it, and the ring says which one */
+.schemapress .sp-json:focus-within {
+  border-color: hsl(var(--sp-ring));
+  background-color: hsl(var(--sp-background));
+  box-shadow: 0 0 0 3px hsl(var(--sp-ring) / 0.12);
+}
+
+.schemapress .sp-json.is-invalid {
+  border-color: hsl(var(--sp-destructive));
+}
+
+/* THE TWO LAYERS HAVE TO AGREE TO THE PIXEL, so every property that decides
+   where a glyph lands is declared once, for both. Split across two rule sets
+   they drift the first time one is edited, and drift here is a caret that sits
+   a character away from the letter it is in front of.
+
+   `pre-wrap` on both rather than `pre` with a scrollbar: a textarea soft-wraps
+   whatever you do, so the highlighted copy underneath has to wrap the same way
+   or a long line desynchronises everything below it. */
+.schemapress .sp-json-layer {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-align: left;
+}
+
+/* the highlighted copy is the one in the flow, so it — and therefore the
+   content — decides how tall the editor is. that is what makes the field grow
+   to fit rather than scroll inside a fixed box */
+.schemapress .sp-json pre.sp-json-layer {
+  position: relative;
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+  color: hsl(var(--sp-foreground));
+  pointer-events: none;
+}
+
+/* `.schemapress code` sets 11px, an element selector this <code> matches. one
+   pixel of font-size is a fraction of a pixel per character and a whole
+   character by the end of a long line, which is the caret sitting next to the
+   letter it claims to be in front of rather than on it. everything about how
+   this text is set comes from the layer, so the <code> contributes nothing but
+   the tokens inside it */
+.schemapress .sp-json pre.sp-json-layer code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+/* wins on specificity over the `.schemapress textarea` reset above, which it
+   has to: that rule sets a border, a fill and a font size, and any one of them
+   would put this layer out of step with the one under it */
+.schemapress textarea.sp-json-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  /* the glyphs are transparent and the caret is not: what you see is the layer
+     underneath, and what you steer is this one */
+  color: transparent;
+  caret-color: hsl(var(--sp-foreground));
+}
+
+.schemapress textarea.sp-json-layer:focus {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* translucent, so the highlighted text shows THROUGH a selection. an opaque
+   one paints over the only layer with any color in it, and selecting a line
+   blanks it */
+.schemapress textarea.sp-json-layer::selection {
+  background: hsl(var(--sp-ring) / 0.22);
+}
+
+.schemapress textarea.sp-json-layer::placeholder {
+  color: hsl(var(--sp-muted-foreground));
+}
+
+/* The JSON field's own palette, on a pale field rather than a dark block.
+
+   Measured against the field AT REST — hsl(220 24% 96.5%) — which is the darker
+   of its two backgrounds and therefore the harder one; each color gains about
+   half a point when the field goes white on focus. The ratio is recorded beside
+   every one, as everywhere else in this file. Syntax color that has to be
+   squinted at is decoration.
+
+   Only the tokens the JSON grammar actually emits are here. It produces eight —
+   property, string, number, punctuation, operator, boolean, null and comment —
+   and a rule for anything else would be a color nothing can wear. */
+
+/* the structure: braces, brackets, commas and the colon. deliberately the
+   quietest thing in the field, because it is the part you read past. the same
+   value as --sp-muted-foreground, which is doing the same job elsewhere */
+.schemapress .sp-json .token.punctuation,
+.schemapress .sp-json .token.operator {
+  color: hsl(220 14% 38%); /* 6.14:1 */
+}
+
+/* a key is a label, and the one thing on a line you scan for. the app's one
+   saturated color, which is what makes this field look like it belongs to the
+   same screen as everything else */
+.schemapress .sp-json .token.property {
+  color: hsl(224 71% 45%); /* 6.61:1 */
+}
+
+.schemapress .sp-json .token.string {
+  color: hsl(160 84% 24%); /* 5.57:1 */
+}
+
+.schemapress .sp-json .token.number {
+  color: hsl(24 90% 32%); /* 6.04:1 */
+}
+
+/* true, false and null: the three literals, told apart from strings at a glance
+   because "false" and "\"false\"" are not the same value and the bug that
+   confuses them is a quiet one */
+.schemapress .sp-json .token.boolean,
+.schemapress .sp-json .token.null {
+  color: hsl(280 62% 42%); /* 6.76:1 */
+}
+
+/* not valid JSON, so this is never stored — but the grammar tokenises it, and
+   text on screen with no color rule inherits the body color and reads as
+   ordinary content */
+.schemapress .sp-json .token.comment {
+  color: hsl(220 13% 42%); /* 5.27:1 */
+  font-style: italic;
+}
+
 /* --- syntax highlighting -------------------------------------------------- */
 
 /* Prism supplies the token classes; what they look like is declared here rather
    than pulled in as one of its themes, so the palette is the app's and a theme
    stylesheet cannot arrive with its own background and fight the block above.
-   every colour below clears 4.5:1 on that background — a code sample is text,
-   and syntax colour that has to be squinted at is decoration */
+   every color below clears 4.5:1 on that background — a code sample is text,
+   and syntax color that has to be squinted at is decoration */
 
 .schemapress .sp-prose .token.comment,
 .schemapress .sp-prose .token.prolog,
@@ -541,7 +829,7 @@ body.toplevel_page_schemapress #wpfooter {
 }
 
 /* a JSON key is a string to the grammar and a label to the reader, so it takes
-   the property colour rather than disappearing into the values around it */
+   the property color rather than disappearing into the values around it */
 .schemapress .sp-prose .language-json .token.property {
   color: hsl(199 80% 74%);
 }
@@ -558,7 +846,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* one operation, spelled for each surface. the strip is built by DocsView from
    the panes below it — before that runs, every pane is visible, which is the
-   right thing to degrade to: three labelled code blocks stacked is worse than
+   right thing to degrade to: three labeled code blocks stacked is worse than
    tabs and much better than nothing */
 .schemapress .sp-prose .sp-tabs {
   margin: 0 0 1.5rem;
@@ -617,7 +905,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* --- callouts ------------------------------------------------------------ */
 
-/* :::note … ::: in the Markdown. the left border carries the colour and the
+/* :::note … ::: in the Markdown. the left border carries the color and the
    fill stays light enough to read dark text on — the same bargain the alerts
    in the app make */
 .schemapress .sp-prose .sp-callout {
@@ -641,7 +929,7 @@ body.toplevel_page_schemapress #wpfooter {
   text-transform: uppercase;
 }
 
-/* a chip in the callout's own colour: at a glance the kind is read from the
+/* a chip in the callout's own color: at a glance the kind is read from the
    left edge, before the word naming it has been */
 .schemapress .sp-prose .sp-callout__title::before {
   content: '';
@@ -787,7 +1075,7 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* the three the sources can print, in the same values class-docs.php uses for
    the standalone page — written as hex on both sides so the two are greppable
-   against each other. the border carries the colour: a callout is an object on
+   against each other. the border carries the color: a callout is an object on
    the page, not a tinted paragraph */
 .schemapress .sp-prose .sp-status--ok {
   border-color: #6ee7b7;
@@ -800,7 +1088,7 @@ body.toplevel_page_schemapress #wpfooter {
 }
 
 /* summary() prints this one, and nothing here had ever styled it — a note fell
-   through to the bare border and the grey dot */
+   through to the bare border and the gray dot */
 .schemapress .sp-prose .sp-status--note {
   border-color: #7dd3fc;
   background: #f0f9ff;

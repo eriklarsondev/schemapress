@@ -125,6 +125,47 @@ function TypeSettings({ field, config, update }) {
     case 'select':
       return <SelectOptions config={config} onChange={update} />
 
+    case 'gallery':
+      return (
+        <Field
+          label={__('Most images', 'schemapress')}
+          help={__(
+            '0 for unlimited. There is no minimum — “required” already means at least one.',
+            'schemapress',
+          )}
+        >
+          {(id) => (
+            <Input
+              id={id}
+              type="number"
+              min="0"
+              className="sm:max-w-[12rem]"
+              value={config.max || 0}
+              onChange={(event) => update({ max: Number(event.target.value) || 0 })}
+            />
+          )}
+        </Field>
+      )
+
+    case 'json':
+      return (
+        <Field
+          label={__('Editor height', 'schemapress')}
+          help={__('In rows. A payload is usually either three lines or three hundred.', 'schemapress')}
+        >
+          {(id) => (
+            <Input
+              id={id}
+              type="number"
+              min="3"
+              className="sm:max-w-[12rem]"
+              value={config.rows || 8}
+              onChange={(event) => update({ rows: Number(event.target.value) || 8 })}
+            />
+          )}
+        </Field>
+      )
+
     case 'repeater':
       return (
         <div className="grid gap-3 sm:grid-cols-3">

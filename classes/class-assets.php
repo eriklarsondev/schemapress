@@ -58,7 +58,14 @@ class Assets
         wp_enqueue_script(
             $handle,
             SCHEMAPRESS_URL . self::BUILD_DIR . '/' . $entry . '.js',
-            $asset['dependencies'],
+            // `editor` on top of what the build declared, and it has to be a
+            // DEPENDENCY rather than merely enqueued alongside. RichTextControl
+            // reads `wp.editor.initialize` once, as it first renders, and both
+            // scripts sit in the footer — so without an ordering between them
+            // whether the editor exists by the time React looks is a matter of
+            // which file the browser finished first. Declaring it makes the
+            // answer always yes instead of usually.
+            array_merge($asset['dependencies'], ['editor']),
             $asset['version'],
             true
         );
@@ -67,6 +74,21 @@ class Assets
 
         // the media modal is used by the image and file field types
         wp_enqueue_media();
+
+        // TinyMCE and Quicktags, for the Rich Text field.
+        //
+        // WITHOUT THIS THERE IS NO EDITOR. `wp.editor.initialize()` is the
+        // documented way to raise an editor on a textarea the page created
+        // itself, and it exists only once this has run — it is what loads
+        // TinyMCE, Quicktags and the `wp.editor` API around them.
+        //
+        // It was never called. RichTextControl checks for the API and falls
+        // back to a plain textarea when it is absent, which is the right way
+        // for it to fail — and meant the fallback was ALL anybody ever saw. The
+        // toolbar, the media button and the formatting menu were configured,
+        // committed, and unreachable: the check that was meant to catch a rare
+        // environment was catching every single load.
+        wp_enqueue_editor();
 
         wp_add_inline_script(
             $handle,

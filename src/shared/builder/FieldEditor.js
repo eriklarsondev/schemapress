@@ -1040,7 +1040,7 @@ function Steps({ steps, current, onGo }) {
             </button>
 
             {/* the rule joins the CIRCLES, so it is offset to their middle
-                rather than centred on the column — the labels underneath make
+                rather than centered on the column — the labels underneath make
                 the two different heights */}
             {/* a fixed connector, not a stretching one: two steps spread over
                 a wide dialog read as two unrelated things at opposite ends */}

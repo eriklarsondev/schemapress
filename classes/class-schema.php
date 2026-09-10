@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
  * registers the schema post type.
  *
  * a schema is stored as a post so it inherits ids, capabilities and
- * trash behaviour for free. it has no admin UI of its own — the React app on
+ * trash behavior for free. it has no admin UI of its own — the React app on
  * the SchemaPress menu page is the only way schemas are edited, and it works
  * exclusively through the REST layer.
  */

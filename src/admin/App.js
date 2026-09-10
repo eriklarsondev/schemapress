@@ -27,6 +27,7 @@ import { TypeView } from './views/TypeView'
 import { ComponentView } from './views/ComponentView'
 import { DocsView } from './views/DocsView'
 import { SettingsView } from './views/SettingsView'
+import { JobsBanner } from './JobsBanner'
 
 /**
  * Routes that are a screen of their own rather than a collection.
@@ -150,13 +151,23 @@ export function App({ settings }) {
         {/* the builder screens are cards laid on the muted ground, so the ground
             is what separates one card from the next. the docs are not cards —
             they are a column of text, and text wants paper. so the pane itself
-            goes white there rather than the page floating a white block on grey */}
+            goes white there rather than the page floating a white block on gray */}
         <main
           className={cn(
             'min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8',
             route.view === 'docs' && 'bg-background',
           )}
         >
+          {/* above whatever screen is open, because the work it describes is
+              about the site rather than about this screen — a reindex started
+              on one collection is still running while you are looking at
+              another, and its filters are still wrong until it finishes */}
+          {route.view === 'docs' ? null : (
+            <div className="mb-4 empty:mb-0">
+              <JobsBanner onFinished={reload} />
+            </div>
+          )}
+
           {/* the docs do not wait on the sidebar's data, and are still readable
               when loading it is what failed — the page explaining the plugin is
               the last thing that should go down with it */}
@@ -175,7 +186,10 @@ export function App({ settings }) {
               {route.view === 'settings' ? (
                 // reload, because the sidebar's collections carry which of them
                 // publish to the API and this screen names them
-                <SettingsView types={types} onSaved={reload} />
+                // reload on both: saving changes which collections publish, and
+                // an import can create collections the sidebar has never heard
+                // of
+                <SettingsView types={types} onSaved={reload} onImported={reload} />
               ) : route.view === 'component' && route.id ? (
                 <ComponentView
                   id={Number(route.id)}

@@ -1,6 +1,6 @@
 {
   "name": "schemapress",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Erik Larson",
   "description": "Define reusable page content schemas and bind them to page templates",
   "license": "GPL-2.0-or-later",
@@ -9,7 +9,11 @@
     "build": "wp-scripts build",
     "start": "wp-scripts start",
     "format": "wp-scripts format",
-    "lint:js": "wp-scripts lint-js"
+    "lint:js": "wp-scripts lint-js",
+    "test": "php tests/run.php",
+    "pot": "php bin/make-pot.php",
+    "package": "php bin/package.php",
+    "lint:php": "phpcs --standard=phpcs.xml.dist"
   },
   "devDependencies": {
     "@wordpress/scripts": "^30.7.0",

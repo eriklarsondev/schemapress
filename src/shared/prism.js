@@ -4,7 +4,7 @@
  * Prism, with only the grammars the documentation actually uses. The package is
  * 3.7MB of languages; the five loaded below are what docs/*.md is written in.
  *
- * The colours are not Prism's. A theme stylesheet would arrive with its own
+ * The colors are not Prism's. A theme stylesheet would arrive with its own
  * background and its own idea of the chrome around it, and fight the block
  * styling in style.css — so only the token CLASSES come from here, and what
  * they look like is declared alongside everything else the app paints.

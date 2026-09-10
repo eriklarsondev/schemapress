@@ -23,10 +23,18 @@ node_modules/
 
 # --- generated at runtime ---------------------------------------------------
 
-# The Tailwind safelist is written by the plugin whenever a schema is saved, so
-# it reflects one site's schemas. Committing it would carry another site's
-# classes into this one.
+# Nothing writes here any more — the Tailwind safelist this described was
+# removed, and the plugin now writes no files at all, which is the right answer
+# for something installed into a directory it may not own. Kept so a stray
+# working copy of the old behaviour cannot be committed by accident.
 generated/
+
+# --- release artifacts ------------------------------------------------------
+
+# What `npm run package` builds. It is derived from everything else in here and
+# is rebuilt in a second; committing one means a repository that grows by a
+# megabyte and a half per release for no reason anybody can use.
+schemapress.*.zip
 
 # --- local tooling ----------------------------------------------------------
 

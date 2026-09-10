@@ -1,4 +1,4 @@
-<!-- group: Modelling content -->
+<!-- group: Modeling content -->
 <!-- description: The rules a collection can put on its own values, and where each one is enforced. -->
 
 ## Validation
@@ -8,7 +8,7 @@ to the field they belong to, and they are enforced on **every** write — the en
 REST route behind it, and anything else that calls `Entries::save()`.
 
 That last part is the important one. These rules used to live only in the browser: the Save
-button greyed out and nothing behind it checked. An importer, a migration script or a
+button grayed out and nothing behind it checked. An importer, a migration script or a
 direct call to the admin route stored whatever it was given.
 
 | Rule | Set on | Means |

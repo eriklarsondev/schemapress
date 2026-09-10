@@ -15,15 +15,54 @@
  *
  * With it off the collection cards go inert rather than disappearing. What each
  * collection had chosen still matters — it is what comes back when the API is
- * turned on again — so it stays on screen, greyed, saying so.
+ * turned on again — so it stays on screen, grayed, saying so.
  */
 
 import { useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
-import { List, FileSearch, Globe, Lock, Code2, ShieldCheck } from 'lucide-react'
-import { Card, CardBody, Button, Switch, Alert, Badge, ConfirmDialog, Copyable, cn } from '../../ui'
+import {
+  List,
+  FileSearch,
+  Globe,
+  Lock,
+  Code2,
+  ShieldCheck,
+  Timer,
+  Trash2,
+} from 'lucide-react'
+import {
+  Card,
+  CardBody,
+  Button,
+  Switch,
+  Select,
+  Field,
+  Alert,
+  Badge,
+  ConfirmDialog,
+  Copyable,
+  cn,
+} from '../../ui'
 import { api } from '../../shared/api'
 import { site, setSite } from '../../shared/settings'
+import { DataPanel } from './DataPanel'
+
+/**
+ * How long a shared cache may hold a response.
+ *
+ * A closed list rather than a number field, because the useful values are an
+ * order of magnitude apart and the difference between 60 and 90 seconds is not
+ * a decision anybody is making. The labels say what each one costs: this is a
+ * directive to caches the site does not control, so raising it means an editor's
+ * correction can sit behind a CDN for that long.
+ */
+const CACHE_AGES = [
+  { value: '0', label: __('Revalidate every time (recommended)', 'schemapress') },
+  { value: '60', label: __('1 minute', 'schemapress') },
+  { value: '300', label: __('5 minutes', 'schemapress') },
+  { value: '3600', label: __('1 hour', 'schemapress') },
+  { value: '86400', label: __('1 day', 'schemapress') },
+]
 
 /**
  * The two shapes of read, and what each one gives away.
@@ -77,19 +116,33 @@ function pairsOf(types) {
  * @param {Object} props
  * @return {JSX.Element} The view.
  */
-export function SettingsView({ types = [], onSaved }) {
+export function SettingsView({ types = [], onSaved, onImported }) {
   const [rest, setRest] = useState(() => site().restApi)
+  const [cacheAge, setCacheAge] = useState(() => String(site().apiCacheMaxAge))
+  const [deleteData, setDeleteData] = useState(() => site().deleteDataOnUninstall)
   const [collections, setCollections] = useState(() => pairsOf(types))
   const [saved, setSaved] = useState(() =>
-    JSON.stringify({ restApi: site().restApi, collections: pairsOf(types) }),
+    JSON.stringify({
+      restApi: site().restApi,
+      apiCacheMaxAge: site().apiCacheMaxAge,
+      deleteDataOnUninstall: site().deleteDataOnUninstall,
+      collections: pairsOf(types),
+    }),
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  // '' | 'rest-on' | 'rest-off' | 'save'
+  // '' | 'rest-on' | 'rest-off' | 'save' | 'delete-data'
   const [confirming, setConfirming] = useState('')
 
-  const dirty = JSON.stringify({ restApi: rest, collections }) !== saved
+  const current = {
+    restApi: rest,
+    apiCacheMaxAge: Number(cacheAge),
+    deleteDataOnUninstall: deleteData,
+    collections,
+  }
+
+  const dirty = JSON.stringify(current) !== saved
   const before = JSON.parse(saved)
 
   /**
@@ -130,7 +183,7 @@ export function SettingsView({ types = [], onSaved }) {
     setError('')
 
     api
-      .saveSettings({ restApi: rest, collections })
+      .saveSettings(current)
       .then((result) => {
         const stored = pairsOf(result.types || [])
 
@@ -139,8 +192,17 @@ export function SettingsView({ types = [], onSaved }) {
         // with
         setSite(result.settings)
         setRest(result.settings.restApi)
+        setCacheAge(String(result.settings.apiCacheMaxAge))
+        setDeleteData(result.settings.deleteDataOnUninstall)
         setCollections(stored)
-        setSaved(JSON.stringify({ restApi: result.settings.restApi, collections: stored }))
+        setSaved(
+          JSON.stringify({
+            restApi: result.settings.restApi,
+            apiCacheMaxAge: result.settings.apiCacheMaxAge,
+            deleteDataOnUninstall: result.settings.deleteDataOnUninstall,
+            collections: stored,
+          }),
+        )
         setBusy(false)
         onSaved?.()
       })
@@ -294,6 +356,110 @@ export function SettingsView({ types = [], onSaved }) {
         </span>
       </p>
 
+      <Card>
+        <CardBody className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <Timer className="size-4" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold">{__('Caching', 'schemapress')}</p>
+
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              {__(
+                'Every API response carries an ETag, so a client that asks again for something it already has gets a 304 and no body. That happens whatever this is set to.',
+                'schemapress',
+              )}
+            </p>
+
+            <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+              {Number(cacheAge) > 0
+                ? __(
+                    'Above zero this also tells caches you do not control — a CDN, a proxy — not to ask at all for that long. A correction published now may take that long to appear.',
+                    'schemapress',
+                  )
+                : __(
+                    'At zero, nothing is ever served stale: a cache must check with the site before reusing a response, and the ETag makes checking cheap.',
+                    'schemapress',
+                  )}
+            </p>
+
+            <div className="mt-3 max-w-xs">
+              <Field label={__('How long responses stay fresh', 'schemapress')}>
+                {(id) => (
+                  <Select id={id} value={cacheAge} options={CACHE_AGES} onChange={setCacheAge} />
+                )}
+              </Field>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <div className="mt-1">
+        <h2 className="px-1 text-[14px] font-semibold">{__('Data', 'schemapress')}</h2>
+        <p className="mt-0.5 px-1 text-[12px] text-muted-foreground">
+          {__('Moving collections between installations, and what happens on the way out.', 'schemapress')}
+        </p>
+      </div>
+
+      <DataPanel types={types} onImported={onImported} />
+
+      <Card>
+        <CardBody className="flex items-start gap-3">
+          <span
+            className={cn(
+              'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
+              deleteData ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground',
+            )}
+          >
+            <Trash2 className="size-4" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold">
+              {__('Delete everything when the plugin is uninstalled', 'schemapress')}
+            </p>
+
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              {deleteData
+                ? __(
+                    'Deleting SchemaPress from the Plugins screen will permanently erase every collection, every entry and every setting. There is no undo, and deactivating is not the same thing — only deleting.',
+                    'schemapress',
+                  )
+                : __(
+                    'Deleting the plugin leaves your collections and entries in the database, so reinstalling picks them back up. Turn this on if you would rather it cleaned up after itself.',
+                    'schemapress',
+                  )}
+            </p>
+          </div>
+
+          {/* only the arming direction asks. turning it back off is choosing to
+              keep the data, which is the safe way to be wrong */}
+          <Switch
+            checked={deleteData}
+            aria-label={__('Delete everything when the plugin is uninstalled', 'schemapress')}
+            onChange={(next) => (next ? setConfirming('delete-data') : setDeleteData(false))}
+          />
+        </CardBody>
+      </Card>
+
+      {confirming === 'delete-data' ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(next) => !next && setConfirming('')}
+          title={__('Erase everything on uninstall?', 'schemapress')}
+          description={__(
+            'If SchemaPress is ever deleted from the Plugins screen, every collection and every entry goes with it, permanently. Export your schema first if you have not already.',
+            'schemapress',
+          )}
+          confirmLabel={__('Turn it on', 'schemapress')}
+          onConfirm={() => {
+            setDeleteData(true)
+            setConfirming('')
+          }}
+        />
+      ) : null}
+
       {confirming === 'rest-on' ? (
         <ConfirmDialog
           open
@@ -384,7 +550,7 @@ function CollectionCard({ type, pair, disabled, onToggle }) {
         'overflow-hidden transition-opacity',
         !open && 'border-dashed bg-muted/20',
         // inert rather than gone. what this collection had chosen is what comes
-        // back when the API is switched on again, so it stays legible — greyed
+        // back when the API is switched on again, so it stays legible — grayed
         // is the difference between "not in effect" and "not decided"
         disabled && 'pointer-events-none select-none opacity-50',
       )}

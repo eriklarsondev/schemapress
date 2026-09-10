@@ -108,6 +108,11 @@ class Component
             'label' => get_the_title($post),
             'description' => (string) $post->post_excerpt,
             'fields' => $definition['fields'],
+            // the version a save is made against. a component save replaces the
+            // WHOLE field list, exactly as a collection's does, so the editor
+            // sends this back and a component that moved underneath it is
+            // refused rather than overwritten — see Rest::staleDefinition
+            'modified' => Dates::iso($post->post_modified_gmt),
         ];
     }
 

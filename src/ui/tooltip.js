@@ -41,7 +41,7 @@ export function TooltipProvider({ children, ...props }) {
  * @param {string}      props.label    The tooltip text.
  * @param {string}      props.side     top, right, bottom or left.
  * @param {boolean}     props.disabled Whether the wrapped control is disabled.
- * @param {JSX.Element} props.children The control being labelled.
+ * @param {JSX.Element} props.children The control being labeled.
  * @return {JSX.Element} The tooltip.
  */
 export function Tooltip({ label, side = 'top', disabled = false, stretch = false, children }) {

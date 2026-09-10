@@ -13,6 +13,7 @@
  */
 
 import { cn } from '../ui'
+import { fieldTypes } from './settings'
 
 /** The widths a control may take, in twelfths. */
 export const WIDTHS = [
@@ -42,15 +43,38 @@ const SPACERS = {
 }
 
 /**
+ * The width a field is drawn at.
+ *
+ * Its own when it has one — any field can be set to any width, and that choice
+ * always wins. A field that has not been given one yet, which is every field
+ * the moment it is added, starts at its TYPE's width rather than full: the
+ * server fills in the same default on save (FieldTypes::WIDTHS), so the form
+ * shows now what will be stored, instead of a full-width field that jumps to a
+ * third the first time it is saved.
+ *
+ * @param {Object} field
+ * @return {string} third, half, two-thirds or full.
+ */
+export function widthOf(field) {
+  const own = field?.config?.width
+
+  if (WIDTHS.some((option) => option.value === own)) {
+    return own
+  }
+
+  const type = fieldTypes.find((one) => one.type === field?.type)
+
+  return WIDTHS.some((option) => option.value === type?.width) ? type.width : 'full'
+}
+
+/**
  * How many twelfths a field takes.
  *
  * @param {Object} field
  * @return {number} The span.
  */
 export function spanOf(field) {
-  const found = WIDTHS.find((option) => option.value === field?.config?.width)
-
-  return found ? found.span : 12
+  return WIDTHS.find((option) => option.value === widthOf(field)).span
 }
 
 /**
@@ -126,7 +150,7 @@ export function rowBreakClass() {
  * @return {string} A class string.
  */
 export function cellClass(field) {
-  return cn('min-w-0', SPANS[field?.config?.width] || SPANS.full)
+  return cn('min-w-0', SPANS[widthOf(field)])
 }
 
 /**

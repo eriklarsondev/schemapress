@@ -41,7 +41,7 @@ export function Dialog({
         <DialogPrimitive.Overlay
           className={cn("fixed inset-0 bg-black/40", LAYERS.dialogOverlay)}
         />
-        {/* centred by flex, not by a transform. a transform would be the
+        {/* centered by flex, not by a transform. a transform would be the
             obvious way, but the open animation animates `transform` too and
             the two cannot both hold it — the panel would spend the animation
             with its top-left corner at the middle of the screen, drifting up

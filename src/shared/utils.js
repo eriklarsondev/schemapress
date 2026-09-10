@@ -107,10 +107,15 @@ export function emptyValue(type) {
       return false
     case 'repeater':
     case 'group':
+    case 'gallery':
       return []
     case 'number':
     case 'image':
     case 'file':
+    // nothing, not an empty string. '' is a value — the JSON string "" — and a
+    // fresh JSON field showed exactly that, a pair of quotes, before anybody had
+    // typed into it
+    case 'json':
       return null
     case 'link':
       return { url: '', label: '', target: '' }

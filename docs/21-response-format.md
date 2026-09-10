@@ -82,7 +82,7 @@ Everything else is one of your fields, under the machine key you gave it.
 Two separate settings, under a collection's **Settings** button.
 
 **Shown as** picks the field an entry is named by. Its value is written straight to the
-WordPress title, in full rather than summarised, so the two cannot disagree. Leave it as
+WordPress title, in full rather than summarized, so the two cannot disagree. Leave it as
 **No name** and `title` does not appear — the right answer for a collection you would never
 list by name, a set of settings or a group of link rows.
 
@@ -110,6 +110,35 @@ entry leaves its address alone, so a link somebody already has keeps working —
 rule WordPress applies to a post's own slug.
 
 Two entries with the same value get a numbered suffix: `ada-lovelace`, `ada-lovelace-2`.
+:::
+
+:::note Addressing by a field that repeats
+**Addressed by** offers any field a readable slug can be built from, and lists the ones
+marked [**Must be unique**](#validation) first, because a field the collection already
+refuses duplicates in is the one that produces addresses which cannot collide.
+
+The rest are still offered, and deliberately. Requiring uniqueness to get a readable URL
+would mean a Team Members collection could not be addressed by name without also refusing
+to store a second John Smith — and refusing the person is a great deal worse than
+`john-smith-2`.
+
+So the trade is yours to make, and the dialog states it: which of two entries gets the bare
+address and which gets the number depends on the order they were created in, so it is not
+something you can work out from the entry itself. If that matters for your collection, mark
+the field **Must be unique** on the **Schema** tab.
+:::
+
+:::note Naming **Addressed by** later re-addresses the entries that had no address
+Most collections grow a slug field after they already hold entries, and those entries were
+published under the id. Choosing a field re-addresses every one of them that is still on
+its id — a random id is not something anybody chose to link to, so giving an entry its
+first real address is not a rename.
+
+Entries that already have a real address keep it, whatever you change **Addressed by** to
+afterwards. The freeze above is about renames, and that is still what it refuses.
+
+On a large collection the work is queued, so the addresses appear as the job runs rather
+than the moment you press Save — `wp schemapress jobs --run` finishes it now.
 :::
 
 :::tabs

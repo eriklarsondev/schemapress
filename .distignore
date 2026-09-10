@@ -1,0 +1,86 @@
+# What does NOT go in the plugin the directory serves.
+#
+# The zip somebody installs is not the repository. It holds what the plugin
+# needs to RUN — the PHP, the built admin bundle, the vendored libraries, the
+# translations — and nothing about how it is developed. Shipping the rest is not
+# only weight: every file in the package is a file the review team reads, a file
+# a security scanner reports on, and a file somebody can request over HTTP.
+#
+# Read by `npm run package`, which is what builds the zip. The format is one
+# path fragment per line, the same as WP-CLI's `wp dist-archive`.
+
+# --- version control and CI --------------------------------------------------
+
+.git
+.gitignore
+.gitattributes
+.github
+.distignore
+.editorconfig
+
+# --- the source the build is made from ---------------------------------------
+#
+# src/ AND the build config SHIP, which is not the obvious choice. The directory
+# requires that compiled code be accompanied by human-readable source, and the
+# usual answer is a link to a repository — but src/ is 576K against vendor's
+# 4.5M, so carrying it costs about a tenth of the package and turns the
+# strongest objection a reviewer can raise into nothing to discuss. The webpack
+# and Tailwind configs go with it so the build is reproducible rather than
+# merely readable.
+#
+# node_modules and the lockfile do not. The lockfile is larger than the source
+# it locks, and neither is needed to read or rebuild.
+
+node_modules
+package-lock.json
+
+# --- development tooling -----------------------------------------------------
+
+composer.json
+composer.lock
+phpcs.xml.dist
+phpcs.xml
+.php-cs-fixer.cache
+.phpunit.result.cache
+
+# --- the suite and the scripts -----------------------------------------------
+#
+# tests/ stubs WordPress by declaring its functions in the global namespace,
+# which is correct in a test harness and alarming in a plugin. bin/ is release
+# machinery. Neither runs on a site.
+
+tests
+bin
+
+# --- the directory listing, rather than the plugin ---------------------------
+#
+# The icon, banner and screenshots belong to SVN's own assets/ directory, which
+# is a SIBLING of trunk/ rather than part of it. Shipping them would send a
+# megabyte of marketing to every site on every update. See assets/README.md.
+
+assets
+
+# --- writing about the plugin, rather than the plugin ------------------------
+#
+# readme.txt ships, because that IS the directory listing. The rest is for
+# somebody reading the repository.
+
+README.md
+CHANGELOG.md
+
+# --- generated at runtime ----------------------------------------------------
+
+generated
+
+# --- what this script itself produces ----------------------------------------
+#
+# A previous release sitting in the working directory. Without this the second
+# run packages the first run's zip inside the new one, which doubles the size
+# and is not obviously wrong from the outside.
+
+schemapress.*.zip
+
+# --- operating systems -------------------------------------------------------
+
+.DS_Store
+Thumbs.db

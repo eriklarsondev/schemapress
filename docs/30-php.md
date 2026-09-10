@@ -10,19 +10,26 @@ no `use` statement and no bootstrapping:
 $people = SchemaPress::collection('team_member')->get();
 ```
 
-:::note Also aliased as `Content`
-`Content::collection()` was the original name and still answers, so a template written
-against it keeps working. `SchemaPress::` is the one to reach for — it is the name you are
-already typing when you go looking for it.
+:::caution `Content` and the `sp_` functions are gone
+`Content::collection()` and `sp_collection()` were the original names and no longer answer.
+Both lived in the global namespace, which every plugin on the site shares: `Content` is
+about as generic as a class name gets, and `sp_` is two letters that SportsPress already
+uses throughout. Two plugins declaring one name is a fatal error, and this plugin cannot be
+the one that claims either.
+
+Rename them in your theme — `Content::` to `SchemaPress::`, and `sp_collection()` to
+`schemapress_collection()`. **Twig templates are unaffected**: `sp_collection()` is still
+the Twig function, because that name is registered into this plugin's own environment and
+collides with nothing.
 :::
 
 The same calls exist as plain functions, which read better inside a template file:
 
 ```php
-sp_collection('team_member')      // the query
-sp_entry('team_member', $id)      // one entry, or null
-sp_collections()                  // every collection's key
-sp_has_collection('team_member')  // whether it exists
+schemapress_collection('team_member')      // the query
+schemapress_entry('team_member', $id)      // one entry, or null
+schemapress_collections()                  // every collection's key
+schemapress_has_collection('team_member')  // whether it exists
 ```
 
 Both names work — singular or plural, `team_member` or `team_members`. An unknown name
@@ -105,7 +112,7 @@ decide whether a given spot needs `esc_html`, `esc_attr` or `esc_url`.
 `find()` takes the entry's id — the uuid, not a post id:
 
 ```php
-$person = sp_entry('team_member', $id);
+$person = schemapress_entry('team_member', $id);
 
 if (!$person) {
     // no such entry in this collection
@@ -118,7 +125,7 @@ echo esc_html($person->full_name);
 A common shape is a URL like `/team/{id}`, read from a query var:
 
 ```php
-$person = sp_entry('team_member', get_query_var('person'));
+$person = schemapress_entry('team_member', get_query_var('person'));
 ```
 
 `first()` is there for the single-entry case — a settings-style collection, or just the

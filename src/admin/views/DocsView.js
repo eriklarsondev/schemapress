@@ -83,8 +83,8 @@ export function DocsView({ docs, page }) {
   }
 
   return (
-    // one centred block: text and contents list side by side, the pair
-    // centred by mx-auto. no offsets, no mirrors, nothing measured against
+    // one centered block: text and contents list side by side, the pair
+    // centered by mx-auto. no offsets, no mirrors, nothing measured against
     // anything — the margins either side are whatever is left over, and they
     // are equal because that is what centring means
     <div ref={root} className="mx-auto flex w-full max-w-5xl gap-10 py-2">
@@ -398,7 +398,7 @@ function blurb(section) {
  *
  * A reference is read in order at least once, and a page that simply stops
  * makes the reader go back to the sidebar to find out what came next. Naming
- * the neighbours costs a row and answers it.
+ * the neighbors costs a row and answers it.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The pager.
@@ -424,7 +424,7 @@ function Pager({ sections, section }) {
 }
 
 /**
- * One neighbour, as a card.
+ * One neighbor, as a card.
  *
  * @param {Object} props
  * @return {JSX.Element} The link.
@@ -597,7 +597,7 @@ function useCodeChrome(root, section) {
 /**
  * Turns each `:::tabs` group into a tab strip over its panes.
  *
- * Built here rather than shipped as markup because it is behaviour, and the
+ * Built here rather than shipped as markup because it is behavior, and the
  * same Markdown is read in the repository where three stacked code blocks is
  * exactly the right rendering. Until this runs the panes are all visible, so a
  * failure degrades to that rather than to nothing.

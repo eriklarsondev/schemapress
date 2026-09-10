@@ -70,6 +70,30 @@ class Docs
     }
 
     /**
+     * what the compiled documentation is allowed to contain.
+     *
+     * `post` covers everything Markdown produces — headings, lists, tables,
+     * code blocks, links. What it does not reliably carry is `id` and `class`
+     * on every one of them, and this page depends on both: the headings carry
+     * the anchors its contents list links to, and the classes are what the
+     * stylesheet below is written against. Stripped, the page still renders and
+     * every link in the sidebar goes nowhere.
+     *
+     * @return array
+     */
+    private static function allowedHtml()
+    {
+        $allowed = wp_kses_allowed_html('post');
+
+        foreach ($allowed as $tag => $attributes) {
+            $allowed[$tag]['id'] = true;
+            $allowed[$tag]['class'] = true;
+        }
+
+        return $allowed;
+    }
+
+    /**
      * the documentation as the app consumes it: one entry per source file, in
      * the order the directory names, each already rendered to HTML.
      *
@@ -101,6 +125,7 @@ class Docs
         $sections = [];
 
         foreach (self::files() as $path) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a docs/*.md file shipped inside this plugin, never a URL and never a path a user supplied.
             $markdown = trim((string) file_get_contents($path));
 
             if ($markdown === '') {
@@ -243,10 +268,17 @@ class Docs
             );
         }
 
+        // through wp_kses even though both sides are this plugin's own Markdown
+        // compiled by its own parser. nothing a user typed reaches here — but
+        // "it is our own content" is a property of today's code rather than a
+        // guarantee, and the allow-list costs one pass over a page that renders
+        // only when the admin bundle is missing
+        $allowed = self::allowedHtml();
+
         printf(
             '<div class="sp-docs-layout">%s<div class="sp-docs-body">%s</div></div>',
-            self::nav($html),
-            $html
+            wp_kses(self::nav($html), $allowed),
+            wp_kses($html, $allowed)
         );
 
         self::script();
@@ -288,6 +320,7 @@ class Docs
         $parts = [];
 
         foreach (self::files() as $path) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- as above: this plugin's own Markdown, read off disk.
             $contents = file_get_contents($path);
 
             if ($contents !== false) {
@@ -385,7 +418,7 @@ class Docs
     }
 
     /**
-     * the callout kinds a page may use, and the word each is labelled with.
+     * the callout kinds a page may use, and the word each is labeled with.
      *
      * the syntax is Docusaurus's, which is what the documentation this reads
      * like is written in:
@@ -800,7 +833,7 @@ class Docs
             /* the same palette the app uses, written as hex because this page
                has no bundle to read variables from — the hues and lightnesses
                are the tokens in src/shared/style.css, converted. keep the two
-               in step: a docs page in last season\'s greys reads as a different
+               in step: a docs page in last season\'s grays reads as a different
                product. every pair here is measured, including --faint on
                --sunk, which is the small uppercase type in table headers and
                the one that had been failing */
@@ -950,7 +983,7 @@ class Docs
         .schemapress-docs .sp-status--error::before { background: #dc2626; }
 
         /* emitted by summary() and, until now, styled nowhere: a note fell
-           through to the bare bordered paragraph with a grey dot */
+           through to the bare bordered paragraph with a gray dot */
         .schemapress-docs .sp-status--note {
             background: #f0f9ff; border-color: #7dd3fc; color: #0c4a6e;
         }

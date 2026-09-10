@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
  * A select can take its choices from one of these instead of a hand-written
  * list. That is not only convenience: a country list typed by hand is a country
  * list that is missing three countries, spells one of them differently from the
- * next collection, and stores "USA" where its neighbour stores "United States".
+ * next collection, and stores "USA" where its neighbor stores "United States".
  *
  * A field stores only which dataset it uses, never a copy of it. The options
  * are resolved when they are read, so a correction here reaches every field

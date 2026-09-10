@@ -16,7 +16,7 @@
  * one copy, saving is publishing, and the status card has nothing to say.
  */
 
-import { Fragment, useEffect, useState } from '@wordpress/element'
+import { Fragment, useCallback, useEffect, useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
 import { ChevronLeft, Save, Trash2, CircleDot, GitBranch, Undo2, CloudUpload, EyeOff } from 'lucide-react'
 import {
@@ -35,6 +35,7 @@ import { emptyValues } from '../../shared/utils'
 import { Ago } from '../../shared/time'
 import { visibleFields } from '../../shared/conditions'
 import { missingRequired } from '../../shared/required'
+import { UnsaveableProvider } from '../../shared/unsaveable'
 import { clearUnsaved, useUnsavedGuard } from '../../shared/unsaved'
 import {
   breakBefore,
@@ -59,6 +60,9 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
       : { id: null, title: '', state: 'draft', isPublished: false, ahead: 0, values: emptyValues(fields) }
   )
   const [error, setError] = useState('')
+  // a conflict is not an ordinary error: it has an action attached, and the
+  // action is what makes it recoverable rather than only regrettable
+  const [conflict, setConflict] = useState(false)
   const [busy, setBusy] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -106,6 +110,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   const run = (work) => {
     setBusy(true)
     setError('')
+    setConflict(false)
 
     work
       .then((result) => {
@@ -118,7 +123,33 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
       .catch((failure) => {
         setBusy(false)
         setError(failure.message)
+        setConflict(failure.code === 'schemapress_conflict')
       })
+  }
+
+  /**
+   * Takes the current version of the entry, keeping what is typed here.
+   *
+   * The point of a conflict is that BOTH versions matter. Reloading the whole
+   * form would throw away the work that could not be saved, which is the loss
+   * the conflict check exists to prevent — so this adopts the other person's
+   * version as the baseline and leaves the values on screen alone. Saving again
+   * then goes through, and what it saves is this form.
+   *
+   * @return {void}
+   */
+  const takeLatest = () => {
+    setBusy(true)
+
+    api
+      .entry(type.id, entry.id)
+      .then((result) => {
+        setEntry((current) => ({ ...result.entry, values: current.values }))
+        setError('')
+        setConflict(false)
+      })
+      .catch((failure) => setError(failure.message))
+      .finally(() => setBusy(false))
   }
 
   /**
@@ -127,11 +158,24 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
    * No title is sent: the server derives one from the content, so the listing
    * follows what was written rather than a stale label.
    *
+   * `expectedModified` IS sent, and is the version this form was built on. If
+   * somebody else has saved the entry since it was loaded, the server refuses
+   * with a 409 rather than replacing their work with a form that never saw it —
+   * and the refusal says so, with what is typed here still on screen to copy
+   * across. Losing an afternoon's writing to a colleague pressing save is the
+   * kind of bug nobody reports, because neither person can tell it happened.
+   *
    * @param {boolean} publish
    * @return {void}
    */
   const save = (publish = false) =>
-    run(api.saveEntry(type.id, entry.id, { values: entry.values, publish }))
+    run(
+      api.saveEntry(type.id, entry.id, {
+        values: entry.values,
+        publish,
+        expectedModified: entry.modified,
+      }),
+    )
 
   // a save that would store what is already stored is not a save.
   //
@@ -140,6 +184,36 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   // ran one fewer hook than the render after it — which React refuses outright
   // with "rendered more hooks than during the previous render", and which meant
   // opening any existing entry threw
+  // fields holding text they could not parse, and so could not commit. these
+  // are NOT in entry.values by design — the last good value is still there —
+  // which is exactly why the form has to be told about them separately, or a
+  // save reports success while quietly storing the value somebody was in the
+  // middle of replacing. see shared/unsaveable
+  //
+  // ABOVE THE EARLY RETURN, for the reason the note on `dirty` below gives:
+  // these ran after it, so the render that shows Loading ran two fewer hooks
+  // than the one after it and React refused the lot with error #310. An entry
+  // being fetched is exactly the case, so opening any existing entry threw.
+  const [unsaveable, setUnsaveable] = useState({})
+
+  const reportUnsaveable = useCallback((id, label) => {
+    setUnsaveable((current) => {
+      if ((current[id] || null) === label) {
+        return current
+      }
+
+      const next = { ...current }
+
+      if (label) {
+        next[id] = label
+      } else {
+        delete next[id]
+      }
+
+      return next
+    })
+  }, [])
+
   const dirty = entry ? JSON.stringify(entry.values || {}) !== saved : false
 
   useUnsavedGuard(dirty)
@@ -169,7 +243,9 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   // inside each repeater row, and only counting fields actually on screen
   const missing = missingRequired(fields, entry.values)
 
-  const incomplete = missing.length > 0
+  const unparsed = [...new Set(Object.values(unsaveable))]
+
+  const incomplete = missing.length > 0 || unparsed.length > 0
 
   /**
    * What to say on a control that cannot be used yet.
@@ -179,14 +255,26 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
    *
    * @return {string} The message, or '' when nothing is missing.
    */
-  const blocked = () =>
-    incomplete
+  const blocked = () => {
+    // the unparseable ones first: an empty required field is a thing you have
+    // not done yet, and a field full of broken JSON is a thing you have done
+    // wrong — the second is the one you want naming when both are true
+    if (unparsed.length > 0) {
+      return sprintf(
+        /* translators: %s: a comma-separated list of field names */
+        __('%s cannot be saved as written', 'schemapress'),
+        unparsed.join(', ')
+      )
+    }
+
+    return missing.length > 0
       ? sprintf(
           /* translators: %s: a comma-separated list of field names */
           __('Fill in %s first', 'schemapress'),
           missing.map((field) => field.label).join(', ')
         )
       : ''
+  }
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -227,7 +315,22 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
         </Tooltip>
       </header>
 
-      {error ? <Alert variant="warning">{error}</Alert> : null}
+      {error ? (
+        <Alert variant="warning">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span>{error}</span>
+
+            {/* the offer, rather than only the news. taking their version keeps
+                what is typed here, so the next save goes through and saves this
+                form — nothing on screen is lost by pressing it */}
+            {conflict ? (
+              <Button size="sm" variant="outline" disabled={busy} onClick={takeLatest}>
+                {__('Keep mine and continue', 'schemapress')}
+              </Button>
+            ) : null}
+          </span>
+        </Alert>
+      ) : null}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Card>
@@ -237,6 +340,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
                 {__('This collection has no fields yet. Add some in the Schema tab.', 'schemapress')}
               </Alert>
             ) : (
+              <UnsaveableProvider onChange={reportUnsaveable}>
               <div className={gridClass()}>
                 {visible.map((field, index) => (
                   <Fragment key={field.key}>
@@ -263,6 +367,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
                   </Fragment>
                 ))}
               </div>
+              </UnsaveableProvider>
             )}
           </CardBody>
         </Card>
@@ -279,7 +384,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
             />
           ) : null}
 
-          {entry.id ? <IdCard entry={entry} /> : null}
+          {entry.id ? <IdCard entry={entry} type={type} /> : null}
 
           {entry.id ? <DetailsCard entry={entry} drafts={drafts} /> : null}
 
@@ -375,7 +480,7 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
 
   // the three acts that move an entry between states, always all three and
   // always in the same places — a control that comes and goes has to be found
-  // again every time, where a greyed-out one can be learned once
+  // again every time, where a grayed-out one can be learned once
   //
   // each one asks first. they are icon buttons sitting side by side, all three
   // change what the public sees, and two of them cannot be undone — the click
@@ -536,33 +641,55 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
 }
 
 /**
- * What this entry is called from outside.
+ * The address this entry answers on.
  *
- * Its own card, because the id is the one thing here that gets used somewhere
- * else — pasted into a template, a URL, a bug report — rather than read. That
- * makes it an action, not a detail, and it earns the room to show all 36
- * characters instead of trailing off inside a row.
+ * ONE address, the one a front end would actually use. This showed the id and
+ * the slug as two separate values, and for a collection with no slug field they
+ * were the same uuid printed twice — because an entry with nothing to build a
+ * slug from is given its uuid as one. Two copies of the same string under two
+ * headings reads as two different things, and neither was the URL anybody was
+ * here to copy.
+ *
+ * So: a collection that builds slugs from a field is addressed by the slug,
+ * which is what a route like /team/ada-lovelace has in hand. One that does not
+ * is addressed by the id. Both resolve — Entries::resolve tries the uuid and
+ * then the slug — so the choice is only which one is worth handing over.
+ *
+ * The address is built the way the collection settings dialog builds it, so
+ * the two copy buttons never disagree about where a collection lives.
  *
  * @param {Object} props
  * @return {JSX.Element} The card.
  */
-function IdCard({ entry }) {
+function IdCard({ entry, type }) {
+  // a slug that IS the uuid is the fallback, not a slug anybody chose
+  const bySlug = Boolean(entry.slug) && entry.slug !== entry.id
+  const ref = bySlug ? entry.slug : entry.id
+  const url = `${window.location.origin}/wp-json/schemapress/api/${type.apiSlug}/${ref}`
+
+  // the address exists whether or not anything answers on it. saying when it
+  // will not is cheaper than somebody pasting it into a browser to find out
+  const closed = !type.publicApi?.single
+  const unpublished = !entry.isPublished
+
   return (
     <Card>
       <CardBody className="flex flex-col gap-2">
-        <Label>{__('ID', 'schemapress')}</Label>
+        <Label>
+          {bySlug ? __('Endpoint · by slug', 'schemapress') : __('Endpoint · by ID', 'schemapress')}
+        </Label>
 
-        <Copyable value={entry.id} label={__('Copy entry ID', 'schemapress')} />
+        <Copyable value={url} label={__('Copy endpoint', 'schemapress')} />
 
-        {/* the two ways to address this entry, together. the id is the one the
-            API reports and the slug is the one a front end routes on, and
-            whichever you need you are here to copy it rather than read it */}
-        {entry.slug ? (
-          <>
-            <Label className="mt-1">{__('Slug', 'schemapress')}</Label>
-
-            <Copyable value={entry.slug} label={__('Copy slug', 'schemapress')} />
-          </>
+        {closed || unpublished ? (
+          <p className="text-[12px] leading-relaxed text-muted-foreground">
+            {closed
+              ? __(
+                  'Not answering yet: turn on Read one in this collection’s settings.',
+                  'schemapress',
+                )
+              : __('Not answering yet: publish this entry first.', 'schemapress')}
+          </p>
         ) : null}
       </CardBody>
     </Card>
@@ -618,7 +745,7 @@ function Label({ children, className }) {
 }
 
 /**
- * One labelled fact.
+ * One labeled fact.
  *
  * @param {Object} props
  * @return {JSX.Element} The row.

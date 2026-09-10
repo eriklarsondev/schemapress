@@ -1,6 +1,6 @@
 /**
  * The UI kit's public surface. Views import from here rather than reaching
- * into individual modules, so a primitive can be reorganised without a sweep
+ * into individual modules, so a primitive can be reorganized without a sweep
  * across the app.
  */
 

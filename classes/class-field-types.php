@@ -169,6 +169,71 @@ class FieldTypes
                     return $id && get_post_type($id) === 'attachment' ? $id : null;
                 },
             ],
+            // its own type rather than a `multiple` flag on `image`, for the
+            // reason the three date shapes are separate: what a field IS changes
+            // what can be asked of it. one image can be filtered on and sorted
+            // by, a list of them cannot; one image resolves to an attachment and
+            // a gallery to a list of them. a flag would have made every consumer
+            // branch on a config value to know which shape it was holding
+            'gallery' => [
+                'label' => __('Gallery', 'schemapress'),
+                'default' => [],
+                'sanitize' => function ($value, $field) {
+                    $ids = [];
+                    $max = isset($field['config']['max']) ? (int) $field['config']['max'] : 0;
+
+                    foreach (is_array($value) ? $value : [] as $item) {
+                        if ($max > 0 && count($ids) >= $max) {
+                            break;
+                        }
+
+                        $id = absint(is_array($item) ? ($item['id'] ?? 0) : $item);
+
+                        // the same image twice in one gallery is a slip rather
+                        // than a choice — it is a list of what to show, not a
+                        // count of anything
+                        if ($id && wp_attachment_is_image($id) && !in_array($id, $ids, true)) {
+                            $ids[] = $id;
+                        }
+                    }
+
+                    return $ids;
+                },
+            ],
+            'color' => [
+                'label' => __('Color', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value) {
+                    // WordPress's own, which returns '' for anything that is not
+                    // a hex color — so a stored value is always something a
+                    // stylesheet can use, and never a string that only looks it
+                    $color = sanitize_hex_color((string) $value);
+
+                    return is_string($color) ? $color : '';
+                },
+            ],
+            // for the shapes a schema should not try to describe: a third
+            // party's payload, a chart's series, anything whose structure
+            // belongs to something other than this collection. it is stored as
+            // decoded data rather than as a string, so it travels through the
+            // API as JSON rather than as JSON inside a string
+            'json' => [
+                'label' => __('JSON', 'schemapress'),
+                'default' => null,
+                'sanitize' => function ($value) {
+                    if (is_string($value)) {
+                        $decoded = json_decode($value, true);
+
+                        // invalid JSON is stored as nothing rather than as the
+                        // text somebody typed, which is the rule `email` and the
+                        // date types already follow — a value that is not the
+                        // thing is not kept as an approximation of it
+                        return json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+                    }
+
+                    return is_array($value) ? $value : null;
+                },
+            ],
             'link' => [
                 'label' => __('Link', 'schemapress'),
                 'default' => ['url' => '', 'label' => '', 'target' => ''],
@@ -276,6 +341,68 @@ class FieldTypes
         return $definition && array_key_exists('default', $definition)
             ? $definition['default']
             : null;
+    }
+
+    /**
+     * how wide each built-in type's control STARTS on the entry form.
+     *
+     * a starting point, never a rule — the Layout tab sets any field to any
+     * width, and a width somebody chose is kept exactly. this only answers for
+     * a field that has not been given one yet.
+     *
+     * everything used to start full width, which made every form a single tall
+     * column: a toggle stretched across the page with its switch at one end and
+     * nothing at the other, an image preview blown up to a banner. the widths
+     * follow what each control actually draws — a switch or a swatch needs a
+     * third, a line of text half, anything with inputs side by side or a
+     * document inside it the whole row — and match Strapi's defaults where the
+     * two have the same type.
+     *
+     * @var array<string, string>
+     */
+    const WIDTHS = [
+        'text' => 'half',
+        'textarea' => 'full',
+        'wysiwyg' => 'full',
+        'email' => 'half',
+        'url' => 'half',
+        'phone' => 'third',
+        'number' => 'third',
+        'date' => 'third',
+        // the date and the time side by side, which is wider than either
+        'datetime' => 'half',
+        'time' => 'third',
+        'toggle' => 'third',
+        'select' => 'half',
+        'color' => 'third',
+        'image' => 'third',
+        // a grid of thumbnails, which wants the room to be a grid
+        'gallery' => 'full',
+        'file' => 'half',
+        // the address and its label sit side by side
+        'link' => 'full',
+        'json' => 'half',
+        'group' => 'full',
+        'repeater' => 'full',
+    ];
+
+    /**
+     * the width a type's control starts at.
+     *
+     * a type registered through the schemapress/field_types filter can say its
+     * own with a `width` key; anything unrecognised starts full, which is the
+     * one width that can never be too narrow for what is in it.
+     *
+     * @param string $type
+     *
+     * @return string third, half, two-thirds or full
+     */
+    public static function defaultWidth($type)
+    {
+        $definition = self::get($type);
+        $width = $definition['width'] ?? (self::WIDTHS[$type] ?? 'full');
+
+        return in_array($width, ['third', 'half', 'two-thirds', 'full'], true) ? $width : 'full';
     }
 
     /**

@@ -83,7 +83,7 @@ check('deduplicates sibling keys', 'name_2', $fields[1]['key']);
 check('drops fields of an unknown type', 5, count($fields));
 check('keeps required', true, $fields[0]['required']);
 check('keeps the form width', 'half', $fields[2]['config']['width']);
-check('defaults the form width', 'full', $fields[0]['config']['width']);
+check('defaults the form width to the type\'s own', 'half', $fields[0]['config']['width']);
 check('defaults to no offset', 0, $fields[0]['config']['offset']);
 
 // a deliberate gap before a control has to be stated, because a grid flows its
@@ -100,6 +100,28 @@ $offsets = SchemaModel::normalize([
 check('keeps an offset that fits', 6, $offsets[0]['config']['offset']);
 check('clamps one that would overflow the row', 6, $offsets[1]['config']['offset']);
 check('a full-width control cannot be offset', 0, $offsets[2]['config']['offset']);
+
+$widths = SchemaModel::normalize([
+    'fields' => [
+        ['label' => 'Photo', 'type' => 'image'],
+        ['label' => 'Active', 'type' => 'toggle'],
+        ['label' => 'Brand', 'type' => 'color'],
+        ['label' => 'Payload', 'type' => 'json'],
+        ['label' => 'Body', 'type' => 'wysiwyg'],
+        ['label' => 'Hero', 'type' => 'image', 'config' => ['width' => 'full']],
+        ['label' => 'Odd', 'type' => 'image', 'config' => ['width' => 'enormous']],
+    ],
+])['fields'];
+
+check('an image starts at a third', 'third', $widths[0]['config']['width']);
+check('so does a toggle', 'third', $widths[1]['config']['width']);
+check('and a color', 'third', $widths[2]['config']['width']);
+check('JSON starts at half', 'half', $widths[3]['config']['width']);
+check('rich text still starts full', 'full', $widths[4]['config']['width']);
+// the default is only a starting point: every field can be any width, and
+// full is a choice like any other rather than the absence of one
+check('a width somebody chose is kept, full included', 'full', $widths[5]['config']['width']);
+check('an unreadable width falls back to the type\'s', 'third', $widths[6]['config']['width']);
 check('refuses a negative offset', 0, $offsets[3]['config']['offset']);
 check('keeps whitelisted repeater config', 2, $fields[4]['config']['max']);
 check('drops unknown config keys', false, array_key_exists('junk', $fields[4]['config']));
@@ -628,7 +650,7 @@ check('and the front end loses it', 1, count(Entries::all($notes)['entries']));
 check('discarding an unpublished entry does nothing', null, Entries::discard($notes, $draft['id']));
 
 // every transition is addressed by uuid, so a bad one is a miss, not a
-// neighbouring entry
+// neighboring entry
 check('an unknown uuid publishes nothing', null, Entries::publish($notes, 'not-a-real-uuid'));
 check('and reads as nothing', null, Entries::get($notes, 'not-a-real-uuid', 0, Entries::DRAFT));
 

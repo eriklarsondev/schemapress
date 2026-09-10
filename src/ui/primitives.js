@@ -1,7 +1,7 @@
 /**
  * Layout and text primitives: card, badge, alert, spinner, empty state.
  *
- * Presentational only — no state, no behaviour. Anything interactive lives in
+ * Presentational only — no state, no behavior. Anything interactive lives in
  * its own module alongside the Radix primitive it wraps.
  */
 
@@ -90,7 +90,7 @@ const alertVariants = cva('rounded-md border px-3 py-2.5 text-[13px]', {
   variants: {
     variant: {
       // the border is what makes an alert a distinct object rather than a
-      // faintly tinted paragraph, so it carries the colour and the fill stays
+      // faintly tinted paragraph, so it carries the color and the fill stays
       // light enough to read dark text on
       info: 'border-sky-300 bg-sky-50 text-sky-900',
       warning: 'border-amber-300 bg-amber-50 text-amber-900',
@@ -129,7 +129,7 @@ export function Spinner({ className }) {
 }
 
 /**
- * Centred loading state for a whole view.
+ * Centered loading state for a whole view.
  *
  * @param {Object} props
  * @return {JSX.Element} The loading state.

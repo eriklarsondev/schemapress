@@ -267,8 +267,16 @@ class ContentType
                 // settings screen names the collections a change would affect,
                 // which it can only do if the listing says which they are
                 'publicApi' => $definition['settings']['publicApi'],
+                // which roles own this collection's entries, empty for "anyone
+                // who may edit content" — see Capabilities::canEditCollection
+                'editRoles' => $definition['settings']['editRoles'],
                 'fields' => count($definition['fields']),
                 'entries' => null,
+                // the version a save is made against. the builder sends this
+                // back when it replaces the field list, so a definition that
+                // moved underneath it is refused rather than overwritten — see
+                // Rest::staleDefinition
+                'modified' => Dates::iso($post->post_modified_gmt),
             ];
         }
 

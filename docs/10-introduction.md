@@ -1,5 +1,5 @@
 <!-- group: Get started -->
-<!-- description: Structured content for WordPress, modelled the way Strapi does it — the concepts, and what this is not. -->
+<!-- description: Structured content for WordPress, modeled the way Strapi does it — the concepts, and what this is not. -->
 
 ## Introduction
 
@@ -36,7 +36,7 @@ existing queries, capabilities and backups keep working.
 ### What it is not
 
 It does not render anything. A collection describes what content **is**; what it **looks
-like** is your theme's business. There are no widths, columns, colours or CSS classes in a
+like** is your theme's business. There are no widths, columns, colors or CSS classes in a
 collection.
 
 That line is the whole design. It is why the same entry can come out as a Twig template, a

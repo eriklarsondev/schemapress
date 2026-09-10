@@ -39,6 +39,13 @@ export function TypeView({ type, onChanged, onDeleted }) {
   const [error, setError] = useState('')
   const [tab, setTab] = useState('entries')
 
+  // the version this screen's copy of the definition was built on, sent back
+  // with a save so one made against a definition that has since moved is
+  // refused rather than applied. this route takes the WHOLE field list, so two
+  // builders with the collection open in two tabs meant the second save
+  // silently deleted whatever the first had added
+  const [version, setVersion] = useState(type.modified || '')
+
   // undefined = the listing; null = a new entry; a number = that entry
   const [entryId, setEntryId] = useState(undefined)
   const [configuring, setConfiguring] = useState(false)
@@ -49,7 +56,10 @@ export function TypeView({ type, onChanged, onDeleted }) {
 
     return api
       .type(type.id)
-      .then((result) => setDefinition(result.definition))
+      .then((result) => {
+        setDefinition(result.definition)
+        setVersion(result.type?.modified || '')
+      })
       .catch((failure) => setError(failure.message))
   }, [type.id])
 
@@ -79,6 +89,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
     api
       .updateType(type.id, {
         ...rest,
+        expectedModified: version,
         definition: {
           ...definition,
           fields: fields || definition.fields,
@@ -87,6 +98,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
       })
       .then((result) => {
         setDefinition(result.definition)
+        setVersion(result.type?.modified || '')
         onChanged()
       })
 

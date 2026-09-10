@@ -94,7 +94,7 @@ class Timber
     /**
      * one entry of a collection, by id.
      *
-     * mirrors sp_entry() in includes/helpers.php.
+     * mirrors schemapress_entry() in includes/helpers.php — the Twig name stays sp_entry, which is safe because it is registered into this plugin's own Twig environment rather than the global one.
      *
      * @param string $key
      * @param string $id

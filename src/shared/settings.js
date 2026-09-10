@@ -16,7 +16,7 @@ export const settings = window.SchemaPress || {}
 export const fieldTypes = settings.fieldTypes || []
 
 /**
- * The element palette: field types expressed as things an author recognises.
+ * The element palette: field types expressed as things an author recognizes.
  *
  * @type {Array<{id: string, label: string, icon: string, field: Object}>}
  */
@@ -66,20 +66,46 @@ let siteSettings = normalize(settings.site)
  * Fills in whatever PHP did not send. Mirrors Settings::normalize.
  *
  * @param {Object} value
- * @return {{restApi: boolean}} The settings.
+ * @return {{restApi: boolean, apiCacheMaxAge: number, deleteDataOnUninstall: boolean}} The settings.
  */
 function normalize(value) {
-  return { restApi: value?.restApi !== false }
+  return {
+    restApi: value?.restApi !== false,
+    apiCacheMaxAge: Number(value?.apiCacheMaxAge) || 0,
+    // the one default that is not a judgement call: the destructive direction
+    // has to be asked for
+    deleteDataOnUninstall: value?.deleteDataOnUninstall === true,
+  }
 }
 
 /**
  * The site's settings as they currently stand.
  *
- * @return {{restApi: boolean}} The settings.
+ * @return {Object} The settings.
  */
 export function site() {
   return siteSettings
 }
+
+/**
+ * Every role a collection's entries can be restricted to.
+ *
+ * The site's own list rather than a fixed one, so a role added by another
+ * plugin is offered without this one knowing it exists.
+ *
+ * @type {Array<{value: string, label: string}>}
+ */
+export const roles = settings.roles || []
+
+/**
+ * Long-running work that was already in flight when the page loaded.
+ *
+ * Bootstrapped so a reindex started before a reload is still visible after it,
+ * rather than appearing to have vanished.
+ *
+ * @type {Array<{id: string, job: string, typeId: number, done: number, total: number}>}
+ */
+export const queuedJobs = settings.jobs || []
 
 /**
  * Adopts what the server stored, so a screen opened after the Settings view was

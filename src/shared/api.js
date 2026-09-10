@@ -27,7 +27,18 @@ function request(path, { method = 'GET', data } = {}) {
     data,
     headers: nonce ? { 'X-WP-Nonce': nonce } : {},
   }).catch((error) => {
-    throw new Error(error?.message || 'Request failed')
+    const failure = new Error(error?.message || 'Request failed')
+
+    // the message is what a screen shows, and for most failures it is all a
+    // screen needs. a few have to be TOLD APART rather than only read out — a
+    // 409 offers to reload, a validation error can mark up the offending
+    // controls — and throwing a bare Error discarded everything but the
+    // sentence. carried on the Error rather than thrown separately, so every
+    // existing `.catch((failure) => setError(failure.message))` is unaffected
+    failure.code = error?.code || ''
+    failure.data = error?.data || {}
+
+    throw failure
   })
 }
 
@@ -206,6 +217,16 @@ export const api = {
     request(`/types/${id}/entries/${entryId}/discard`, { method: 'POST' }),
 
   /**
+   * Copies an entry. The copy is always a draft, whatever the original was.
+   *
+   * @param {number} id
+   * @param {number} entryId
+   * @return {Promise<{entry: Object}>} The copy.
+   */
+  duplicateEntry: (id, entryId) =>
+    request(`/types/${id}/entries/${entryId}/duplicate`, { method: 'POST' }),
+
+  /**
    * Trashes an entry.
    *
    * @param {number} id
@@ -213,4 +234,79 @@ export const api = {
    * @return {Promise<{deleted: boolean}>} Whether it went.
    */
   deleteEntry: (id, entryId) => request(`/types/${id}/entries/${entryId}`, { method: 'DELETE' }),
+
+  /**
+   * One action over several entries.
+   *
+   * The response is per entry — `succeeded` and `failed` — because a bulk
+   * publish where one entry has a required field empty should publish the rest
+   * and say which one it could not.
+   *
+   * @param {number}   id
+   * @param {string}   action  publish, unpublish, discard, duplicate, delete, restore
+   * @param {string[]} entries
+   * @return {Promise<{succeeded: Array, failed: Array}>} What happened to each.
+   */
+  bulk: (id, action, entries) =>
+    request(`/types/${id}/bulk`, { method: 'POST', data: { action, entries } }),
+
+  /**
+   * A page of a collection's trashed entries.
+   *
+   * @param {number} id
+   * @param {Object} args page, perPage
+   * @return {Promise<{entries: Array, total: number, pages: number}>} The page.
+   */
+  trash: (id, args = {}) => request(`/types/${id}/trash${query(args)}`),
+
+  /**
+   * Brings an entry back from the trash, to the state it was in.
+   *
+   * @param {number} id
+   * @param {string} entryId
+   * @return {Promise<{entry: Object}>} The entry.
+   */
+  restoreEntry: (id, entryId) => request(`/types/${id}/trash/${entryId}`, { method: 'POST' }),
+
+  /**
+   * Erases one trashed entry, permanently.
+   *
+   * @param {number} id
+   * @param {string} entryId
+   * @return {Promise<{deleted: boolean}>} Whether it went.
+   */
+  purgeEntry: (id, entryId) => request(`/types/${id}/trash/${entryId}`, { method: 'DELETE' }),
+
+  /**
+   * Erases everything in a collection's trash.
+   *
+   * @param {number} id
+   * @return {Promise<{erased: number}>} How many went.
+   */
+  emptyTrash: (id) => request(`/types/${id}/trash`, { method: 'DELETE' }),
+
+  /**
+   * The site's collections as a portable document.
+   *
+   * @param {Object} args types (comma-separated ids), entries (1 to include)
+   * @return {Promise<{filename: string, export: Object}>} The document.
+   */
+  export: (args = {}) => request(`/export${query(args)}`),
+
+  /**
+   * Reads a portable document back in.
+   *
+   * @param {Object}  payload the parsed document
+   * @param {Object}  options mode, entries
+   * @return {Promise<{report: Object, types: Array}>} What happened.
+   */
+  import: (payload, options = {}) =>
+    request('/import', { method: 'POST', data: { export: payload, ...options } }),
+
+  /**
+   * Long-running work still in flight.
+   *
+   * @return {Promise<{jobs: Array}>} The queue.
+   */
+  jobs: () => request('/jobs'),
 }

@@ -127,7 +127,7 @@ class Rest
         // moving the published copy is its own act, not a flag on a save
         register_rest_route(
             self::NAMESPACE,
-            '/types/(?P<id>\d+)/entries/(?P<entry>[A-Za-z0-9-]+)/(?P<action>publish|unpublish|discard)',
+            '/types/(?P<id>\d+)/entries/(?P<entry>[A-Za-z0-9-]+)/(?P<action>publish|unpublish|discard|duplicate)',
             [
                 [
                     'methods' => 'POST',
@@ -136,6 +136,10 @@ class Rest
                 ],
             ]
         );
+
+        $this->trashRoutes();
+        $this->bulkRoutes();
+        $this->portabilityRoutes();
 
         register_rest_route(self::NAMESPACE, '/settings', [
             [
@@ -146,7 +150,107 @@ class Rest
             ],
         ]);
 
+        register_rest_route(self::NAMESPACE, '/jobs', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'jobs'],
+                'permission_callback' => [$this, 'canEdit'],
+            ],
+        ]);
+
         $this->componentRoutes();
+    }
+
+    /**
+     * the trash: listing it, coming back from it, and emptying it.
+     *
+     * @return void
+     */
+    private function trashRoutes()
+    {
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/trash', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'trash'],
+                'permission_callback' => [$this, 'canEditType'],
+            ],
+            [
+                'methods' => 'DELETE',
+                'callback' => [$this, 'emptyTrash'],
+                // emptying a trash erases content permanently and in bulk, which
+                // is the blast radius the schema capability exists to gate
+                'permission_callback' => [$this, 'canManageType'],
+            ],
+        ]);
+
+        register_rest_route(
+            self::NAMESPACE,
+            '/types/(?P<id>\d+)/trash/(?P<entry>[A-Za-z0-9-]+)',
+            [
+                [
+                    'methods' => 'POST',
+                    'callback' => [$this, 'restoreEntry'],
+                    'permission_callback' => [$this, 'canEditType'],
+                ],
+                [
+                    'methods' => 'DELETE',
+                    'callback' => [$this, 'purgeEntry'],
+                    'permission_callback' => [$this, 'canManageType'],
+                ],
+            ]
+        );
+    }
+
+    /**
+     * one action over several entries at once.
+     *
+     * @return void
+     */
+    private function bulkRoutes()
+    {
+        // NOT /entries/bulk. WordPress matches routes in registration order and
+        // returns the first whose pattern fits, so `bulk` would be read as an
+        // entry identifier by the route above — `[A-Za-z0-9-]+` matches it
+        // perfectly — and every bulk request would have tried to save an entry
+        // whose uuid was the word bulk. its own segment cannot be mistaken for
+        // one
+        register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/bulk', [
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'bulk'],
+                'permission_callback' => [$this, 'canEditType'],
+                'args' => [
+                    'action' => ['type' => 'string', 'required' => true],
+                    'entries' => ['type' => 'array', 'required' => true],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * schemas in and out as files.
+     *
+     * @return void
+     */
+    private function portabilityRoutes()
+    {
+        register_rest_route(self::NAMESPACE, '/export', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'export'],
+                // an export of everything is a copy of the whole content model,
+                // and with entries it is a copy of the content
+                'permission_callback' => [$this, 'canManageSchema'],
+            ],
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/import', [
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'import'],
+                'permission_callback' => [$this, 'canManageSchema'],
+            ],
+        ]);
     }
 
     // --- settings ------------------------------------------------------------
@@ -316,6 +420,13 @@ class Rest
     /**
      * renames a component or replaces its fields.
      *
+     * the same conflict check a collection's definition gets, for the same
+     * reason: this route takes the WHOLE field list, so two people with the
+     * component open in two tabs meant the second save deleted whatever the
+     * first had added. a component is imported by copy, so the loss is not
+     * confined to the component — every collection that imports it afterwards
+     * gets the version that survived.
+     *
      * @param \WP_REST_Request $request
      *
      * @return \WP_REST_Response|\WP_Error
@@ -325,6 +436,12 @@ class Rest
         $id = absint($request['id']);
         $body = $request->get_json_params();
         $body = is_array($body) ? $body : [];
+
+        $conflict = $this->staleDefinition($id, $body, 'fields');
+
+        if ($conflict) {
+            return $conflict;
+        }
 
         $post = ['ID' => $id];
 
@@ -446,6 +563,12 @@ class Rest
         $body = $request->get_json_params();
         $body = is_array($body) ? $body : [];
 
+        $conflict = $this->staleDefinition($id, $body);
+
+        if ($conflict) {
+            return $conflict;
+        }
+
         $post = ['ID' => $id];
 
         if (isset($body['title']) && trim((string) $body['title']) !== '') {
@@ -472,7 +595,70 @@ class Rest
     }
 
     /**
+     * refuses a schema save built on a definition that has since moved.
+     *
+     * the same rule entries get — see Entries::conflict — for the same reason,
+     * and here the loss is larger: this route takes the WHOLE field list, so two
+     * builders with the collection open in two tabs meant the second save
+     * silently deleted whatever the first had added.
+     *
+     * the schema post's modified stamp is the version, because saving a
+     * definition moves it — see SchemaRepository::saveDefinition, which is where
+     * that had to be made true. as with an entry it is optional, so a script
+     * that has always posted a definition still can.
+     *
+     * a component is the same shape and gets the same check — see
+     * updateComponent, which is why the key naming the field-replacing half of
+     * the body is a parameter rather than the literal `definition`.
+     *
+     * @param integer $id
+     * @param array   $body
+     * @param string  $key the body key whose presence means the fields are
+     *                     being replaced
+     *
+     * @return \WP_Error|null
+     */
+    private function staleDefinition($id, array $body, $key = 'definition')
+    {
+        $expected = isset($body['expectedModified']) ? (string) $body['expectedModified'] : '';
+
+        // only a save that would REPLACE the fields can lose somebody's work. a
+        // rename arriving alongside a stale stamp is not worth refusing
+        if ($expected === '' || !isset($body[$key])) {
+            return null;
+        }
+
+        $post = get_post($id);
+        $current = $post ? Dates::iso($post->post_modified_gmt) : '';
+
+        if ($current === '' || $current === $expected) {
+            return null;
+        }
+
+        return new \WP_Error(
+            'schemapress_conflict',
+            $key === 'fields'
+                ? __(
+                    'Somebody else changed this component while you were editing it. Reload before saving, or your changes will replace theirs.',
+                    'schemapress'
+                )
+                : __(
+                    'Somebody else changed this collection while you were editing it. Reload before saving, or your changes will replace theirs.',
+                    'schemapress'
+                ),
+            ['status' => 409, 'expected' => $expected, 'current' => $current]
+        );
+    }
+
+    /**
      * deletes a type. its entries go with it, which is why this asks.
+     *
+     * a collection small enough to erase inside the request is; anything larger
+     * is queued, because reading every entry of a large collection to delete
+     * them one at a time is precisely the request that does not finish. the
+     * definition is deleted by the last chunk rather than here, so an
+     * interrupted purge leaves the collection behind to be finished from rather
+     * than a post type full of orphans nothing can name.
      *
      * @param \WP_REST_Request $request
      *
@@ -482,6 +668,18 @@ class Rest
     {
         $id = absint($request['id']);
         $type = ContentType::get($id);
+
+        if ($type && !Batch::inline($id)) {
+            Batch::queue('purge', ['type_id' => $id, 'delete_type' => true]);
+
+            return rest_ensure_response([
+                'deleted' => true,
+                'queued' => true,
+                'types' => array_values(array_filter(ContentType::all(), function ($one) use ($id) {
+                    return $one['id'] !== $id;
+                })),
+            ]);
+        }
 
         if ($type && $type['postType']) {
             foreach (get_posts([
@@ -587,7 +785,7 @@ class Rest
     }
 
     /**
-     * publishes, unpublishes or discards the draft.
+     * publishes, unpublishes, discards the draft, or copies the entry.
      *
      * @param \WP_REST_Request $request
      *
@@ -599,10 +797,17 @@ class Rest
             'publish' => [Entries::class, 'publish'],
             'unpublish' => [Entries::class, 'unpublish'],
             'discard' => [Entries::class, 'discard'],
+            'duplicate' => [Entries::class, 'duplicate'],
         ];
 
         $action = (string) $request['action'];
         $entry = call_user_func($actions[$action], $request['id'], $request['entry']);
+
+        // a duplicate can fail on a unique field, and that sentence names which
+        // one — the same reason storeEntry passes a validation error through
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
 
         if (!$entry) {
             return new \WP_Error(
@@ -613,6 +818,213 @@ class Rest
         }
 
         return rest_ensure_response(['entry' => $entry]);
+    }
+
+    // --- the trash -----------------------------------------------------------
+
+    /**
+     * a page of a collection's trashed entries.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function trash($request)
+    {
+        return rest_ensure_response(Entries::trashed(absint($request['id']), [
+            'page' => $request->get_param('page'),
+            'perPage' => $request->get_param('perPage'),
+        ]));
+    }
+
+    /**
+     * brings an entry back from the trash.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function restoreEntry($request)
+    {
+        $entry = Entries::restore(absint($request['id']), $request['entry']);
+
+        if (!$entry) {
+            return new \WP_Error(
+                'schemapress_no_entry',
+                __('That entry is not in the trash.', 'schemapress'),
+                ['status' => 404]
+            );
+        }
+
+        return rest_ensure_response(['entry' => $entry]);
+    }
+
+    /**
+     * erases one trashed entry.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function purgeEntry($request)
+    {
+        return rest_ensure_response([
+            'deleted' => Entries::purge(absint($request['id']), $request['entry']),
+        ]);
+    }
+
+    /**
+     * erases everything in a collection's trash.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response
+     */
+    public function emptyTrash($request)
+    {
+        return rest_ensure_response(['erased' => Entries::emptyTrash(absint($request['id']))]);
+    }
+
+    // --- several at once -----------------------------------------------------
+
+    /**
+     * one action applied to a list of entries.
+     *
+     * the result is per entry rather than one verdict for the request. a bulk
+     * publish of forty entries where one has a required field empty should
+     * publish the thirty-nine and say which one it could not — reporting the
+     * whole thing as a failure would be both untrue and unhelpful.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function bulk($request)
+    {
+        $type_id = absint($request['id']);
+        $action = (string) $request['action'];
+        $entries = (array) $request['entries'];
+
+        $handlers = [
+            'publish' => [Entries::class, 'publish'],
+            'unpublish' => [Entries::class, 'unpublish'],
+            'discard' => [Entries::class, 'discard'],
+            'duplicate' => [Entries::class, 'duplicate'],
+            'delete' => [Entries::class, 'delete'],
+            'restore' => [Entries::class, 'restore'],
+        ];
+
+        if (!isset($handlers[$action])) {
+            return new \WP_Error(
+                'schemapress_unknown_action',
+                __('That is not something that can be done to several entries at once.', 'schemapress'),
+                ['status' => 400]
+            );
+        }
+
+        // a bulk request is one page of a listing at most, and a page is capped
+        // at a hundred. a body naming more than that is not the admin asking
+        if (count($entries) > 100) {
+            return new \WP_Error(
+                'schemapress_too_many',
+                __('That is more entries than one request can act on. Do it a page at a time.', 'schemapress'),
+                ['status' => 400]
+            );
+        }
+
+        $succeeded = [];
+        $failed = [];
+
+        foreach ($entries as $entry) {
+            $result = call_user_func($handlers[$action], $type_id, (string) $entry);
+
+            if (!$result || is_wp_error($result)) {
+                $failed[] = [
+                    'id' => (string) $entry,
+                    'message' => is_wp_error($result)
+                        ? $result->get_error_message()
+                        : __('That could not be done.', 'schemapress'),
+                ];
+
+                continue;
+            }
+
+            $succeeded[] = (string) $entry;
+        }
+
+        return rest_ensure_response([
+            'action' => $action,
+            'succeeded' => $succeeded,
+            'failed' => $failed,
+        ]);
+    }
+
+    // --- portability ---------------------------------------------------------
+
+    /**
+     * collections as a portable document.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function export($request)
+    {
+        $types = array_filter(array_map(
+            'absint',
+            array_filter(explode(',', (string) $request->get_param('types')), 'strlen')
+        ));
+
+        $payload = Portability::export($types, [
+            'entries' => (bool) $request->get_param('entries'),
+        ]);
+
+        if (is_wp_error($payload)) {
+            return $payload;
+        }
+
+        return rest_ensure_response([
+            'filename' => Portability::filename($types),
+            'export' => $payload,
+        ]);
+    }
+
+    /**
+     * restores collections from an exported document.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function import($request)
+    {
+        $body = $request->get_json_params();
+        $body = is_array($body) ? $body : [];
+
+        $report = Portability::import($body['export'] ?? null, [
+            'mode' => ($body['mode'] ?? '') === 'replace' ? 'replace' : 'merge',
+            'entries' => !empty($body['entries']),
+        ]);
+
+        if (is_wp_error($report)) {
+            return $report;
+        }
+
+        return rest_ensure_response([
+            'report' => $report,
+            'types' => ContentType::all(),
+            'components' => Component::all(),
+        ]);
+    }
+
+    /**
+     * what long-running work is queued, so a screen can show its progress.
+     *
+     * @return \WP_REST_Response
+     */
+    public function jobs()
+    {
+        return rest_ensure_response(['jobs' => Batch::status()]);
     }
 
     /**
@@ -697,21 +1109,21 @@ class Rest
      */
     public function canEdit()
     {
-        return current_user_can(Admin::CAPABILITY);
+        return Capabilities::canEdit();
     }
 
     /**
      * whether the current user may change the shape of content.
      *
      * a higher bar than editing entries, and deliberately — see
-     * Admin::SCHEMA_CAPABILITY. everything gated on this either restructures
+     * class-capabilities.php. everything gated on this either restructures
      * stored content or decides what the site publishes.
      *
      * @return boolean
      */
     public function canManageSchema()
     {
-        return current_user_can(Admin::SCHEMA_CAPABILITY);
+        return Capabilities::canManage();
     }
 
     /**
@@ -742,7 +1154,12 @@ class Rest
 
 
     /**
-     * whether the current user may edit a specific content type.
+     * whether the current user may edit a specific content type's entries.
+     *
+     * this used to be `edit_post` on the SCHEMA post, which mapped to the page
+     * capabilities and so meant "may this person edit content at all" — the same
+     * answer for every collection on the site. a collection may now name the
+     * roles that own it, and this is where that is enforced.
      *
      * @param \WP_REST_Request $request
      *
@@ -752,7 +1169,7 @@ class Rest
     {
         $id = absint($request['id']);
 
-        return get_post_type($id) === Schema::POST_TYPE && current_user_can('edit_post', $id);
+        return get_post_type($id) === Schema::POST_TYPE && Capabilities::canEditCollection($id);
     }
 
     /**
@@ -766,6 +1183,6 @@ class Rest
     {
         $id = absint($request['id']);
 
-        return get_post_type($id) === Component::POST_TYPE && current_user_can('edit_post', $id);
+        return get_post_type($id) === Component::POST_TYPE && Capabilities::canEdit();
     }
 }

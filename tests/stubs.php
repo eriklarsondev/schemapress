@@ -45,6 +45,8 @@ function sp_test_reset()
     $GLOBALS['wp_meta'] = [];
     $GLOBALS['wp_post_types'] = ['page' => true, 'attachment' => true];
     $GLOBALS['wp_next_id'] = 100;
+    $GLOBALS['wp_next_stamp'] = 0;
+    $GLOBALS['sp_test_undeletable'] = [];
     $GLOBALS['wp_actions'] = [];
     $GLOBALS['wp_options'] = [];
     $GLOBALS['wp_rest_routes'] = [];
@@ -68,7 +70,7 @@ function esc_url_raw($value)
 {
     $value = trim((string) $value);
 
-    // enough of WordPress's behaviour to matter here: a scheme it does not
+    // enough of WordPress's behavior to matter here: a scheme it does not
     // allow yields an empty string rather than a stored javascript: payload
     if ($value !== '' && preg_match('#^\s*(javascript|data|vbscript):#i', $value)) {
         return '';
@@ -128,9 +130,69 @@ function do_action($hook, ...$args)
     }
 }
 
-function add_filter($hook, $callback = null, $priority = 10, $args = 1) {}
-function apply_filters($hook, $value) { return $value; }
-function current_user_can($cap, $id = null) { return true; }
+/**
+ * Filters that actually run.
+ *
+ * These were no-ops — add_filter stored nothing and apply_filters handed the
+ * value straight back — which meant any behavior the plugin achieves THROUGH a
+ * filter was invisible to the suite. Entries::restore() is the case that
+ * surfaced it: it relies on `wp_untrash_post_status`, and with a filter that
+ * never ran, the stub's own untrash quietly did the plugin's job for it and the
+ * test passed for a reason real WordPress would not reproduce.
+ *
+ * Priority-ordered and argument-counted the way WordPress does it. With nothing
+ * registered, apply_filters still returns the value unchanged, so every existing
+ * call is unaffected.
+ */
+$GLOBALS['wp_filters'] = [];
+
+function add_filter($hook, $callback = null, $priority = 10, $args = 1)
+{
+    $GLOBALS['wp_filters'][$hook][$priority][] = ['callback' => $callback, 'args' => (int) $args];
+
+    return true;
+}
+
+function remove_filter($hook, $callback, $priority = 10)
+{
+    foreach ($GLOBALS['wp_filters'][$hook][$priority] ?? [] as $index => $registered) {
+        if ($registered['callback'] === $callback) {
+            unset($GLOBALS['wp_filters'][$hook][$priority][$index]);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function apply_filters($hook, $value, ...$extra)
+{
+    $byPriority = $GLOBALS['wp_filters'][$hook] ?? [];
+    ksort($byPriority);
+
+    foreach ($byPriority as $callbacks) {
+        foreach ($callbacks as $registered) {
+            $args = array_slice(array_merge([$value], $extra), 0, max(1, $registered['args']));
+            $value = call_user_func_array($registered['callback'], $args);
+        }
+    }
+
+    return $value;
+}
+/**
+ * Everything is permitted unless a test says otherwise.
+ *
+ * Most of the suite is not about permissions and should not have to grant
+ * itself any. A test that IS about them sets $GLOBALS['sp_test_caps'] to the
+ * map it wants and puts it back afterwards.
+ */
+function current_user_can($cap, $id = null)
+{
+    $caps = $GLOBALS['sp_test_caps'] ?? null;
+
+    return is_array($caps) ? !empty($caps[$cap]) : true;
+}
 function add_menu_page() { return 'toplevel_page_schemapress'; }
 function add_submenu_page() { return 'schemapress_page_docs'; }
 function admin_url($path = '') { return 'http://example.test/wp-admin/' . $path; }
@@ -181,7 +243,7 @@ function is_wp_error($value) { return $value instanceof WP_Error; }
 // --- REST --------------------------------------------------------------------
 
 // recorded rather than discarded: whether the content API's namespace is
-// registered AT ALL is the master switch's whole behaviour, so a test has to be
+// registered AT ALL is the master switch's whole behavior, so a test has to be
 // able to see what was registered
 function register_rest_route($namespace, $route, $args = [])
 {
@@ -194,7 +256,48 @@ function register_rest_route($namespace, $route, $args = [])
  * The response is the payload here, so a test can read it as the array the
  * handler built rather than unwrapping an object that does nothing else.
  */
-function rest_ensure_response($data) { return $data; }
+/**
+ * A response that still reads as the array it wraps.
+ *
+ * The content API sets headers on what it returns — an ETag, a Cache-Control —
+ * so a bare array is no longer enough. Making this ArrayAccess means every
+ * assertion written as `$response['data']` goes on meaning what it did, and a
+ * test that wants to check a header can ask for one.
+ */
+class WP_REST_Response implements ArrayAccess
+{
+    public $data;
+    public $status;
+    public $headers = [];
+
+    public function __construct($data = null, $status = 200)
+    {
+        $this->data = $data;
+        $this->status = $status;
+    }
+
+    public function header($name, $value) { $this->headers[$name] = $value; }
+    public function get_headers() { return $this->headers; }
+    public function get_status() { return $this->status; }
+    public function get_data() { return $this->data; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset) { return $this->data[$offset] ?? null; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetExists($offset) { return isset($this->data[$offset]); }
+
+    #[\ReturnTypeWillChange]
+    public function offsetSet($offset, $value) { $this->data[$offset] = $value; }
+
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($offset) { unset($this->data[$offset]); }
+}
+
+function rest_ensure_response($data)
+{
+    return $data instanceof WP_REST_Response ? $data : new WP_REST_Response($data);
+}
 
 /**
  * Enough of a request for the content API: the path parts it matches on, and
@@ -204,15 +307,23 @@ class WP_REST_Request implements ArrayAccess
 {
     private $params;
     private $query;
+    private $headers;
 
-    public function __construct(array $params = [], array $query = [])
+    public function __construct(array $params = [], array $query = [], array $headers = [])
     {
         $this->params = $params;
         $this->query = $query;
+        $this->headers = $headers;
     }
 
     public function get_query_params() { return $this->query; }
     public function get_param($key) { return $this->params[$key] ?? null; }
+
+    // WordPress normalizes a header name to lowercase with underscores, which
+    // is why the API asks for `if_none_match` rather than `If-None-Match`
+    public function get_header($name) { return $this->headers[$name] ?? null; }
+
+    public function get_json_params() { return $this->params['__json'] ?? []; }
 
     #[\ReturnTypeWillChange]
     public function offsetGet($offset) { return $this->params[$offset] ?? null; }
@@ -289,6 +400,25 @@ function sp_test_unique_slug($slug, $type, $exclude = 0)
     return $unique;
 }
 
+/**
+ * The next modified stamp, one second on from the last.
+ *
+ * WordPress sets post_modified on every insert AND every update, and stamping
+ * everything with one fixed time here hid a real bug for a release: nothing in
+ * the plugin moved a schema's stamp when its definition was saved, and the
+ * conflict check that reads it could not have failed under a stub where the
+ * stamp never moved either.
+ *
+ * A counter rather than the wall clock, because two writes in the same second
+ * would tie and the suite has to be able to tell "before" from "after".
+ *
+ * @return string
+ */
+function sp_test_stamp()
+{
+    return gmdate('Y-m-d H:i:s', strtotime('2026-09-02 00:00:00') + $GLOBALS['wp_next_stamp']++);
+}
+
 function wp_insert_post($data, $wp_error = false)
 {
     $id = $GLOBALS['wp_next_id']++;
@@ -306,7 +436,7 @@ function wp_insert_post($data, $wp_error = false)
             $id
         ),
         'post_status' => $data['post_status'] ?? 'publish',
-        'post_modified_gmt' => '2026-09-02 00:00:00',
+        'post_modified_gmt' => sp_test_stamp(),
     ];
 
     return $id;
@@ -333,6 +463,11 @@ function wp_update_post($data, $wp_error = false)
             $id
         );
     }
+
+    // as WordPress does, and unconditionally: wp_insert_post overwrites
+    // post_modified on every update, which is what makes the stamp a version
+    // rather than a description of the last edit somebody typed
+    $GLOBALS['wp_posts'][$id]->post_modified_gmt = sp_test_stamp();
 
     return $id;
 }
@@ -369,16 +504,57 @@ function wp_trash_post($id)
 {
     $post = get_post($id);
 
-    if ($post) {
-        $post->post_status = 'trash';
+    if (!$post) {
+        return false;
     }
 
-    return (bool) $post;
+    // WordPress records the status it is coming from and the moment it went, and
+    // the plugin reads both — one to restore to, one to say how long is left
+    update_post_meta($id, '_wp_trash_meta_status', $post->post_status);
+    update_post_meta($id, '_wp_trash_meta_time', time());
+
+    $post->post_status = 'trash';
+
+    return true;
+}
+
+function wp_untrash_post($id)
+{
+    $post = get_post($id);
+
+    if (!$post || $post->post_status !== 'trash') {
+        return false;
+    }
+
+    $was = (string) get_post_meta($id, '_wp_trash_meta_status', true);
+
+    // WordPress 5.6+: back to draft, whatever it was, unless a filter says
+    // otherwise. the previous status is handed to the filter precisely so a
+    // caller can choose it. this used to restore the previous status on its
+    // own, which is kinder than WordPress and let a plugin bug pass the suite
+    $post->post_status = apply_filters('wp_untrash_post_status', 'draft', $id, $was);
+
+    delete_post_meta($id, '_wp_trash_meta_status');
+    delete_post_meta($id, '_wp_trash_meta_time');
+
+    return true;
 }
 
 function wp_delete_post($id, $force = false)
 {
-    unset($GLOBALS['wp_posts'][absint($id)]);
+    $id = absint($id);
+
+    // stands in for `pre_delete_post`, which lets any other plugin on the site
+    // veto a deletion. WordPress returns false and leaves the post where it is,
+    // which is the case that used to make Entries::emptyTrash() spin forever:
+    // it reads the front of the trash and deletes what it read, so a page that
+    // survives its own deletion is read again, vetoed again, and the request
+    // never returns
+    if (in_array($id, (array) ($GLOBALS['sp_test_undeletable'] ?? []), true)) {
+        return false;
+    }
+
+    unset($GLOBALS['wp_posts'][$id]);
 
     return true;
 }
@@ -826,6 +1002,90 @@ class SP_Test_Wpdb
 
 $GLOBALS['wpdb'] = new SP_Test_Wpdb();
 
+// --- scheduling and roles ----------------------------------------------------
+
+/**
+ * Just enough WP-Cron for Batch, which asks whether the drain is already
+ * scheduled before scheduling it. Nothing here runs anything: a test that wants
+ * a job finished calls Batch::finish(), which is what WP-CLI does too.
+ */
+$GLOBALS['wp_cron'] = [];
+
+function wp_next_scheduled($hook) { return $GLOBALS['wp_cron'][$hook] ?? false; }
+
+function wp_schedule_single_event($when, $hook)
+{
+    $GLOBALS['wp_cron'][$hook] = (int) $when;
+
+    return true;
+}
+
+function wp_clear_scheduled_hook($hook)
+{
+    unset($GLOBALS['wp_cron'][$hook]);
+}
+
+/**
+ * Roles, as much of them as Capabilities needs: enough to grant a capability,
+ * read it back, and ask which roles a user holds.
+ */
+class SP_Test_Role
+{
+    public $name;
+    public $capabilities = [];
+
+    public function __construct($name) { $this->name = $name; }
+    public function add_cap($cap) { $this->capabilities[$cap] = true; }
+    public function remove_cap($cap) { unset($this->capabilities[$cap]); }
+}
+
+class SP_Test_Roles
+{
+    public $roles = [];
+    public $role_objects = [];
+
+    public function __construct()
+    {
+        foreach (['administrator' => 'Administrator', 'editor' => 'Editor'] as $slug => $label) {
+            $this->roles[$slug] = ['name' => $label];
+            $this->role_objects[$slug] = new SP_Test_Role($slug);
+        }
+    }
+}
+
+function wp_roles()
+{
+    if (!isset($GLOBALS['wp_roles_instance'])) {
+        $GLOBALS['wp_roles_instance'] = new SP_Test_Roles();
+    }
+
+    return $GLOBALS['wp_roles_instance'];
+}
+
+function get_role($name) { return wp_roles()->role_objects[$name] ?? null; }
+
+function translate_user_role($name) { return $name; }
+
+function wp_get_current_user()
+{
+    return (object) ['roles' => $GLOBALS['wp_current_roles'] ?? ['administrator']];
+}
+
+function home_url() { return 'https://example.test'; }
+
+if (!function_exists('_n')) {
+    function _n($single, $plural, $number, $domain = 'default') { return (int) $number === 1 ? $single : $plural; }
+}
+
+function wp_parse_url($url, $component = -1) { return parse_url($url, $component); }
+
+function sanitize_hex_color($color)
+{
+    $color = trim((string) $color);
+
+    return preg_match('/^#([A-Fa-f0-9]{3}){1,2}$/', $color) ? $color : '';
+}
+
 require_once SCHEMAPRESS_PATH . 'classes/class-inflector.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-datasets.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-dates.php';
@@ -840,12 +1100,15 @@ require_once SCHEMAPRESS_PATH . 'classes/class-resolver.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-fields.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entry.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-query.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-batch.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-index.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entries.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content-type.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-collection.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-component.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-capabilities.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-portability.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-api.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-upgrade.php';
 

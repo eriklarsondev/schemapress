@@ -6,7 +6,7 @@
 The addresses, and what may be asked of them. **Response format** covers what comes
 back; **Filters** and **Sorting & pagination** cover the parameters.
 
-The API is modelled on Strapi, deliberately and down to the parameter names, so a client
+The API is modeled on Strapi, deliberately and down to the parameter names, so a client
 written against one reads against the other.
 
 ### Base URL
@@ -71,7 +71,7 @@ collection edited again.
 The **Settings** screen lists every collection with its own pair of switches, so what the
 site publishes can be read and changed in one place rather than one dialog at a time. The
 switches there are the same ones as on each collection's screen — set in either, stored on
-the collection. With the master switch off they are shown greyed, because they still say
+the collection. With the master switch off they are shown grayed, because they still say
 what will happen when it goes back on.
 
 Separating **Read one** from **Read many** is worth the extra switch. A client that already

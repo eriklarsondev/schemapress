@@ -72,6 +72,26 @@ class Dates
     }
 
     /**
+     * a unix timestamp as ISO-8601 in UTC.
+     *
+     * WordPress records when a post was trashed as `_wp_trash_meta_time`, which
+     * is a unix timestamp rather than the "Y-m-d H:i:s" every other date on a
+     * post is written in — so iso() cannot read it, and a trash listing showing
+     * "how long is left" needs it in the same shape as every other instant the
+     * API reports.
+     *
+     * @param mixed $value
+     *
+     * @return string YYYY-MM-DDTHH:MM:SSZ, or ''
+     */
+    public static function instant($value)
+    {
+        $stamp = is_numeric($value) ? (int) $value : 0;
+
+        return $stamp > 0 ? gmdate('Y-m-d\TH:i:s\Z', $stamp) : '';
+    }
+
+    /**
      * accepts what `<input type="date">` sends.
      *
      * @param mixed $value

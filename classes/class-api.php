@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 /**
  * the content API.
  *
- * modelled on Strapi, down to the URLs and the parameter names, so a client
+ * modeled on Strapi, down to the URLs and the parameter names, so a client
  * written against one reads against the other:
  *
  *   GET /wp-json/schemapress/api/team-members
@@ -123,7 +123,7 @@ class Api
             return $this->shape($entry);
         }, $result['entries']);
 
-        return rest_ensure_response([
+        return $this->cached($request, [
             'data' => $data,
             'meta' => Query::meta($spec['pagination'], $result['total']),
         ]);
@@ -156,13 +156,71 @@ class Api
             );
         }
 
-        return rest_ensure_response([
+        return $this->cached($request, [
             'data' => $this->shape($entry),
             'meta' => new \stdClass(),
         ]);
     }
 
     // --- internals -----------------------------------------------------------
+
+    /**
+     * a response a client can hold on to, and ask about cheaply next time.
+     *
+     * every response carried no cache headers at all, so a build step reading a
+     * collection every minute got a full WordPress bootstrap, a WP_Query and the
+     * whole resolver each time to be handed bytes it already had.
+     *
+     * so there is an ETAG, always. it is a hash of the body, which is exactly
+     * the right thing to key on here: the body is a pure function of the
+     * published content and the query, so it changes when and only when the
+     * answer does. a client that sends back `If-None-Match` gets a 304 with no
+     * body — the query still runs, but nothing is serialized or transferred, and
+     * that is the bulk of a listing's cost.
+     *
+     * MAX-AGE IS ZERO UNLESS THE SITE SAYS OTHERWISE, and the two are different
+     * promises. an ETag says "ask me and I will tell you cheaply"; a max-age
+     * says "do not ask me for an hour", which means an editor publishing a
+     * correction cannot get it onto a CDN-fronted site until that hour is up.
+     * that is a real trade some sites want and not one to make on their behalf —
+     * see Settings::cacheMaxAge.
+     *
+     * @param \WP_REST_Request $request
+     * @param array            $payload
+     *
+     * @return \WP_REST_Response
+     */
+    private function cached($request, array $payload)
+    {
+        $etag = '"' . md5((string) wp_json_encode($payload)) . '"';
+        $maxAge = Settings::cacheMaxAge();
+
+        // a listing is public, so `public` is honest and lets a shared cache
+        // hold it. `must-revalidate` is what stops a proxy serving a stale copy
+        // past its age rather than asking — which is the failure mode that makes
+        // people distrust caching and turn it off everywhere
+        $control = $maxAge > 0
+            ? sprintf('public, max-age=%d, must-revalidate', $maxAge)
+            : 'public, max-age=0, must-revalidate';
+
+        if (trim((string) $request->get_header('if_none_match')) === $etag) {
+            $response = new \WP_REST_Response(null, 304);
+            $response->header('ETag', $etag);
+            $response->header('Cache-Control', $control);
+
+            return $response;
+        }
+
+        $response = rest_ensure_response($payload);
+        $response->header('ETag', $etag);
+        $response->header('Cache-Control', $control);
+        // the query string is part of the answer and the header is not, but a
+        // cache keyed on the URL alone would hand one client another's page of
+        // results if anything ever varied by header. saying so costs nothing
+        $response->header('Vary', 'Accept-Encoding, Origin');
+
+        return $response;
+    }
 
     /**
      * the collection behind a path segment, if it is open for this shape of read.

@@ -31,6 +31,16 @@ class Upgrade
     const OPTION = 'schemapress_version';
 
     /**
+     * the lock, so two requests arriving together do not both upgrade.
+     */
+    const LOCK = 'schemapress_upgrade_lock';
+
+    /**
+     * how long a lock is honored before it is assumed to be a crashed run.
+     */
+    const LOCK_TTL = 300;
+
+    /**
      * hooks the check.
      */
     public function __construct()
@@ -41,13 +51,38 @@ class Upgrade
     /**
      * brings the installation up to the running version.
      *
+     * THE LOCK AND THE ORDER ARE THE POINT. this runs on whichever request
+     * arrives first after the files change, which on a live site is an
+     * anonymous front-end pageview and possibly several at once. the previous
+     * version had neither: concurrent requests all ran the whole backfill
+     * together, and the version was only recorded after every collection had
+     * been walked — so a run that timed out recorded nothing and the next
+     * request started again from the beginning, forever.
+     *
+     * now the version is written FIRST and the work is queued. a request cannot
+     * fail to finish something it is not doing, and what is left is a job with a
+     * cursor that survives being interrupted. see class-batch.php.
+     *
      * @return void
      */
     public function run()
     {
-        if (get_option(self::OPTION) === SCHEMAPRESS_VERSION) {
+        $from = get_option(self::OPTION);
+
+        if ($from === SCHEMAPRESS_VERSION || !$this->lock()) {
             return;
         }
+
+        // before the work, not after it. this is the flag that says "this
+        // version has been seen", and every step below is either idempotent or
+        // a queued job that tracks its own progress — so nothing is lost by not
+        // being able to run the whole thing twice
+        update_option(self::OPTION, SCHEMAPRESS_VERSION);
+
+        // the capabilities the plugin defines for itself, which a site that
+        // updated its files without deactivating has never been given. granting
+        // is additive and repeatable, so it costs nothing to redo
+        Capabilities::grant();
 
         $minted = 0;
 
@@ -57,14 +92,34 @@ class Upgrade
             $minted += Entries::backfill($type['id']);
         }
 
-        update_option(self::OPTION, SCHEMAPRESS_VERSION);
+        delete_option(self::LOCK);
 
         /**
          * fires after an upgrade has run.
          *
          * @param string  $version the version now stored
-         * @param integer $minted  how many entries were given an identifier
+         * @param integer $minted  how many entries were given an identifier on
+         *                         the spot; a large collection is queued instead
+         * @param string  $from    the version that was stored before, or false
          */
-        do_action('schemapress/upgraded', SCHEMAPRESS_VERSION, $minted);
+        do_action('schemapress/upgraded', SCHEMAPRESS_VERSION, $minted, $from);
+    }
+
+    /**
+     * takes the upgrade lock.
+     *
+     * @return boolean
+     */
+    private function lock()
+    {
+        $held = (int) get_option(self::LOCK, 0);
+
+        if ($held && (time() - $held) < self::LOCK_TTL) {
+            return false;
+        }
+
+        update_option(self::LOCK, time(), false);
+
+        return true;
     }
 }

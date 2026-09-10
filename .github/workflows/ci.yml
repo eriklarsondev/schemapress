@@ -1,0 +1,71 @@
+name: CI
+
+# Every push and every pull request. The suite is a plain PHP script with no
+# database and no WordPress, so it costs seconds — there is no version of this
+# worth running less often than that.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      # a failure on 8.2 should not hide whether 8.4 is also broken
+      fail-fast: false
+      matrix:
+        # 8.2 is the floor the plugin header declares, because Timber 2 needs
+        # it. the newest stable is the ceiling, so a deprecation lands here
+        # rather than on somebody's site
+        php: ['8.2', '8.3', '8.4']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Lint every PHP file
+        # the suite loads most of the plugin but not all of it — uninstall.php
+        # never runs under it by design, and a parse error there would only
+        # surface when somebody deleted the plugin
+        run: |
+          find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' \
+            -print0 | xargs -0 -n1 -P4 php -l
+
+      - name: Run the suite
+        run: php tests/run.php
+
+  build:
+    name: Build the admin
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: The committed build must match the source
+        # the plugin ships built, so build/ is committed alongside the change
+        # that needed it. a build that comes out different from what is in the
+        # tree means somebody edited src/ and did not rebuild — which ships an
+        # admin that does not match its own source
+        run: |
+          if ! git diff --quiet -- build/; then
+            echo "build/ is out of date. Run 'npm run build' and commit the result."
+            git diff --stat -- build/
+            exit 1
+          fi

@@ -30,7 +30,7 @@ function rowLabel(field, row, index) {
   }
 
   // fall back to the first filled text field, so an unconfigured repeater
-  // still shows something recognisable
+  // still shows something recognizable
   const readable = (field.fields || []).find(
     (child) => ['text', 'textarea', 'wysiwyg'].includes(child.type) && row.values?.[child.key]
   )

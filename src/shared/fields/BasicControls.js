@@ -124,7 +124,7 @@ export function NumberField({ field, value, onChange }) {
  * A calendar date, a clock time, or both.
  *
  * Each maps to the browser's own picker, which is the one thing here worth not
- * reinventing: it is localised, keyboard-operable and familiar, and a hand-built
+ * reinventing: it is localized, keyboard-operable and familiar, and a hand-built
  * calendar is a month of work to get to the same place.
  *
  * The value passes through untouched in both directions. The stored forms are

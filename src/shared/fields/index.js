@@ -24,6 +24,8 @@ import {
   SelectField,
 } from './BasicControls'
 import { ImageField, FileField } from './MediaControl'
+import { GalleryField } from './GalleryControl'
+import { ColorField, JsonField } from './ValueControls'
 import { LinkField } from './LinkControl'
 import { RichTextField } from './RichTextControl'
 import { RepeaterField, GroupField } from './RepeaterControl'
@@ -41,7 +43,10 @@ const CONTROLS = {
   time: TimeField,
   toggle: ToggleField,
   select: SelectField,
+  color: ColorField,
+  json: JsonField,
   image: ImageField,
+  gallery: GalleryField,
   file: FileField,
   link: LinkField,
   group: GroupField,
