@@ -76,8 +76,35 @@ ships. Three things keep them out of a release, and it is worth knowing which do
    for as long as you have dev dependencies installed. This is normal. `bin/vendor-no-dev`
    runs in the pre-commit hook and refuses to let them into a commit while they describe a
    dev install; CI runs the same check against the committed tree.
+
+   In practice this means **`git add -A` will stop your commit**, because it sweeps those
+   six files in. Leave them out and carry on:
+
+   ```bash
+   git restore --staged vendor/
+   ```
+
+   The hook says exactly this when it fires. The only time you *should* be staging
+   `vendor/` is a release — see below.
 3. **`npm run package` rebuilds `vendor/` with `--no-dev` into a staging copy**, so the
    released zip is dev-free regardless of what your working tree looks like.
+
+### `config.platform` is pinned to PHP 8.2
+
+`composer.json` sets `config.platform.php` to `8.2`, and it has to stay there. It makes
+Composer resolve against the PHP the plugin header **promises** rather than the PHP the
+maintainer happens to be running.
+
+Without it, running `composer require` on a newer PHP silently locks dependencies that
+newer PHP allows. That is exactly what happened the first time this tooling was added on
+PHP 8.5: it locked `symfony/console` 8.1 and `sebastian/diff` 9, both of which need
+`>=8.4`, and `composer.lock` stopped installing on 8.2 altogether. Nothing local
+complained — the maintainer's machine was fine. CI failed on the 8.2 jobs, after the lock
+was already committed.
+
+So if you add a dev dependency, the lock it produces is the one a contributor on 8.2 has
+to be able to install. The pin makes that automatic. Runtime dependencies are unaffected
+either way; they all support 8.2 already.
 
 If you need to commit a genuine dependency change:
 
@@ -161,6 +188,13 @@ value and an actual value; follow what is already in `tests/collections.php`.
 4. If you changed behaviour a user would notice, update the relevant page in `docs/`.
 5. Add a line to `CHANGELOG.md` under the unreleased heading.
 
+**You do not need to run `npm run pot`.** The translation template records a file and line
+number for every string, so any edit to `src/` shifts references throughout it and the
+`POT-Creation-Date` header changes on every run — regenerating it per commit would put a
+few hundred lines of churn in front of a reviewer for no benefit. It is regenerated once
+before a release, and nothing checks it in CI. Do run it if you added or reworded a
+translatable string and want to confirm it comes through.
+
 ## Where things live
 
 Three layers, and the boundary between them is the point.
@@ -208,6 +242,37 @@ the first; the diff already says what changed.
 CI must be green. It runs five jobs: the suite on three PHP versions; the wordpress.org
 review checks (`phpcs.xml.dist`); lint and formatting (ESLint, Prettier, PHP-CS-Fixer); a
 `build/`-matches-`src/` check; and the `vendor/`-is-dev-free check.
+
+## Releasing
+
+Maintainers only, and the order matters — step 5 removes the tooling the earlier steps
+need.
+
+1. **Bump the version in all four places.** The plugin header `Version:`,
+   `SCHEMAPRESS_VERSION` in `schemapress.php`, `Stable tag:` in `readme.txt`, and
+   `version` in `package.json`. `npm run package` refuses to build if any of them
+   disagree, so a mistake here stops the release rather than shipping.
+2. **Close the changelog.** Move `[Unreleased]` to the new version with the date it was
+   tagged.
+3. **`npm run pot`.** Once per release, not per commit — see above.
+4. **`npm run build`** and commit `build/`.
+5. **Refresh the shipping `vendor/`:**
+
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   git add vendor/
+   git commit
+   ```
+
+   The hook will say PHP formatting was skipped. That is correct — this commit is the one
+   that records the formatter's absence.
+
+6. **`npm run package`**, then `composer install` to get the tooling back.
+
+The zip is correct regardless of what your working tree looks like: `bin/package.php`
+rebuilds `vendor/` with `--no-dev` into a staging copy of its own. Step 5 is about the
+`vendor/` in the **repository**, which matters to anyone installing by cloning rather
+than by unzipping.
 
 ## Reporting bugs
 

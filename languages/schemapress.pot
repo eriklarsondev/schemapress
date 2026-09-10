@@ -3,8 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: SchemaPress\n"
-"Report-Msgid-Bugs-To: https://github.com/eriklarson/schemapress/issues\n"
-"POT-Creation-Date: 2026-09-10 16:16+0000\n"
+"Report-Msgid-Bugs-To: https://github.com/eriklarsondev/schemapress/issues\n"
+"POT-Creation-Date: 2026-09-10 17:20+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -12,7 +12,7 @@ msgstr ""
 "X-Domain: schemapress\n"
 
 #. translators: 1: collections created, 2: collections updated, 3: entries
-#: src/admin/views/DataPanel.js:162
+#: src/admin/views/DataPanel.js:153
 msgid "%1$d created, %2$d updated, %3$d entries."
 msgstr ""
 
@@ -27,87 +27,87 @@ msgid "%1$d of %2$d"
 msgstr ""
 
 #. translators: 1: a field's name, 2: a number of characters
-#: classes/class-validator.php:153
+#: classes/class-validator.php:154
 msgid "%1$s must be %2$d characters or fewer."
 msgstr ""
 
 #. translators: 1: a field's name, 2: the largest allowed value
-#: classes/class-validator.php:174
+#: classes/class-validator.php:175
 msgid "%1$s must be %2$s or less."
 msgstr ""
 
 #. translators: 1: a field's name, 2: the smallest allowed value
-#: classes/class-validator.php:165
+#: classes/class-validator.php:166
 msgid "%1$s must be %2$s or more."
 msgstr ""
 
 #. translators: 1: dataset name, 2: number of choices
-#: src/shared/builder/FieldConfig.js:258
+#: src/shared/builder/FieldConfig.js:271
 msgid "%1$s — %2$d choices, kept up to date for you."
 msgstr ""
 
 #. translators: 1: a shape of read, 2: the collection's name
-#: src/admin/views/SettingsView.js:610
+#: src/admin/views/SettingsView.js:602
 msgid "%1$s — %2$s"
 msgstr ""
 
 #. translators: 1: collection name, 2: field name, 3: old type, 4: new type
-#: classes/class-portability.php:699
+#: classes/class-portability.php:700
 msgid "%1$s: “%2$s” changed from %3$s to %4$s. Values that do not fit the new type will read as empty."
 msgstr ""
 
 #. translators: 1: collection name, 2: field name, 3: a field type slug
-#: classes/class-portability.php:745
+#: classes/class-portability.php:746
 msgid "%1$s: “%2$s” is a %3$s field, which this site does not have, so it was left out."
 msgstr ""
 
 #. translators: 1: collection name, 2: field name
-#: classes/class-portability.php:713
+#: classes/class-portability.php:714
 msgid "%1$s: “%2$s” was removed, and the values stored under it are no longer reachable."
 msgstr ""
 
 #. translators: %d: number of unpublished changes
-#: src/admin/views/EntryView.js:581
+#: src/admin/views/EntryView.js:596
 msgid "%d change ahead of published"
 msgstr ""
 
 #. translators: %d: number of unpublished changes
-#: src/admin/views/EntriesView.js:1077
+#: src/admin/views/EntriesView.js:1073
 msgid "%d changes ahead of published"
 msgstr ""
 
 #. translators: %d: number of choices
-#: src/shared/builder/FieldEditor.js:125 src/shared/builder/FieldEditor.js:458
+#: src/shared/builder/FieldEditor.js:125 src/shared/builder/FieldEditor.js:465
 msgid "%d choices"
 msgstr ""
 
 #. translators: %d: number of entries
-#: src/admin/views/SettingsView.js:573
+#: src/admin/views/SettingsView.js:565
 msgid "%d entry"
 msgstr ""
 
 #. translators: %d: number of entries erased
-#: src/admin/views/EntriesView.js:1005
+#: src/admin/views/EntriesView.js:1001
 msgid "%d entry erased."
 msgstr ""
 
 #. translators: %d: number of entries in the trash
-#: src/admin/views/EntriesView.js:971
+#: src/admin/views/EntriesView.js:967
 msgid "%d entry will be gone for good. This cannot be undone."
 msgstr ""
 
 #. translators: %d: number of selected entries
-#: src/admin/views/EntriesView.js:981
+#: src/admin/views/EntriesView.js:977
 msgid "%d entry will be moved to the trash, where you can restore it."
 msgstr ""
 
 #. translators: %d: number of fields
-#: src/shared/builder/FieldEditor.js:506
+#: src/shared/builder/FieldEditor.js:514
 msgid "%d field"
 msgstr ""
 
 #. translators: %d: number of chosen columns
-#: src/admin/views/ConfigureTableDialog.js:183
+#: src/admin/views/ConfigureTableDialog.js:179
 msgid "%d field columns."
 msgstr ""
 
@@ -117,12 +117,12 @@ msgid "%d image"
 msgstr ""
 
 #. translators: %d: number of images and files
-#: classes/class-portability.php:343
+#: classes/class-portability.php:344
 msgid "%d image or file could not be found in this site’s media library, so the entries that used it have none. Upload it and set it again."
 msgstr ""
 
 #. translators: %d: how many entries an array holds
-#: src/shared/fields/ValueControls.js:481
+#: src/shared/fields/ValueControls.js:494
 msgid "%d item"
 msgstr ""
 
@@ -132,7 +132,7 @@ msgid "%d items"
 msgstr ""
 
 #. translators: %d: how many keys an object holds
-#: src/admin/views/EntriesView.js:253 src/shared/fields/ValueControls.js:486
+#: src/admin/views/EntriesView.js:253 src/shared/fields/ValueControls.js:499
 msgid "%d key"
 msgstr ""
 
@@ -147,73 +147,73 @@ msgid "%d sub fields"
 msgstr ""
 
 #. translators: %s: the title of the entry being copied
-#: classes/class-entries.php:781
+#: classes/class-entries.php:782
 msgid "%s (copy)"
 msgstr ""
 
 #. translators: %s: a comma-separated list of field names
-#: src/admin/views/EntryView.js:265
+#: src/admin/views/EntryView.js:281
 msgid "%s cannot be saved as written"
 msgstr ""
 
 #. translators: %s: a field's name
-#: classes/class-validator.php:113
+#: classes/class-validator.php:114
 msgid "%s is required."
 msgstr ""
 
 #. translators: %s: a field's name
-#: classes/class-validator.php:184
+#: classes/class-validator.php:185
 msgid "%s must be unique, and another entry already has that value."
 msgstr ""
 
 #. translators: %s: a repeater field's name
-#: classes/class-validator.php:214
+#: classes/class-validator.php:215
 msgid "%s needs at least one row."
 msgstr ""
 
 #. translators: %s: the collection's name
-#: src/admin/views/ComponentSettingsDialog.js:67 src/admin/views/SettingsDialog.js:315
+#: src/admin/views/ComponentSettingsDialog.js:67 src/admin/views/SettingsDialog.js:320
 msgid "%s settings"
 msgstr ""
 
 #. translators: %s: the name of a field that refuses duplicate values
-#: src/admin/views/SettingsDialog.js:140
+#: src/admin/views/SettingsDialog.js:145
 msgid "%s · unique"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:684
+#: src/shared/builder/FieldEditor.js:686
 msgid "(unnamed)"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:89
+#: src/shared/builder/FieldConfig.js:99
 msgid "0 for none"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:183
+#: src/shared/builder/FieldConfig.js:196
 msgid "0 for unlimited"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:132
+#: src/shared/builder/FieldConfig.js:142
 msgid "0 for unlimited. There is no minimum — “required” already means at least one."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:64
+#: src/admin/views/SettingsView.js:55
 msgid "1 day"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:63
+#: src/admin/views/SettingsView.js:54
 msgid "1 hour"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:61
+#: src/admin/views/SettingsView.js:52
 msgid "1 minute"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:62
+#: src/admin/views/SettingsView.js:53
 msgid "5 minutes"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:217
+#: src/admin/views/DataPanel.js:208
 msgid "A JSON document holding your collections and their fields. Commit it, diff it, or read it into another install."
 msgstr ""
 
@@ -221,11 +221,11 @@ msgstr ""
 msgid "A Markdown parser is not installed, so the documentation below is shown as plain text. Run composer install to format it."
 msgstr ""
 
-#: classes/class-docs.php:264
+#: classes/class-docs.php:265
 msgid "A Markdown parser is not installed, so the documentation below is shown as plain text. To format it, run"
 msgstr ""
 
-#: classes/class-portability.php:412
+#: classes/class-portability.php:413
 msgid "A collection in that file has no name. The file may be truncated."
 msgstr ""
 
@@ -233,7 +233,7 @@ msgstr ""
 msgid "A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:293
+#: src/admin/views/DataPanel.js:284
 msgid "A field the file does not mention is left alone. Nothing an import does can orphan stored values."
 msgstr ""
 
@@ -241,19 +241,19 @@ msgstr ""
 msgid "A group of fields you can import into any collection. You can add its fields next."
 msgstr ""
 
-#: src/admin/views/FormTab.js:1281
+#: src/admin/views/FormTab.js:1273
 msgid "A hidden field keeps whatever was already in it, and still delivers it."
 msgstr ""
 
-#: classes/class-rest.php:396 classes/class-rest.php:526
+#: classes/class-rest.php:397 classes/class-rest.php:527
 msgid "A name is required."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:445
+#: src/admin/views/SettingsDialog.js:450
 msgid "A random ID"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:238
+#: src/shared/builder/FieldConfig.js:251
 msgid "A ready-made list, or your own."
 msgstr ""
 
@@ -265,15 +265,15 @@ msgstr ""
 msgid "A street, a city and a postcode."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:377
+#: src/admin/views/SettingsView.js:366
 msgid "Above zero this also tells caches you do not control — a CDN, a proxy — not to ask at all for that long. A correction published now may take that long to appear."
 msgstr ""
 
-#: classes/class-schema-model.php:484
+#: classes/class-schema-model.php:485
 msgid "Add Row"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:407
+#: src/shared/builder/FieldEditor.js:414
 msgid "Add a field"
 msgstr ""
 
@@ -281,7 +281,7 @@ msgstr ""
 msgid "Add field"
 msgstr ""
 
-#: classes/class-elements.php:115
+#: classes/class-elements.php:116
 msgid "Add item"
 msgstr ""
 
@@ -289,23 +289,23 @@ msgstr ""
 msgid "Add one to describe what an entry holds."
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:325
+#: src/shared/builder/FieldConfig.js:344
 msgid "Add option"
 msgstr ""
 
-#: src/shared/fields/GalleryControl.js:250
+#: src/shared/fields/GalleryControl.js:248
 msgid "Add or remove images"
 msgstr ""
 
-#: src/shared/fields/RepeaterControl.js:238
+#: src/shared/fields/RepeaterControl.js:240
 msgid "Add row"
 msgstr ""
 
-#: src/admin/views/FormTab.js:821
+#: src/admin/views/FormTab.js:816
 msgid "Add some fields first, then come back."
 msgstr ""
 
-#: src/admin/views/EntriesView.js:660
+#: src/admin/views/EntriesView.js:658
 msgid "Add some in the Schema tab, then you can create entries."
 msgstr ""
 
@@ -318,7 +318,7 @@ msgstr ""
 msgid "Address"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:228
+#: src/shared/builder/FieldConfig.js:241
 msgid "Allow multiple selections"
 msgstr ""
 
@@ -326,58 +326,58 @@ msgstr ""
 msgid "An administrator can create one."
 msgstr ""
 
-#: src/admin/views/FormTab.js:1239
+#: src/admin/views/FormTab.js:1231
 msgid "An entry cannot be saved without it."
 msgstr ""
 
 #. translators: %s: the name of the chosen field
-#: src/admin/views/SettingsDialog.js:396
+#: src/admin/views/SettingsDialog.js:401
 msgid "An entry is listed under its %s instead of “Untitled”, and that is what the API reports and what goes in its URL."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:380
+#: src/admin/views/DataPanel.js:371
 msgid "An entry the destination refuses — a unique value already taken, a required field added since — is skipped rather than stopping the import."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:335
+#: src/admin/views/DataPanel.js:326
 msgid "An import never turns on a collection’s public API, whatever the file says. Publishing is a decision about this site."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:72
+#: src/admin/views/SettingsDialog.js:80
 msgid "Anyone can ask for every published entry, a page at a time."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:82
+#: src/admin/views/SettingsDialog.js:87
 msgid "Anyone holding an entry’s id can read that entry. Ids are random, so this alone does not reveal what else is here."
 msgstr ""
 
 #. translators: %s: the plural name of the collection
-#: src/admin/views/SettingsDialog.js:645
+#: src/admin/views/SettingsDialog.js:650
 msgid "Anyone holding an entry’s id will be able to read that %s without logging in. Ids are random, so this does not let anyone list the collection. You can turn this back off at any time."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:522
+#: src/admin/views/SettingsDialog.js:527
 msgid "Anyone who can edit content. Tick a role to narrow it to those people."
 msgstr ""
 
 #. translators: %s: the plural name of the collection
-#: src/admin/views/SettingsDialog.js:640
+#: src/admin/views/SettingsDialog.js:645
 msgid "Anyone who knows the address will be able to read every published %s without logging in, and page through the lot. Drafts and unpublished edits are never served. You can turn this back off at any time."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:381
+#: src/admin/views/SettingsView.js:370
 msgid "At zero, nothing is ever served stale: a cache must check with the site before reusing a response, and the ETag makes checking cheap."
 msgstr ""
 
-#: classes/class-datasets.php:70
+#: classes/class-datasets.php:71
 msgid "Australian states"
 msgstr ""
 
-#: src/admin/views/EntryView.js:227 src/shared/builder/FieldEditor.js:906
+#: src/admin/views/EntryView.js:243 src/shared/builder/FieldEditor.js:906
 msgid "Back"
 msgstr ""
 
-#: classes/class-elements.php:83 classes/class-elements.php:86
+#: classes/class-elements.php:84 classes/class-elements.php:87
 msgid "Background"
 msgstr ""
 
@@ -385,39 +385,39 @@ msgstr ""
 msgid "Breadcrumb"
 msgstr ""
 
-#: classes/class-elements.php:92 classes/class-elements.php:95
+#: classes/class-elements.php:93 classes/class-elements.php:96
 msgid "Button"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:366
+#: src/admin/views/SettingsView.js:355
 msgid "Caching"
 msgstr ""
 
-#: classes/class-datasets.php:66
+#: classes/class-datasets.php:67
 msgid "Canadian provinces"
 msgstr ""
 
-#: src/admin/CreateComponentDialog.js:71 src/admin/CreateTypeDialog.js:85 src/admin/views/ComponentSettingsDialog.js:83 src/admin/views/ConfigureTableDialog.js:114 src/admin/views/FormTab.js:1196 src/admin/views/SettingsDialog.js:334 src/shared/builder/FieldEditor.js:910 src/ui/overlay.js:113
+#: src/admin/CreateComponentDialog.js:71 src/admin/CreateTypeDialog.js:85 src/admin/views/ComponentSettingsDialog.js:83 src/admin/views/ConfigureTableDialog.js:114 src/admin/views/FormTab.js:1188 src/admin/views/SettingsDialog.js:339 src/shared/builder/FieldEditor.js:910 src/ui/overlay.js:111
 msgid "Cancel"
 msgstr ""
 
-#: classes/class-docs.php:438
+#: classes/class-docs.php:439
 msgid "Caution"
 msgstr ""
 
-#: classes/class-elements.php:143 classes/class-elements.php:146
+#: classes/class-elements.php:144 classes/class-elements.php:147
 msgid "Choice"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:237
+#: src/shared/builder/FieldConfig.js:250
 msgid "Choices from"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:329
+#: src/admin/views/DataPanel.js:320
 msgid "Choose a file…"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:650
+#: src/admin/views/EntriesView.js:648
 msgid "Clear"
 msgstr ""
 
@@ -425,7 +425,7 @@ msgstr ""
 msgid "Clear color"
 msgstr ""
 
-#: src/ui/dialog.js:84
+#: src/ui/dialog.js:81
 msgid "Close"
 msgstr ""
 
@@ -437,15 +437,15 @@ msgstr ""
 msgid "Collection types"
 msgstr ""
 
-#: src/admin/Sidebar.js:61 src/admin/views/SettingsView.js:313
+#: src/admin/Sidebar.js:61 src/admin/views/SettingsView.js:302
 msgid "Collections"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:281
+#: src/admin/views/DataPanel.js:272
 msgid "Collections are matched on their machine key, so re-importing a file updates what it made rather than making it again."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:265
+#: src/admin/views/SettingsView.js:254
 msgid "Collections can be read over HTTP. Reads are public and unauthenticated — anyone with the address gets them — and only published entries are ever served."
 msgstr ""
 
@@ -454,19 +454,19 @@ msgstr ""
 msgid "Collections that already imported “%s” keep their copy of the fields — importing copies rather than links, so nothing they hold is lost."
 msgstr ""
 
-#: classes/class-field-types.php:204
+#: classes/class-field-types.php:205
 msgid "Color"
 msgstr ""
 
-#: classes/class-component.php:49 src/shared/builder/FieldEditor.js:87
+#: classes/class-component.php:50 src/shared/builder/FieldEditor.js:87
 msgid "Component"
 msgstr ""
 
-#: classes/class-rest.php:379
+#: classes/class-rest.php:380
 msgid "Component not found."
 msgstr ""
 
-#: classes/class-component.php:48 src/admin/Sidebar.js:101
+#: classes/class-component.php:49 src/admin/Sidebar.js:101
 msgid "Components"
 msgstr ""
 
@@ -474,7 +474,7 @@ msgstr ""
 msgid "Configure the table"
 msgstr ""
 
-#: classes/class-elements.php:68
+#: classes/class-elements.php:69
 msgid "Content"
 msgstr ""
 
@@ -482,7 +482,7 @@ msgstr ""
 msgid "Content manager"
 msgstr ""
 
-#: classes/class-rest.php:1091
+#: classes/class-rest.php:1092
 msgid "Content type not found."
 msgstr ""
 
@@ -494,15 +494,15 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
-#: src/admin/views/EntryView.js:682
+#: src/admin/views/EntryView.js:697
 msgid "Copy endpoint"
 msgstr ""
 
-#: classes/class-rest.php:1067
+#: classes/class-rest.php:1068
 msgid "Could not save that entry."
 msgstr ""
 
-#: classes/class-datasets.php:58
+#: classes/class-datasets.php:59
 msgid "Countries"
 msgstr ""
 
@@ -523,7 +523,7 @@ msgstr ""
 msgid "Create a component"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:683
+#: src/admin/views/EntriesView.js:681
 msgid "Create the first one to get started."
 msgstr ""
 
@@ -531,23 +531,23 @@ msgstr ""
 msgid "Creating…"
 msgstr ""
 
-#: src/admin/views/EntryView.js:394
+#: src/admin/views/EntryView.js:409
 msgid "Danger zone"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:399
+#: src/admin/views/SettingsView.js:388
 msgid "Data"
 msgstr ""
 
-#: classes/class-field-types.php:109
+#: classes/class-field-types.php:110
 msgid "Date"
 msgstr ""
 
-#: classes/class-field-types.php:116
+#: classes/class-field-types.php:117
 msgid "Date and time"
 msgstr ""
 
-#: classes/class-datasets.php:78
+#: classes/class-datasets.php:79
 msgid "Days of the week"
 msgstr ""
 
@@ -555,11 +555,11 @@ msgstr ""
 msgid "Define a collection, fill in its entries, and read them from your theme or over HTTP. Nothing about presentation is stored here — what the content looks like is your templates’ business."
 msgstr ""
 
-#: classes/class-docs.php:255 src/admin/views/DocsView.js:118
+#: classes/class-docs.php:256 src/admin/views/DocsView.js:118
 msgid "Define a collection, fill in its entries, and read them from your theme. Nothing about presentation is stored here — what the content looks like is your templates’ business."
 msgstr ""
 
-#: src/admin/views/ComponentSettingsDialog.js:149 src/admin/views/EntriesView.js:86 src/admin/views/EntriesView.js:96 src/admin/views/EntriesView.js:852 src/admin/views/EntriesView.js:952 src/admin/views/EntriesView.js:993 src/admin/views/EntryView.js:443 src/admin/views/SettingsDialog.js:692
+#: src/admin/views/ComponentSettingsDialog.js:149 src/admin/views/EntriesView.js:86 src/admin/views/EntriesView.js:96 src/admin/views/EntriesView.js:850 src/admin/views/EntriesView.js:948 src/admin/views/EntriesView.js:989 src/admin/views/EntryView.js:458 src/admin/views/SettingsDialog.js:697
 msgid "Delete"
 msgstr ""
 
@@ -567,23 +567,23 @@ msgstr ""
 msgid "Delete component"
 msgstr ""
 
-#: src/admin/views/EntryView.js:405
+#: src/admin/views/EntryView.js:420
 msgid "Delete entry"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:420 src/admin/views/SettingsView.js:440
+#: src/admin/views/SettingsView.js:412 src/admin/views/SettingsView.js:432
 msgid "Delete everything when the plugin is uninstalled"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:851
+#: src/admin/views/EntriesView.js:849
 msgid "Delete permanently"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:965
+#: src/admin/views/EntriesView.js:961
 msgid "Delete these entries?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:687
+#: src/admin/views/SettingsDialog.js:692
 msgid "Delete this collection type?"
 msgstr ""
 
@@ -591,23 +591,23 @@ msgstr ""
 msgid "Delete this component?"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:939 src/admin/views/EntryView.js:441
+#: src/admin/views/EntriesView.js:937 src/admin/views/EntryView.js:456
 msgid "Delete this entry?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:330
+#: src/admin/views/SettingsDialog.js:335
 msgid "Delete type"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:721
+#: src/admin/views/EntriesView.js:719
 msgid "Deleted"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:680
+#: src/admin/views/EntriesView.js:678
 msgid "Deleted entries wait here, and can be restored."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:425
+#: src/admin/views/SettingsView.js:417
 msgid "Deleting SchemaPress from the Plugins screen will permanently erase every collection, every entry and every setting. There is no undo, and deactivating is not the same thing — only deleting."
 msgstr ""
 
@@ -615,27 +615,27 @@ msgstr ""
 msgid "Deleting a collection"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:429
+#: src/admin/views/SettingsView.js:421
 msgid "Deleting the plugin leaves your collections and entries in the database, so reinstalling picks them back up. Turn this on if you would rather it cleaned up after itself."
 msgstr ""
 
-#: src/admin/CreateComponentDialog.js:97 src/admin/CreateTypeDialog.js:119 src/admin/views/ComponentSettingsDialog.js:104 src/admin/views/SettingsDialog.js:362
+#: src/admin/CreateComponentDialog.js:97 src/admin/CreateTypeDialog.js:119 src/admin/views/ComponentSettingsDialog.js:104 src/admin/views/SettingsDialog.js:367
 msgid "Description"
 msgstr ""
 
-#: src/admin/views/EntryView.js:709
+#: src/admin/views/EntryView.js:724
 msgid "Details"
 msgstr ""
 
-#: src/admin/views/EntryView.js:525 src/admin/views/EntryView.js:540
+#: src/admin/views/EntryView.js:540 src/admin/views/EntryView.js:555
 msgid "Discard"
 msgstr ""
 
-#: src/admin/views/EntryView.js:529
+#: src/admin/views/EntryView.js:544
 msgid "Discard changes?"
 msgstr ""
 
-#: classes/class-docs.php:65 classes/class-docs.php:254 classes/class-docs.php:702 src/admin/Sidebar.js:143 src/admin/views/DocsView.js:104 src/admin/views/DocsView.js:239
+#: classes/class-docs.php:66 classes/class-docs.php:255 classes/class-docs.php:703 src/admin/Sidebar.js:143 src/admin/views/DocsView.js:104 src/admin/views/DocsView.js:239
 msgid "Documentation"
 msgstr ""
 
@@ -647,71 +647,71 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:266
+#: src/admin/views/DataPanel.js:257
 msgid "Download export"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:1065 src/admin/views/EntryView.js:476
+#: src/admin/views/EntriesView.js:1061 src/admin/views/EntryView.js:491
 msgid "Draft"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:490 src/admin/views/SettingsDialog.js:509
+#: src/admin/views/SettingsDialog.js:495 src/admin/views/SettingsDialog.js:514
 msgid "Draft and publish"
 msgstr ""
 
-#: src/admin/views/FormTab.js:830
+#: src/admin/views/FormTab.js:825
 msgid "Drag a field onto another to reorder, into a row’s spare space to fill it, or onto a New row strip to give it a row of its own. Click a card for its placeholder, help text and whether it is required."
 msgstr ""
 
-#: classes/class-field-types.php:137
+#: classes/class-field-types.php:138
 msgid "Dropdown"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:83 src/admin/views/EntriesView.js:93 src/admin/views/EntriesView.js:827 src/admin/views/EntriesView.js:831
+#: src/admin/views/EntriesView.js:83 src/admin/views/EntriesView.js:93 src/admin/views/EntriesView.js:825 src/admin/views/EntriesView.js:829
 msgid "Duplicate"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:316
+#: src/admin/views/SettingsView.js:305
 msgid "Each one answers independently, and publishes nothing until its own switch is on."
 msgstr ""
 
-#: src/admin/views/EntriesView.js:1064
+#: src/admin/views/EntriesView.js:1060
 msgid "Edited"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:153
+#: src/shared/builder/FieldConfig.js:163
 msgid "Editor height"
 msgstr ""
 
-#: classes/class-field-types.php:66
+#: classes/class-field-types.php:67
 msgid "Email"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:964
+#: src/admin/views/EntriesView.js:960
 msgid "Empty the trash?"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:589 src/admin/views/EntriesView.js:992
+#: src/admin/views/EntriesView.js:589 src/admin/views/EntriesView.js:988
 msgid "Empty trash"
 msgstr ""
 
-#: src/admin/views/EntryView.js:679
+#: src/admin/views/EntryView.js:694
 msgid "Endpoint · by ID"
 msgstr ""
 
-#: src/admin/views/EntryView.js:679
+#: src/admin/views/EntryView.js:694
 msgid "Endpoint · by slug"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:559 src/admin/views/TypeView.js:155
+#: src/admin/views/EntriesView.js:559 src/admin/views/TypeView.js:154
 msgid "Entries"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:402
+#: src/admin/views/SettingsDialog.js:407
 msgid "Entries are listed as “Untitled” and addressed by a random ID. Right for a collection you would never look up by name — a set of settings, a list of links."
 msgstr ""
 
-#: classes/class-rest.php:752
+#: classes/class-rest.php:753
 msgid "Entry not found."
 msgstr ""
 
@@ -719,133 +719,133 @@ msgstr ""
 msgid "Entry restored."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:450
+#: src/admin/views/SettingsView.js:442
 msgid "Erase everything on uninstall?"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:951
+#: src/admin/views/EntriesView.js:948
 msgid "Erase permanently"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:938
+#: src/admin/views/EntriesView.js:936
 msgid "Erase this entry?"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:369
+#: src/admin/views/SettingsView.js:358
 msgid "Every API response carries an ETag, so a client that asks again for something it already has gets a 304 and no body. That happens whatever this is set to."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:688
+#: src/admin/views/SettingsDialog.js:693
 msgid "Every entry in it is deleted too, permanently. This cannot be undone."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:215
+#: src/admin/views/DataPanel.js:206
 msgid "Export"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:96
+#: src/admin/views/DataPanel.js:87
 msgid "Export downloaded."
 msgstr ""
 
-#: classes/class-elements.php:47 classes/class-elements.php:50
+#: classes/class-elements.php:48 classes/class-elements.php:51
 msgid "Eyebrow"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1187 src/admin/views/FormTab.js:1306
+#: src/admin/views/FormTab.js:1179 src/admin/views/FormTab.js:1298
 msgid "Field"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:393
+#: src/shared/builder/FieldEditor.js:400
 msgid "Field types"
 msgstr ""
 
-#: classes/class-field-types.php:164
+#: classes/class-field-types.php:165
 msgid "File"
 msgstr ""
 
 #. translators: %s: a comma-separated list of field names
-#: src/admin/views/EntryView.js:273
+#: src/admin/views/EntryView.js:289
 msgid "Fill in %s first"
 msgstr ""
 
-#: src/admin/views/FormTab.js:998 src/admin/views/FormTab.js:1046
+#: src/admin/views/FormTab.js:991 src/admin/views/FormTab.js:1038
 msgid "Fill this space"
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:331
+#: src/shared/fields/ValueControls.js:346
 msgid "Fix the JSON first"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:434
+#: src/admin/views/SettingsDialog.js:439
 msgid "Fixed when the entry is first published, so renaming it later does not break a link somebody already has."
 msgstr ""
 
-#: src/admin/views/ComponentView.js:148 src/admin/views/TypeView.js:159
+#: src/admin/views/ComponentView.js:148 src/admin/views/TypeView.js:158
 msgid "Form"
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:356
+#: src/shared/fields/ValueControls.js:371
 msgid "Format"
 msgstr ""
 
-#: src/admin/views/FormTab.js:90
+#: src/admin/views/FormTab.js:85
 msgid "Full"
 msgstr ""
 
-#: classes/class-field-types.php:179
+#: classes/class-field-types.php:180
 msgid "Gallery"
 msgstr ""
 
-#: src/shared/fields/GalleryControl.js:248
+#: src/shared/fields/GalleryControl.js:246
 msgid "Gallery is full"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1210
+#: src/admin/views/FormTab.js:1202
 msgid "Grayed-out text inside the empty control."
 msgstr ""
 
-#: classes/class-elements.php:124 classes/class-elements.php:127 classes/class-field-types.php:254
+#: classes/class-elements.php:125 classes/class-elements.php:128 classes/class-field-types.php:255
 msgid "Group"
 msgstr ""
 
-#: classes/class-elements.php:38 classes/class-elements.php:41
+#: classes/class-elements.php:39 classes/class-elements.php:42
 msgid "Heading"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1223
+#: src/admin/views/FormTab.js:1215
 msgid "Help text"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:388
+#: src/admin/views/SettingsView.js:377
 msgid "How long responses stay fresh"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:303
+#: src/admin/views/SettingsView.js:292
 msgid "How your theme reads content — SchemaPress::collection() and sp_collection(). They run on the server and never go over HTTP, so the switch above does not touch them and a page the site renders itself is unaffected either way."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:451
+#: src/admin/views/SettingsView.js:443
 msgid "If SchemaPress is ever deleted from the Plugins screen, every collection and every entry goes with it, permanently. Export your schema first if you have not already."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:290
+#: src/admin/views/DataPanel.js:281
 msgid "If a collection already exists"
 msgstr ""
 
-#: classes/class-elements.php:74 classes/class-elements.php:77 classes/class-field-types.php:155
+#: classes/class-elements.php:75 classes/class-elements.php:78 classes/class-field-types.php:156
 msgid "Image"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:279 src/admin/views/DataPanel.js:373 src/shared/builder/FieldEditor.js:517
+#: src/admin/views/DataPanel.js:270 src/admin/views/DataPanel.js:364 src/shared/builder/FieldEditor.js:520
 msgid "Import"
 msgstr ""
 
 #. translators: %s: the chosen file's name
-#: src/admin/views/DataPanel.js:352
+#: src/admin/views/DataPanel.js:343
 msgid "Import %s?"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:524
+#: src/shared/builder/FieldEditor.js:527
 msgid "Importing copies the component’s fields in. Editing the component later does not change this collection."
 msgstr ""
 
@@ -853,58 +853,58 @@ msgstr ""
 msgid "Importing this into a collection copies its fields in. Editing it afterwards does not reach collections that already imported it."
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:154
+#: src/shared/builder/FieldConfig.js:164
 msgid "In rows. A payload is usually either three lines or three hundred."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:251
+#: src/admin/views/DataPanel.js:242
 msgid "Include the entries"
 msgstr ""
 
-#: classes/class-docs.php:437
+#: classes/class-docs.php:438
 msgid "Info"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1316
+#: src/admin/views/FormTab.js:1308
 msgid "Is"
 msgstr ""
 
-#: src/admin/views/EntryView.js:554
+#: src/admin/views/EntryView.js:569
 msgid "It comes off the front end immediately. The draft is kept, so you can publish it again later."
 msgstr ""
 
 #. translators: %d: number of collections in the file
-#: src/admin/views/DataPanel.js:358
+#: src/admin/views/DataPanel.js:349
 msgid "It holds %d collection. Any field it does not mention will be deleted from a collection that already exists, and the values stored under it orphaned."
 msgstr ""
 
 #. translators: %d: number of collections in the file
-#: src/admin/views/DataPanel.js:365
+#: src/admin/views/DataPanel.js:356
 msgid "It holds %d collection. Existing fields it does not mention are left alone."
 msgstr ""
 
-#: src/admin/views/EntryView.js:442
+#: src/admin/views/EntryView.js:457
 msgid "It will be moved to the trash."
 msgstr ""
 
 #. translators: %d: row number
-#: src/shared/fields/RepeaterControl.js:46
+#: src/shared/fields/RepeaterControl.js:48
 msgid "Item %d"
 msgstr ""
 
-#: classes/class-elements.php:113
+#: classes/class-elements.php:114
 msgid "Items"
 msgstr ""
 
-#: classes/class-field-types.php:221
+#: classes/class-field-types.php:222
 msgid "JSON"
 msgstr ""
 
-#: src/admin/views/EntryView.js:328
+#: src/admin/views/EntryView.js:340
 msgid "Keep mine and continue"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:320
+#: src/admin/views/SettingsView.js:309
 msgid "Kept as they were. These take effect again when the API above is turned back on."
 msgstr ""
 
@@ -912,79 +912,79 @@ msgstr ""
 msgid "Key"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:280 src/shared/builder/FieldEditor.js:729 src/shared/builder/FieldEditor.js:931 src/shared/fields/LinkControl.js:42
+#: src/shared/builder/FieldConfig.js:293 src/shared/builder/FieldEditor.js:729 src/shared/builder/FieldEditor.js:931 src/shared/fields/LinkControl.js:42
 msgid "Label"
 msgstr ""
 
-#: src/admin/views/EntryView.js:712
+#: src/admin/views/EntryView.js:727
 msgid "Last edited"
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:527
+#: src/shared/fields/ValueControls.js:540
 msgid "Last valid version"
 msgstr ""
 
-#: src/admin/App.js:222 src/admin/views/EntryView.js:429
+#: src/admin/App.js:222 src/admin/views/EntryView.js:444
 msgid "Leave"
 msgstr ""
 
-#: src/admin/App.js:217 src/admin/views/EntryView.js:417
+#: src/admin/App.js:217 src/admin/views/EntryView.js:432
 msgid "Leave without saving?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:634
+#: src/admin/views/SettingsDialog.js:639
 msgid "Let anyone list this collection?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:635
+#: src/admin/views/SettingsDialog.js:640
 msgid "Let anyone read one of these?"
 msgstr ""
 
-#: classes/class-elements.php:101 classes/class-elements.php:104 classes/class-field-types.php:238
+#: classes/class-elements.php:102 classes/class-elements.php:105 classes/class-field-types.php:239
 msgid "Link"
 msgstr ""
 
-#: classes/class-admin.php:94
+#: classes/class-admin.php:95
 msgid "Loading SchemaPress…"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:667
+#: src/admin/views/EntriesView.js:665
 msgid "Loading entries…"
 msgstr ""
 
-#: src/admin/App.js:179 src/admin/App.js:206 src/admin/Sidebar.js:75 src/admin/views/ComponentView.js:70 src/admin/views/EntryView.js:232 src/admin/views/TypeView.js:128 src/shared/builder/FieldEditor.js:473
+#: src/admin/App.js:179 src/admin/App.js:206 src/admin/Sidebar.js:75 src/admin/views/ComponentView.js:70 src/admin/views/EntryView.js:248 src/admin/views/TypeView.js:127 src/shared/builder/FieldEditor.js:480
 msgid "Loading…"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:463
+#: src/admin/views/SettingsDialog.js:468
 msgid "Machine keys"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:481
+#: src/shared/builder/FieldEditor.js:486
 msgid "Make one from the sidebar to reuse a shape across collections."
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:89
+#: src/shared/builder/FieldConfig.js:99
 msgid "Max length"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:183
+#: src/shared/builder/FieldConfig.js:196
 msgid "Max rows"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:307
+#: src/admin/views/DataPanel.js:298
 msgid "Merge"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:172
+#: src/shared/builder/FieldConfig.js:185
 msgid "Min rows"
 msgstr ""
 
-#: classes/class-datasets.php:74
+#: classes/class-datasets.php:75
 msgid "Months"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:131
+#: src/shared/builder/FieldConfig.js:141
 msgid "Most images"
 msgstr ""
 
@@ -996,27 +996,27 @@ msgstr ""
 msgid "Move later"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:401
+#: src/admin/views/SettingsView.js:390
 msgid "Moving collections between installations, and what happens on the way out."
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:63
+#: src/shared/builder/FieldConfig.js:73
 msgid "Must be unique"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:394
+#: src/shared/builder/FieldEditor.js:401
 msgid "My components"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:245
+#: src/shared/builder/FieldConfig.js:258
 msgid "My own list"
 msgstr ""
 
-#: src/admin/CreateComponentDialog.js:81 src/admin/CreateTypeDialog.js:95 src/admin/views/ComponentSettingsDialog.js:97 src/admin/views/EntriesView.js:703 src/admin/views/SettingsDialog.js:353
+#: src/admin/CreateComponentDialog.js:81 src/admin/CreateTypeDialog.js:95 src/admin/views/ComponentSettingsDialog.js:97 src/admin/views/EntriesView.js:701 src/admin/views/SettingsDialog.js:358
 msgid "Name"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:391
+#: src/admin/views/SettingsDialog.js:396
 msgid "Name entries by"
 msgstr ""
 
@@ -1033,7 +1033,7 @@ msgid "Never"
 msgstr ""
 
 #. translators: %s: the collection's singular name
-#: src/admin/views/EntryView.js:298
+#: src/admin/views/EntryView.js:314
 msgid "New %s"
 msgstr ""
 
@@ -1041,7 +1041,7 @@ msgstr ""
 msgid "New Field"
 msgstr ""
 
-#: src/admin/views/FormTab.js:975
+#: src/admin/views/FormTab.js:970
 msgid "New row"
 msgstr ""
 
@@ -1049,7 +1049,7 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:909
+#: src/admin/views/EntriesView.js:907
 msgid "Next page"
 msgstr ""
 
@@ -1057,11 +1057,11 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/admin/views/EntryView.js:304
+#: src/admin/views/EntryView.js:320
 msgid "No changes to save"
 msgstr ""
 
-#: classes/class-api.php:250
+#: classes/class-api.php:251
 msgid "No collection with that name."
 msgstr ""
 
@@ -1069,11 +1069,11 @@ msgstr ""
 msgid "No collections yet"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:331
+#: src/admin/views/SettingsView.js:320
 msgid "No collections yet."
 msgstr ""
 
-#: src/admin/Sidebar.js:109 src/shared/builder/FieldEditor.js:478
+#: src/admin/Sidebar.js:109 src/shared/builder/FieldEditor.js:484
 msgid "No components yet"
 msgstr ""
 
@@ -1081,19 +1081,19 @@ msgstr ""
 msgid "No documentation was found"
 msgstr ""
 
-#: classes/class-docs.php:346
+#: classes/class-docs.php:347
 msgid "No documentation was found."
 msgstr ""
 
-#: src/admin/views/EntriesView.js:676
+#: src/admin/views/EntriesView.js:674
 msgid "No entries yet"
 msgstr ""
 
-#: src/admin/views/ConfigureTableDialog.js:177
+#: src/admin/views/ConfigureTableDialog.js:176
 msgid "No field columns — the table falls back to each entry’s own name."
 msgstr ""
 
-#: src/shared/fields/index.js:87
+#: src/shared/fields/index.js:94
 msgid "No fields defined."
 msgstr ""
 
@@ -1101,19 +1101,19 @@ msgstr ""
 msgid "No fields yet"
 msgstr ""
 
-#: src/shared/fields/MediaControl.js:133
+#: src/shared/fields/MediaControl.js:131
 msgid "No file selected"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:414
+#: src/admin/views/SettingsDialog.js:419
 msgid "No name"
 msgstr ""
 
-#: classes/class-api.php:154
+#: classes/class-api.php:155
 msgid "No published entry with that id."
 msgstr ""
 
-#: src/shared/fields/RepeaterControl.js:140
+#: src/shared/fields/RepeaterControl.js:142
 msgid "No rows yet."
 msgstr ""
 
@@ -1121,55 +1121,55 @@ msgstr ""
 msgid "No sub fields yet"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:64
+#: src/shared/builder/FieldConfig.js:74
 msgid "No two entries in this collection may hold the same value."
 msgstr ""
 
-#: src/admin/views/EntryView.js:526
+#: src/admin/views/EntryView.js:541
 msgid "No unpublished changes"
 msgstr ""
 
-#: src/admin/views/EntryView.js:691
+#: src/admin/views/EntryView.js:706
 msgid "Not answering yet: publish this entry first."
 msgstr ""
 
-#: src/admin/views/EntryView.js:687
+#: src/admin/views/EntryView.js:702
 msgid "Not answering yet: turn on Read one in this collection’s settings."
 msgstr ""
 
-#: src/admin/views/EntryView.js:550
+#: src/admin/views/EntryView.js:565
 msgid "Not published"
 msgstr ""
 
-#: classes/class-docs.php:435
+#: classes/class-docs.php:436
 msgid "Note"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:675
+#: src/admin/views/EntriesView.js:673
 msgid "Nothing matches that search"
 msgstr ""
 
-#: src/admin/views/EntryView.js:507
+#: src/admin/views/EntryView.js:522
 msgid "Nothing new to publish"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:228
+#: src/admin/views/DataPanel.js:219
 msgid "Nothing ticked means every collection."
 msgstr ""
 
-#: src/admin/views/FormTab.js:820
+#: src/admin/views/FormTab.js:815
 msgid "Nothing to arrange yet"
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:333
+#: src/shared/fields/ValueControls.js:348
 msgid "Nothing to format yet"
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:533
+#: src/shared/fields/ValueControls.js:546
 msgid "Nothing to preview yet."
 msgstr ""
 
-#: classes/class-elements.php:153 classes/class-elements.php:156 classes/class-field-types.php:96
+#: classes/class-elements.php:154 classes/class-elements.php:157 classes/class-field-types.php:97
 msgid "Number"
 msgstr ""
 
@@ -1177,15 +1177,15 @@ msgstr ""
 msgid "On this page"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:352
+#: src/admin/views/SettingsView.js:341
 msgid "Only published entries are ever served. Drafts, unpublished edits and anything in the trash are never readable over the API, whatever these switches say."
 msgstr ""
 
-#: src/admin/views/FormTab.js:1280
+#: src/admin/views/FormTab.js:1272
 msgid "Only show this field sometimes"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:526
+#: src/admin/views/SettingsDialog.js:531
 msgid "Only these roles, plus anyone who can change the shape of content — somebody who can delete this collection is not meaningfully kept out of its entries."
 msgstr ""
 
@@ -1193,28 +1193,28 @@ msgstr ""
 msgid "Open in a new tab"
 msgstr ""
 
-#: src/admin/CreateComponentDialog.js:98 src/admin/CreateTypeDialog.js:120 src/admin/views/ComponentSettingsDialog.js:105 src/admin/views/FormTab.js:1209 src/admin/views/FormTab.js:1224 src/admin/views/SettingsDialog.js:363
+#: src/admin/CreateComponentDialog.js:98 src/admin/CreateTypeDialog.js:120 src/admin/views/ComponentSettingsDialog.js:105 src/admin/views/FormTab.js:1201 src/admin/views/FormTab.js:1216 src/admin/views/SettingsDialog.js:368
 msgid "Optional"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1073
+#: src/admin/views/FormTab.js:1065
 msgid "Optional — click to make required"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:274
+#: src/shared/builder/FieldConfig.js:287
 msgid "Options"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:298
+#: src/admin/views/SettingsView.js:287
 msgid "PHP and Twig"
 msgstr ""
 
 #. translators: 1: current page, 2: total pages
-#: src/admin/views/EntriesView.js:900
+#: src/admin/views/EntriesView.js:898
 msgid "Page %1$d of %2$d"
 msgstr ""
 
-#: classes/class-field-types.php:84
+#: classes/class-field-types.php:85
 msgid "Phone"
 msgstr ""
 
@@ -1222,7 +1222,7 @@ msgstr ""
 msgid "Pick a color"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1208
+#: src/admin/views/FormTab.js:1200
 msgid "Placeholder"
 msgstr ""
 
@@ -1238,51 +1238,51 @@ msgstr ""
 msgid "Previous"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:890
+#: src/admin/views/EntriesView.js:888
 msgid "Previous page"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:555
+#: src/admin/views/SettingsDialog.js:560
 msgid "Public API"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:81 src/admin/views/EntryView.js:503 src/admin/views/EntryView.js:516 src/admin/views/SettingsView.js:515
+#: src/admin/views/EntriesView.js:81 src/admin/views/EntryView.js:518 src/admin/views/EntryView.js:531 src/admin/views/SettingsView.js:507
 msgid "Publish"
 msgstr ""
 
-#: src/admin/views/EntryView.js:502
+#: src/admin/views/EntryView.js:517
 msgid "Publish changes"
 msgstr ""
 
-#: src/admin/views/EntryView.js:511
+#: src/admin/views/EntryView.js:526
 msgid "Publish changes?"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:503
+#: src/admin/views/SettingsView.js:495
 msgid "Publish these to the API?"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:1063 src/admin/views/EntryView.js:474 src/admin/views/EntryView.js:718
+#: src/admin/views/EntriesView.js:1059 src/admin/views/EntryView.js:489 src/admin/views/EntryView.js:733
 msgid "Published"
 msgstr ""
 
-#: src/admin/views/EntryView.js:475
+#: src/admin/views/EntryView.js:490
 msgid "Published, edited"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:261 src/admin/views/SettingsView.js:281
+#: src/admin/views/SettingsView.js:250 src/admin/views/SettingsView.js:270
 msgid "REST Content API"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:71 src/admin/views/SettingsView.js:74
+#: src/admin/views/SettingsDialog.js:79 src/admin/views/SettingsView.js:65
 msgid "Read many"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:81 src/admin/views/SettingsView.js:79
+#: src/admin/views/SettingsDialog.js:86 src/admin/views/SettingsView.js:70
 msgid "Read one"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:438
+#: src/shared/builder/FieldEditor.js:445
 msgid "Ready-made dropdowns"
 msgstr ""
 
@@ -1298,7 +1298,7 @@ msgstr ""
 msgid "Remove field"
 msgstr ""
 
-#: src/shared/fields/MediaControl.js:148
+#: src/shared/fields/MediaControl.js:144
 msgid "Remove file"
 msgstr ""
 
@@ -1311,60 +1311,60 @@ msgstr ""
 msgid "Remove image %d"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:310
+#: src/shared/builder/FieldConfig.js:329
 msgid "Remove option"
 msgstr ""
 
-#: src/shared/fields/RepeaterControl.js:200
+#: src/shared/fields/RepeaterControl.js:202
 msgid "Remove row"
 msgstr ""
 
-#: classes/class-elements.php:110 classes/class-field-types.php:260 src/shared/builder/FieldEditor.js:874 src/shared/builder/FieldEditor.js:890 src/shared/builder/FieldEditor.js:892
+#: classes/class-elements.php:111 classes/class-field-types.php:261 src/shared/builder/FieldEditor.js:874 src/shared/builder/FieldEditor.js:890 src/shared/builder/FieldEditor.js:892
 msgid "Repeater"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:308 src/shared/fields/MediaControl.js:87 src/shared/fields/MediaControl.js:142
+#: src/admin/views/DataPanel.js:299 src/shared/fields/MediaControl.js:87 src/shared/fields/MediaControl.js:138
 msgid "Replace"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1238
+#: src/admin/views/FormTab.js:1230
 msgid "Required"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1072
+#: src/admin/views/FormTab.js:1064
 msgid "Required — click to make optional"
 msgstr ""
 
 #. translators: %s: the field's label
-#: src/admin/views/FormTab.js:1067
+#: src/admin/views/FormTab.js:1059
 msgid "Required: %s"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:102 src/admin/views/EntriesView.js:813 src/admin/views/EntriesView.js:817
+#: src/admin/views/EntriesView.js:102 src/admin/views/EntriesView.js:811 src/admin/views/EntriesView.js:815
 msgid "Restore"
 msgstr ""
 
-#: src/admin/views/DataPanel.js:379
+#: src/admin/views/DataPanel.js:370
 msgid "Restore the entries too"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:60
+#: src/admin/views/SettingsView.js:51
 msgid "Revalidate every time (recommended)"
 msgstr ""
 
-#: classes/class-elements.php:65 classes/class-field-types.php:59
+#: classes/class-elements.php:66 classes/class-field-types.php:60
 msgid "Rich Text"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:195
+#: src/shared/builder/FieldConfig.js:208
 msgid "Row label field"
 msgstr ""
 
-#: src/admin/views/ConfigureTableDialog.js:117 src/admin/views/EntryView.js:313
+#: src/admin/views/ConfigureTableDialog.js:117 src/admin/views/EntryView.js:325
 msgid "Save"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:243
+#: src/admin/views/SettingsView.js:232
 msgid "Save changes"
 msgstr ""
 
@@ -1372,7 +1372,7 @@ msgstr ""
 msgid "Save component"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1200
+#: src/admin/views/FormTab.js:1192
 msgid "Save field"
 msgstr ""
 
@@ -1380,52 +1380,52 @@ msgstr ""
 msgid "Save fields"
 msgstr ""
 
-#: src/admin/views/FormTab.js:902
+#: src/admin/views/FormTab.js:897
 msgid "Save layout"
 msgstr ""
 
-#: src/admin/views/ComponentSettingsDialog.js:87 src/admin/views/SettingsDialog.js:338
+#: src/admin/views/ComponentSettingsDialog.js:87 src/admin/views/SettingsDialog.js:343
 msgid "Save settings"
 msgstr ""
 
-#: src/admin/views/EntryView.js:508
+#: src/admin/views/EntryView.js:523
 msgid "Save this entry first"
 msgstr ""
 
 #. translators: %s: the singular name of the collection
-#: src/admin/views/SettingsDialog.js:669
+#: src/admin/views/SettingsDialog.js:674
 msgid "Saving a %s will publish it immediately, and unpublished drafts go live the next time they are saved. You can turn this back on later."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:499
+#: src/admin/views/SettingsDialog.js:504
 msgid "Saving publishes. There is one copy of each entry and it is always the one the site is serving."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:495
+#: src/admin/views/SettingsDialog.js:500
 msgid "Saving writes a draft. Nothing reaches the site until you publish it, so a half-finished edit to a live entry stays private."
 msgstr ""
 
-#: src/admin/views/ComponentSettingsDialog.js:87 src/admin/views/ComponentView.js:169 src/admin/views/ConfigureTableDialog.js:117 src/admin/views/EntryView.js:313 src/admin/views/FieldsTab.js:73 src/admin/views/FormTab.js:902 src/admin/views/SettingsDialog.js:338 src/admin/views/SettingsView.js:243
+#: src/admin/views/ComponentSettingsDialog.js:87 src/admin/views/ComponentView.js:169 src/admin/views/ConfigureTableDialog.js:117 src/admin/views/EntryView.js:325 src/admin/views/FieldsTab.js:73 src/admin/views/FormTab.js:897 src/admin/views/SettingsDialog.js:343 src/admin/views/SettingsView.js:232
 msgid "Saving…"
 msgstr ""
 
-#: classes/class-schema.php:40 src/admin/views/ComponentView.js:147 src/admin/views/TypeView.js:158 src/shared/builder/FieldEditor.js:879
+#: classes/class-schema.php:41 src/admin/views/ComponentView.js:147 src/admin/views/TypeView.js:157 src/shared/builder/FieldEditor.js:879
 msgid "Schema"
 msgstr ""
 
-#: classes/class-admin.php:70 classes/class-admin.php:71 src/admin/Sidebar.js:51 src/admin/Sidebar.js:179 src/admin/views/DocsView.js:235
+#: classes/class-admin.php:71 classes/class-admin.php:72 src/admin/Sidebar.js:51 src/admin/Sidebar.js:179 src/admin/views/DocsView.js:235
 msgid "SchemaPress"
 msgstr ""
 
-#: classes/class-docs.php:64
+#: classes/class-docs.php:65
 msgid "SchemaPress Docs"
 msgstr ""
 
-#: classes/class-assets.php:149
+#: classes/class-assets.php:172
 msgid "SchemaPress:"
 msgstr ""
 
-#: classes/class-schema.php:39
+#: classes/class-schema.php:40
 msgid "Schemas"
 msgstr ""
 
@@ -1433,24 +1433,24 @@ msgstr ""
 msgid "Search entries…"
 msgstr ""
 
-#: src/shared/fields/MediaControl.js:142
+#: src/shared/fields/MediaControl.js:138
 msgid "Select"
 msgstr ""
 
 #. translators: %s: the entry's title
-#: src/admin/views/EntriesView.js:754
+#: src/admin/views/EntriesView.js:752
 msgid "Select %s"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:695
+#: src/admin/views/EntriesView.js:693
 msgid "Select every entry on this page"
 msgstr ""
 
-#: src/shared/fields/MediaControl.js:111
+#: src/shared/fields/MediaControl.js:110
 msgid "Select image"
 msgstr ""
 
-#: src/shared/fields/GalleryControl.js:251
+#: src/shared/fields/GalleryControl.js:249
 msgid "Select images"
 msgstr ""
 
@@ -1458,24 +1458,24 @@ msgstr ""
 msgid "Set"
 msgstr ""
 
-#: src/admin/Sidebar.js:132 src/admin/views/ComponentView.js:132 src/admin/views/SettingsView.js:231 src/admin/views/TypeView.js:178
+#: src/admin/Sidebar.js:132 src/admin/views/ComponentView.js:132 src/admin/views/SettingsView.js:220 src/admin/views/TypeView.js:177
 msgid "Settings"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1298
+#: src/admin/views/FormTab.js:1290
 msgid "Show when"
 msgstr ""
 
 #. translators: 1: first row shown, 2: last row shown, 3: total rows
-#: src/admin/views/EntriesView.js:879
+#: src/admin/views/EntriesView.js:877
 msgid "Showing %1$d–%2$d of %3$d entries"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1225
+#: src/admin/views/FormTab.js:1217
 msgid "Shown under the control."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:364
+#: src/admin/views/SettingsDialog.js:369
 msgid "Shown under the name on this screen."
 msgstr ""
 
@@ -1491,29 +1491,29 @@ msgstr ""
 msgid "Shown when picking this from the field list."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:86
+#: src/admin/views/SettingsDialog.js:91
 msgid "Single entries are not served over HTTP."
 msgstr ""
 
 #. translators: %s: why an entry was not imported
-#: src/admin/views/DataPanel.js:179
+#: src/admin/views/DataPanel.js:170
 msgid "Skipped: %s"
 msgstr ""
 
-#: classes/class-rest.php:645
+#: classes/class-rest.php:646
 msgid "Somebody else changed this collection while you were editing it. Reload before saving, or your changes will replace theirs."
 msgstr ""
 
-#: classes/class-rest.php:641
+#: classes/class-rest.php:642
 msgid "Somebody else changed this component while you were editing it. Reload before saving, or your changes will replace theirs."
 msgstr ""
 
-#: classes/class-entries.php:880
+#: classes/class-entries.php:881
 msgid "Somebody else saved this entry while you were editing it. Reload to see their changes — your version is not lost, it is still in the form."
 msgstr ""
 
 #. translators: %s: a post type name
-#: classes/class-portability.php:473
+#: classes/class-portability.php:474
 msgid "Something else on this site already uses the post type “%s”, so that collection cannot be created. Nothing was imported."
 msgstr ""
 
@@ -1521,7 +1521,7 @@ msgstr ""
 msgid "Something went wrong on this screen"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:728 src/admin/views/EntryView.js:568
+#: src/admin/views/EntriesView.js:726 src/admin/views/EntryView.js:583
 msgid "Status"
 msgstr ""
 
@@ -1539,7 +1539,7 @@ msgstr ""
 msgid "Sub fields"
 msgstr ""
 
-#: src/shared/builder/FieldConfig.js:196
+#: src/shared/builder/FieldConfig.js:209
 msgid "Subfield key shown on collapsed rows"
 msgstr ""
 
@@ -1547,45 +1547,45 @@ msgstr ""
 msgid "Team Member"
 msgstr ""
 
-#: classes/class-elements.php:56 classes/class-elements.php:59 classes/class-elements.php:118 classes/class-field-types.php:47
+#: classes/class-elements.php:57 classes/class-elements.php:60 classes/class-elements.php:119 classes/class-field-types.php:48
 msgid "Text"
 msgstr ""
 
-#: classes/class-field-types.php:52
+#: classes/class-field-types.php:53
 msgid "Textarea"
 msgstr ""
 
-#: classes/class-rest.php:815 classes/class-rest.php:946
+#: classes/class-rest.php:816 classes/class-rest.php:947
 msgid "That could not be done."
 msgstr ""
 
-#: classes/class-rest.php:854
+#: classes/class-rest.php:855
 msgid "That entry is not in the trash."
 msgstr ""
 
-#: classes/class-portability.php:386
+#: classes/class-portability.php:387
 msgid "That export was written by a newer version of SchemaPress than this one. Update the plugin first."
 msgstr ""
 
 #. translators: %s: a collection's machine key
-#: classes/class-portability.php:421
+#: classes/class-portability.php:422
 msgid "That file describes the collection “%s” twice. Nothing was imported."
 msgstr ""
 
-#: classes/class-portability.php:380 src/admin/views/DataPanel.js:122
+#: classes/class-portability.php:381 src/admin/views/DataPanel.js:113
 msgid "That file is not a SchemaPress export."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:130
+#: src/admin/views/DataPanel.js:121
 msgid "That file is not valid JSON."
 msgstr ""
 
-#: classes/class-rest.php:930
+#: classes/class-rest.php:931
 msgid "That is more entries than one request can act on. Do it a page at a time."
 msgstr ""
 
 #. translators: %d: the largest number of entries an export may hold
-#: classes/class-portability.php:108
+#: classes/class-portability.php:109
 msgid "That is more than %d entries. Export the schema on its own, or use a database backup for the content."
 msgstr ""
 
@@ -1593,11 +1593,11 @@ msgstr ""
 msgid "That is not a hex color, like #3b82f6."
 msgstr ""
 
-#: classes/class-rest.php:920
+#: classes/class-rest.php:921
 msgid "That is not something that can be done to several entries at once."
 msgstr ""
 
-#: src/shared/fields/ValueControls.js:255
+#: src/shared/fields/ValueControls.js:257
 msgid "That is not valid JSON, so it has not been stored."
 msgstr ""
 
@@ -1607,33 +1607,33 @@ msgid "That reads as a plural. It will be stored as “%s”."
 msgstr ""
 
 #. translators: %d: number of unpublished changes
-#: src/admin/views/EntryView.js:532
+#: src/admin/views/EntryView.js:547
 msgid "The %d unpublished change on this entry is thrown away and the published copy comes back. This cannot be undone."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:569
+#: src/admin/views/SettingsDialog.js:574
 msgid "The REST Content API is switched off for this site, so the schemapress/api namespace is not registered and nothing here is being served. Turn it on in SchemaPress Settings."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:297
+#: src/admin/views/DataPanel.js:288
 msgid "The collection becomes exactly what the file says. A field it does not mention is deleted, and the values stored under it are orphaned."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:76
+#: src/admin/views/SettingsDialog.js:81
 msgid "The collection cannot be listed over HTTP."
 msgstr ""
 
 #. translators: %s: a collection's machine key
-#: classes/class-portability.php:434
+#: classes/class-portability.php:435
 msgid "The collection key “%s” is too long for WordPress to store entries under. Nothing was imported."
 msgstr ""
 
 #. translators: 1: a collection's machine key, 2: an existing collection's key
-#: classes/class-portability.php:455
+#: classes/class-portability.php:456
 msgid "The collection “%1$s” would share its address with “%2$s”, which is already on this site. Nothing was imported."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:252
+#: src/admin/views/DataPanel.js:243
 msgid "The content as well as its shape. Images travel as attachment ids, which will not resolve on a site that does not have them."
 msgstr ""
 
@@ -1649,7 +1649,7 @@ msgstr ""
 msgid "The fields that repeat — one set of them per row."
 msgstr ""
 
-#: src/admin/CreateTypeDialog.js:128 src/admin/views/SettingsDialog.js:371
+#: src/admin/CreateTypeDialog.js:128 src/admin/views/SettingsDialog.js:376
 msgid "The people we list on the about page."
 msgstr ""
 
@@ -1657,19 +1657,19 @@ msgstr ""
 msgid "The rest of the app is still running. The details are in the browser console."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:269
+#: src/admin/views/SettingsView.js:258
 msgid "The schemapress/api namespace is not registered, so it does not appear under /wp-json/ and every address below it answers 404. What each collection had chosen is kept for when this is turned back on."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:486
+#: src/admin/views/SettingsView.js:478
 msgid "The schemapress/api namespace is removed from the WordPress REST API, so anything fetching content over HTTP will break. Your theme is unaffected, and each collection keeps its switches."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:469
+#: src/admin/views/SettingsView.js:461
 msgid "The schemapress/api namespace returns to the WordPress REST API, and collections that publish themselves become readable over HTTP."
 msgstr ""
 
-#: src/admin/views/EntriesView.js:673
+#: src/admin/views/EntriesView.js:671
 msgid "The trash is empty"
 msgstr ""
 
@@ -1677,66 +1677,66 @@ msgstr ""
 msgid "These fields shape every entry in this collection. Removing one stops its saved values being delivered."
 msgstr ""
 
-#: classes/class-api.php:261
+#: classes/class-api.php:262
 msgid "This collection does not answer as a list. Turn on Read many in its Settings."
 msgstr ""
 
-#: classes/class-api.php:265
+#: classes/class-api.php:266
 msgid "This collection does not serve single entries. Turn on Read one in its Settings."
 msgstr ""
 
-#: src/admin/views/EntriesView.js:659
+#: src/admin/views/EntriesView.js:657
 msgid "This collection has no fields yet"
 msgstr ""
 
-#: src/admin/views/EntryView.js:340
+#: src/admin/views/EntryView.js:352
 msgid "This collection has no fields yet. Add some in the Schema tab."
 msgstr ""
 
-#: src/admin/views/EntryView.js:512
+#: src/admin/views/EntryView.js:527
 msgid "This entry becomes what the front end serves, replacing whatever is there now."
 msgstr ""
 
-#: src/admin/views/EntryView.js:420
+#: src/admin/views/EntryView.js:435
 msgid "This entry has changes that have not been saved, and required fields still to fill in. Leaving loses the changes."
 msgstr ""
 
-#: src/admin/views/EntryView.js:424
+#: src/admin/views/EntryView.js:439
 msgid "This entry has changes that have not been saved. Leaving loses them."
 msgstr ""
 
 #. translators: 1: number of reads being opened, 2: a list of them
-#: src/admin/views/SettingsView.js:506
+#: src/admin/views/SettingsView.js:498
 msgid "This makes %2$s readable by anyone who knows the address, without logging in. Drafts and unpublished edits are never served."
 msgstr ""
 
 #. translators: 1: loaded major version, 2: required major version
-#: classes/class-docs.php:802
+#: classes/class-docs.php:803
 msgid "Timber %1$d is loaded, but the Twig functions need Timber %2$d. The PHP API is unaffected."
 msgstr ""
 
 #. translators: %d: Timber major version
-#: classes/class-docs.php:791
+#: classes/class-docs.php:792
 msgid "Timber %d is loaded. The Twig functions are available."
 msgstr ""
 
-#: classes/class-docs.php:810
+#: classes/class-docs.php:811
 msgid "Timber is not installed, so the Twig functions are not registered. The PHP API works without it."
 msgstr ""
 
-#: classes/class-field-types.php:123
+#: classes/class-field-types.php:124
 msgid "Time"
 msgstr ""
 
-#: classes/class-docs.php:436
+#: classes/class-docs.php:437
 msgid "Tip"
 msgstr ""
 
-#: classes/class-elements.php:117
+#: classes/class-elements.php:118
 msgid "Title"
 msgstr ""
 
-#: classes/class-elements.php:134 classes/class-elements.php:137 classes/class-field-types.php:130
+#: classes/class-elements.php:135 classes/class-elements.php:138 classes/class-field-types.php:131
 msgid "Toggle"
 msgstr ""
 
@@ -1744,40 +1744,40 @@ msgstr ""
 msgid "Trash"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:682
+#: src/admin/views/EntriesView.js:680
 msgid "Try a different term."
 msgstr ""
 
-#: src/admin/ErrorBoundary.js:68 src/admin/views/ComponentView.js:62 src/admin/views/TypeView.js:120
+#: src/admin/ErrorBoundary.js:68 src/admin/views/ComponentView.js:62 src/admin/views/TypeView.js:119
 msgid "Try again"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:675 src/admin/views/SettingsView.js:490
+#: src/admin/views/SettingsDialog.js:680 src/admin/views/SettingsView.js:482
 msgid "Turn it off"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:455 src/admin/views/SettingsView.js:473
+#: src/admin/views/SettingsView.js:447 src/admin/views/SettingsView.js:465
 msgid "Turn it on"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:666
+#: src/admin/views/SettingsDialog.js:671
 msgid "Turn off draft and publish?"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:485
+#: src/admin/views/SettingsView.js:477
 msgid "Turn off the REST Content API?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:654
+#: src/admin/views/SettingsDialog.js:659
 msgid "Turn on"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:468
+#: src/admin/views/SettingsView.js:460
 msgid "Turn on the REST Content API?"
 msgstr ""
 
 #. translators: %s: the name of the field the URL is built from
-#: src/admin/views/SettingsDialog.js:175
+#: src/admin/views/SettingsDialog.js:180
 msgid "Two entries can share the same %s, and the second one gets a number added to its address. Mark the field “Must be unique” on the Schema tab if that should not be possible."
 msgstr ""
 
@@ -1785,43 +1785,43 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: classes/class-field-types.php:77 src/shared/fields/LinkControl.js:31
+#: classes/class-field-types.php:78 src/shared/fields/LinkControl.js:31
 msgid "URL"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:433
+#: src/admin/views/SettingsDialog.js:438
 msgid "URL uses"
 msgstr ""
 
-#: classes/class-datasets.php:62
+#: classes/class-datasets.php:63
 msgid "US states and territories"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:82 src/admin/views/EntryView.js:549 src/admin/views/EntryView.js:558
+#: src/admin/views/EntriesView.js:82 src/admin/views/EntryView.js:564 src/admin/views/EntryView.js:573
 msgid "Unpublish"
 msgstr ""
 
-#: src/admin/views/EntryView.js:553
+#: src/admin/views/EntryView.js:568
 msgid "Unpublish this entry?"
 msgstr ""
 
-#: src/admin/views/ComponentView.js:174 src/admin/views/FieldsTab.js:78 src/admin/views/FormTab.js:907
+#: src/admin/views/ComponentView.js:174 src/admin/views/FieldsTab.js:78 src/admin/views/FormTab.js:902
 msgid "Unsaved changes"
 msgstr ""
 
-#: src/shared/fields/index.js:68
+#: src/shared/fields/index.js:75
 msgid "Unsupported field type:"
 msgstr ""
 
-#: classes/class-entries.php:1595 src/admin/views/EntriesView.js:786 src/admin/views/EntriesView.js:1035 src/admin/views/EntryView.js:295
+#: classes/class-entries.php:1596 src/admin/views/EntriesView.js:784 src/admin/views/EntriesView.js:1031 src/admin/views/EntryView.js:311
 msgid "Untitled"
 msgstr ""
 
-#: src/admin/views/EntriesView.js:724
+#: src/admin/views/EntriesView.js:722
 msgid "Updated"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:425
+#: src/admin/views/SettingsDialog.js:430
 msgid "Use a different field for the URL"
 msgstr ""
 
@@ -1837,19 +1837,19 @@ msgstr ""
 msgid "Use this file"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1330 src/shared/builder/FieldConfig.js:293
+#: src/admin/views/FormTab.js:1322 src/shared/builder/FieldConfig.js:309
 msgid "Value"
 msgstr ""
 
-#: classes/class-docs.php:439
+#: classes/class-docs.php:440
 msgid "Warning"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:408
+#: src/shared/builder/FieldEditor.js:415
 msgid "What kind of thing does this hold?"
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:474
+#: src/admin/views/SettingsDialog.js:479
 msgid "What templates ask for. Fixed when the collection was made."
 msgstr ""
 
@@ -1861,15 +1861,15 @@ msgstr ""
 msgid "What the list is called, and how many rows it may hold."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:557
+#: src/admin/views/SettingsDialog.js:562
 msgid "What this collection answers over HTTP, with no key. Drafts and unpublished edits are never served either way."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:354
+#: src/admin/views/SettingsDialog.js:359
 msgid "What this collection is called on screen."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:318
+#: src/admin/views/SettingsDialog.js:323
 msgid "What this collection is, and how publishing works in it."
 msgstr ""
 
@@ -1877,15 +1877,15 @@ msgstr ""
 msgid "What this component is, and where it shows up."
 msgstr ""
 
-#: src/admin/views/FormTab.js:1188
+#: src/admin/views/FormTab.js:1180
 msgid "What this field asks for. Where it sits is set by dragging it on the canvas."
 msgstr ""
 
-#: src/admin/views/SettingsView.js:234
+#: src/admin/views/SettingsView.js:223
 msgid "What this site publishes over HTTP."
 msgstr ""
 
-#: src/admin/views/DataPanel.js:227
+#: src/admin/views/DataPanel.js:218
 msgid "What to export"
 msgstr ""
 
@@ -1893,12 +1893,12 @@ msgstr ""
 msgid "Which fields appear as columns, and in what order. The first one is the link into the entry."
 msgstr ""
 
-#: src/admin/views/SettingsDialog.js:519
+#: src/admin/views/SettingsDialog.js:524
 msgid "Who can edit these"
 msgstr ""
 
 #. translators: %s: the field's label
-#: src/admin/views/FormTab.js:1103
+#: src/admin/views/FormTab.js:1095
 msgid "Width of %s"
 msgstr ""
 
@@ -1910,15 +1910,15 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: classes/class-assets.php:150
+#: classes/class-assets.php:173
 msgid "admin bundles are missing. Run"
 msgstr ""
 
-#: src/admin/views/SettingsView.js:299
+#: src/admin/views/SettingsView.js:288
 msgid "always on"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1322
+#: src/admin/views/FormTab.js:1314
 msgid "anything but"
 msgstr ""
 
@@ -1926,15 +1926,15 @@ msgstr ""
 msgid "duplicated"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1320
+#: src/admin/views/FormTab.js:1312
 msgid "empty"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1321
+#: src/admin/views/FormTab.js:1313
 msgid "exactly"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1319
+#: src/admin/views/FormTab.js:1311
 msgid "filled in"
 msgstr ""
 
@@ -1962,7 +1962,7 @@ msgstr ""
 msgid "published"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:688
+#: src/shared/builder/FieldEditor.js:690
 msgid "required"
 msgstr ""
 
@@ -1978,11 +1978,11 @@ msgstr ""
 msgid "starting…"
 msgstr ""
 
-#: src/admin/views/FormTab.js:1332
+#: src/admin/views/FormTab.js:1324
 msgid "the value to compare against"
 msgstr ""
 
-#: src/shared/builder/FieldEditor.js:691
+#: src/shared/builder/FieldEditor.js:692
 msgid "unique"
 msgstr ""
 
@@ -1990,29 +1990,29 @@ msgstr ""
 msgid "unpublished"
 msgstr ""
 
-#: src/admin/views/FormTab.js:88
+#: src/admin/views/FormTab.js:83
 msgid "½"
 msgstr ""
 
 #. translators: %s: an entry's title
-#: classes/class-portability.php:842
+#: classes/class-portability.php:843
 msgid "“%s” is in this site’s trash, so it was left there."
 msgstr ""
 
 #. translators: %s: the entry's title
-#: src/admin/views/EntriesView.js:944
+#: src/admin/views/EntriesView.js:942
 msgid "“%s” will be gone for good. This cannot be undone."
 msgstr ""
 
 #. translators: %s: the entry's title
-#: src/admin/views/EntriesView.js:946
+#: src/admin/views/EntriesView.js:944
 msgid "“%s” will be moved to the trash, where you can restore it."
 msgstr ""
 
-#: src/admin/views/FormTab.js:87
+#: src/admin/views/FormTab.js:82
 msgid "⅓"
 msgstr ""
 
-#: src/admin/views/FormTab.js:89
+#: src/admin/views/FormTab.js:84
 msgid "⅔"
 msgstr ""

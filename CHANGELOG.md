@@ -31,6 +31,11 @@ a minor bump may still change behavior, and the notes say when it does.
 
 ### Fixed
 
+- **`composer.lock` could not be installed on PHP 8.2**, the version the plugin header
+  promises. The dev dependencies were resolved on 8.5, which locked `symfony/console` 8.1
+  and `sebastian/diff` 9 — both needing `>=8.4`. `config.platform.php` is now pinned to
+  8.2 so Composer resolves against the declared floor rather than the maintainer's
+  machine. Runtime dependencies were never affected.
 - **`npm run package` shipped whatever `vendor/` happened to be in the tree.** Its
   `--no-dev` rebuild was guarded by `file_exists($stage . '/composer.json')`, and
   `.distignore` had already stopped `composer.json` reaching the stage — so the rebuild

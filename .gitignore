@@ -77,7 +77,6 @@ vendor/symfony/polyfill-intl-grapheme/
 vendor/symfony/polyfill-intl-normalizer/
 vendor/symfony/polyfill-php81/
 vendor/symfony/polyfill-php84/
-vendor/symfony/polyfill-php85/
 vendor/symfony/process/
 vendor/symfony/service-contracts/
 vendor/symfony/stopwatch/

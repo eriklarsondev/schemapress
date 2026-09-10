@@ -60,21 +60,47 @@ if (!$dev) {
     exit(0);
 }
 
-fwrite(STDERR, sprintf("\nThe %s vendor/ was installed with dev dependencies:\n\n", $where));
+fwrite(STDERR, sprintf(
+    "\nThe %s vendor/ was installed with dev dependencies (%d of them, %s and the rest).\n",
+    $where,
+    count($dev),
+    $dev[array_key_first($dev)]
+));
 
-foreach ($dev as $name) {
-    fwrite(STDERR, "  {$name}\n");
-}
+// Two very different situations reach this point, and the common one by a wide
+// margin is the accident. Every `composer install` rewrites six tracked files
+// under vendor/composer/, so `git add -A` on an ordinary feature commit sweeps
+// them in — and telling that person to reinstall --no-dev would be answering a
+// question they did not ask, in a way that removes the tooling they are using.
+// So the unstage comes first, and the release case second.
+if ($staged) {
+    fwrite(STDERR, <<<'TXT'
 
-fwrite(STDERR, <<<'TXT'
+If you did not mean to commit vendor/ — which is usually the case, since every
+`composer install` rewrites the six tracked files under vendor/composer/ and
+`git add -A` picks them up — just leave it out of the commit:
+
+  git restore --staged vendor/
+
+If you ARE updating the shipped vendor/ for a release:
+
+  composer install --no-dev --optimize-autoloader
+  git add vendor/
+
+and `composer install` again afterwards to get the tooling back.
+
+TXT);
+} else {
+    fwrite(STDERR, <<<'TXT'
 
 vendor/ is committed and ships to every site running this plugin, so it has to
 hold runtime dependencies only. Restore it with:
 
   composer install --no-dev --optimize-autoloader
 
-and re-run `composer install` afterwards if you still want the formatter.
+and re-run `composer install` afterwards if you still want the tooling.
 
 TXT);
+}
 
 exit(1);

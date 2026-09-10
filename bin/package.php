@@ -80,6 +80,18 @@ if (($stable[1] ?? '') !== $version) {
     );
 }
 
+// package.json ships — .distignore keeps the lockfile out but not this, because
+// src/ goes with it and the build has to stay reproducible from what is in the
+// zip. So it is a fourth place a version can drift, and the only one nothing
+// was watching.
+$manifest = json_decode((string) file_get_contents($root . '/package.json'), true);
+
+if (($manifest['version'] ?? '') !== $version) {
+    schemapress_fail(
+        'package.json says ' . ($manifest['version'] ?? '?') . ', the plugin says ' . $version . '.'
+    );
+}
+
 // --- what does not ship ------------------------------------------------------
 
 $ignored = array_values(array_filter(array_map(
