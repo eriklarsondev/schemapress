@@ -1,4 +1,5 @@
 <?php
+
 /**
  * What happens when somebody deletes the plugin.
  *

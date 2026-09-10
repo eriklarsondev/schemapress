@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -39,7 +40,7 @@ class Api
      * `schemapress/api`, so a route reads /wp-json/schemapress/api/team-members
      * — as close to Strapi's /api/team-members as a WordPress namespace gets.
      */
-    const NAMESPACE = 'schemapress/api';
+    public const NAMESPACE = 'schemapress/api';
 
     /**
      * hooks the routes.

@@ -50,8 +50,8 @@ function openGalleryModal({ title }, chosen, onSelect) {
       frame
         .state()
         .get('selection')
-        .map((attachment) => attachment.toJSON().id),
-    ),
+        .map((attachment) => attachment.toJSON().id)
+    )
   )
 
   frame.open()
@@ -82,7 +82,7 @@ function useAttachments(ids) {
 
         // fetch() resolves from cache when the attachment is already known
         return model.fetch().then(() => model.toJSON())
-      }),
+      })
     ).then((loaded) => {
       if (!live) {
         return
@@ -93,7 +93,7 @@ function useAttachments(ids) {
           all[one.id] = one
 
           return all
-        }, {}),
+        }, {})
       )
     })
 
@@ -152,15 +152,15 @@ export function GalleryField({ field, value, onChange }) {
               /* translators: 1: images chosen, 2: the most allowed */
               __('%1$d of %2$d', 'schemapress'),
               ids.length,
-              max,
+              max
             )
           : ids.length > 0
-            ? sprintf(
-                /* translators: %d: number of images */
-                _n('%d image', '%d images', ids.length, 'schemapress'),
-                ids.length,
-              )
-            : undefined
+          ? sprintf(
+              /* translators: %d: number of images */
+              _n('%d image', '%d images', ids.length, 'schemapress'),
+              ids.length
+            )
+          : undefined
       }
     >
       {ids.length > 0 ? (
@@ -213,7 +213,7 @@ export function GalleryField({ field, value, onChange }) {
                     aria-label={sprintf(
                       /* translators: %d: the image's position in the gallery */
                       __('Remove image %d', 'schemapress'),
-                      index + 1,
+                      index + 1
                     )}
                     onClick={() => onChange(ids.filter((one) => one !== id))}
                   >
@@ -231,15 +231,13 @@ export function GalleryField({ field, value, onChange }) {
         disabled={full}
         onClick={() =>
           openGalleryModal({ title: field.label }, ids, (next) =>
-            onChange(max > 0 ? next.slice(0, max) : next),
+            onChange(max > 0 ? next.slice(0, max) : next)
           )
         }
         className={cn(
           'flex w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 text-muted-foreground transition-colors',
           ids.length > 0 ? 'h-16' : 'h-32',
-          full
-            ? 'cursor-not-allowed opacity-50'
-            : 'hover:border-ring/40 hover:bg-muted',
+          full ? 'cursor-not-allowed opacity-50' : 'hover:border-ring/40 hover:bg-muted'
         )}
       >
         <ImagePlus className="size-5" />
@@ -247,8 +245,8 @@ export function GalleryField({ field, value, onChange }) {
           {full
             ? __('Gallery is full', 'schemapress')
             : ids.length > 0
-              ? __('Add or remove images', 'schemapress')
-              : __('Select images', 'schemapress')}
+            ? __('Add or remove images', 'schemapress')
+            : __('Select images', 'schemapress')}
         </span>
       </button>
     </Field>

@@ -70,10 +70,10 @@ that on in advance.
 ## Getting set up
 
 ```bash
-git clone <repo> wp-content/plugins/schemapress
+git clone https://github.com/eriklarsondev/schemapress.git wp-content/plugins/schemapress
 cd wp-content/plugins/schemapress
 
-composer install          # Markdown parser for the docs screen, Timber
+composer install          # Timber, the Markdown parser, and PHP-CS-Fixer
 npm install && npm run build
 ```
 
@@ -86,22 +86,28 @@ documentation renders as plain text, `vendor/` is missing — run the composer s
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
 npm test                  # both suites (537 assertions, no framework)
-npm run pot               # regenerate languages/schemapress.pot
+npm run format            # Prettier over JS/CSS, PHP-CS-Fixer over PHP
+npm run format:check      # report without writing; this is what CI runs
+npm run lint:js           # ESLint over the admin
 npm run lint:php          # the checks a wordpress.org review blocks on
+npm run pot               # regenerate languages/schemapress.pot
 npm run package           # build the zip the plugin directory serves
 ```
 
-`lint:php` needs PHP_CodeSniffer with the WordPress standards on your PATH; the
-ruleset it runs is `phpcs.xml.dist`, and what it does **not** include — and why —
-is written at the top of that file.
+`lint:php` runs `phpcs.xml.dist` — deliberately not the full WordPress standard, but the
+subset a directory review blocks on: escaping, sanitising, nonces, capabilities, prepared
+SQL, prefixes, and the PHP versions the header promises. What it leaves out, and why, is
+written at the top of that file. It comes with `composer install`; nothing global is
+needed.
 
 `package` reads `.distignore`, rebuilds `vendor/` without dev dependencies into a
 staging copy, and refuses to build at all if the plugin header, `SCHEMAPRESS_VERSION`
 and the readme's `Stable tag` disagree.
 
-CI runs the suite on PHP 8.2, 8.3 and 8.4, and checks that the committed `build/` matches
-`src/` — the plugin ships built, so a change to the admin has to be rebuilt and committed
-with it.
+CI runs five jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review checks; lint
+and formatting; a check that the committed `build/` matches `src/` — the plugin ships
+built, so a change to the admin has to be rebuilt and committed with it; and a check that
+the committed `vendor/` holds runtime dependencies only.
 
 ## How it fits together
 
@@ -168,21 +174,34 @@ the sidebar. Add a file and it appears — there is no list to update.
 
 ## Contributing
 
+The full guide is in **[CONTRIBUTING.md](CONTRIBUTING.md)** — setting up, the two
+formatters, why `vendor/` and `build/` are committed, and what CI checks. The short
+version:
+
 1. Branch off `main`.
 2. Make the change. Match the surrounding style; add comments where the reasoning is not
    obvious from the code.
-3. Run `php tests/collections.php` and `npm run build`. Commit `build/` alongside the
-   source, since the plugin ships built.
-4. If you changed behavior a user would notice, update the relevant page in `docs/`.
+3. Run `npm test` and `npm run build`. Commit `build/` alongside the source, since the
+   plugin ships built.
+4. If you changed behavior a user would notice, update the relevant page in `docs/` and
+   add a line to `CHANGELOG.md`.
 5. Open a PR describing what changed and why the approach was chosen.
 
-**Adding a field type** touches four places: the registry (`class-field-types.php`), the
-resolver if it stores something other than what it renders (`class-resolver.php`), the
-control (`src/shared/fields/`), and the index if it should be filterable
-(`class-index.php`). The test suite covers the first two.
+**Formatting is automatic.** A pre-commit hook runs Prettier over JavaScript and CSS and
+PHP-CS-Fixer over PHP, and refuses a commit whose PHP does not parse. `npm run format`
+does the same by hand. The configuration carries its own reasoning: `.prettierrc` for the
+choice of 2-space, single-quote, no-semicolon, 100 columns over the WordPress house style,
+and `.php-cs-fixer.dist.php` for PSR-12. Neither is `phpcs`, which is a separate
+security-focused ruleset described at the top of `phpcs.xml.dist`.
 
-**Changing the query grammar** means changing `class-query.php` only — all three delivery
-surfaces read it.
+**One thing to know before your first commit.** `composer install` installs PHP-CS-Fixer
+into a `vendor/` that is committed, so six files under `vendor/composer/` will show as
+modified for as long as you have dev dependencies installed. That is expected; the hook
+and CI both stop them reaching a release. CONTRIBUTING.md explains the arrangement.
+
+Security vulnerabilities go through
+[private reporting](https://github.com/eriklarsondev/schemapress/security/advisories/new),
+not the issue tracker.
 
 ## Known rough edges
 
@@ -202,8 +221,12 @@ surfaces read it.
 - The admin bundle is ~490KB, over webpack's advisory. Prism accounts for ~37KB and the
   compiled documentation ships inline with the screen; both are candidates for a dynamic
   import once someone can verify chunk loading in a plugin subdirectory.
-- ESLint does not currently run — `@wordpress/eslint-plugin` cannot load its TypeScript
-  peer in this tree. `npm run build` is the check that matters; CI runs it and verifies the
-  committed `build/` matches `src/`.
 - An export is one JSON document, so it is capped at 5,000 entries. Use a database backup
   for anything larger.
+
+## License
+
+GPL-2.0-or-later. See [LICENSE](LICENSE).
+
+The same licence WordPress uses, and the one the plugin directory requires. Contributions
+are accepted under it; there is no CLA.

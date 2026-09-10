@@ -23,7 +23,7 @@ function openMediaModal({ title, type }, onSelect) {
     title,
     library: type ? { type } : {},
     multiple: false,
-    button: { text: __('Use this file', 'schemapress') }
+    button: { text: __('Use this file', 'schemapress') },
   })
 
   frame.on('select', () => onSelect(frame.state().get('selection').first().toJSON()))
@@ -107,9 +107,7 @@ export function ImageField({ field, value, onChange }) {
           className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 text-muted-foreground transition-colors hover:border-ring/40 hover:bg-muted"
         >
           <ImagePlus className="size-5" />
-          <span className="text-[13px] font-medium">
-            {__('Select image', 'schemapress')}
-          </span>
+          <span className="text-[13px] font-medium">{__('Select image', 'schemapress')}</span>
         </button>
       )}
     </Field>
@@ -135,9 +133,7 @@ export function FileField({ field, value, onChange }) {
         <Button
           size="sm"
           variant="outline"
-          onClick={() =>
-            openMediaModal({ title: field.label }, (next) => onChange(next.id))
-          }
+          onClick={() => openMediaModal({ title: field.label }, (next) => onChange(next.id))}
         >
           {value ? __('Replace', 'schemapress') : __('Select', 'schemapress')}
         </Button>

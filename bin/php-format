@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# PHP-CS-Fixer over the files given, for the pre-commit hook.
+#
+# Two things the bare command cannot do from lint-staged:
+#
+# 1. PHP-CS-Fixer refuses to run on more than one path without an explicit
+#    --config ("For multiple paths config parameter is required"). Handed a
+#    single staged file it discovers the config by itself and works, so this
+#    breaks only once a commit touches two PHP files — which is to say almost
+#    immediately, and with an error that says nothing about the cause.
+#
+# 2. Passing --config by hand would pin the hook to the .dist file and quietly
+#    ignore a local .php-cs-fixer.php override, which is the one thing that
+#    file exists to do. So the choice is made here, the same way the tool makes
+#    it: the local config if there is one, the committed default otherwise.
+#
+# --path-mode=intersection keeps the finder in the config authoritative — a
+# staged file the config excludes stays excluded rather than being pulled in
+# because it was named on the command line.
+#
+#
+# ON A MISSING FORMATTER
+#
+# It has to be possible to commit without one, and the reason is the release
+# workflow in CONTRIBUTING.md. vendor/ is committed, so updating it for a
+# release means `composer install --no-dev`, which DELETES php-cs-fixer — and
+# the very next thing you do is commit that vendor/. A hook that refuses the
+# commit because the formatter it just removed is missing has made the
+# documented workflow impossible, which is what it used to do.
+#
+# The same state happens to a contributor who cloned and ran npm install but
+# not composer install. Both want the same answer: say so plainly, and let the
+# commit through. Nothing is lost — CI runs the formatting check on every push
+# and fails there if this pass was skipped over something that needed it.
+
+fixer=vendor/bin/php-cs-fixer
+
+if [ ! -x "$fixer" ]; then
+	echo ""
+
+	if [ -f vendor/autoload.php ]; then
+		echo "  PHP formatting skipped: vendor/ is a --no-dev install, so"
+		echo "  php-cs-fixer is not here. Expected if you are committing a"
+		echo "  release vendor/. Run 'composer install' to get it back."
+	else
+		echo "  PHP formatting skipped: no vendor/ at all."
+		echo "  Run 'composer install'."
+	fi
+
+	echo "  CI checks formatting regardless, so nothing goes unnoticed."
+	echo ""
+
+	exit 0
+fi
+
+config=.php-cs-fixer.php
+[ -f "$config" ] || config=.php-cs-fixer.dist.php
+
+exec "$fixer" fix \
+	--config="$config" \
+	--path-mode=intersection \
+	--quiet \
+	-- "$@"

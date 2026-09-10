@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Builds the zip the plugin directory serves.
  *
@@ -162,6 +163,23 @@ foreach ($files as $file) {
 
 // --- vendor, without the tooling --------------------------------------------
 
+// composer.json and composer.lock are in .distignore, so the copy above skipped
+// them — correctly, since neither belongs in the package. But the rebuild below
+// needs them, and for a long time it was guarded by `file_exists($stage .
+// '/composer.json')`, which the copy had just guaranteed to be false. The whole
+// --no-dev rebuild silently never ran, and the zip shipped whatever vendor/ the
+// tree happened to hold.
+//
+// That was invisible while there were no dev dependencies to ship. Adding
+// php-cs-fixer to require-dev turned it into a release carrying a code
+// formatter and 32 other packages. So they are staged deliberately here, used,
+// and deleted again below.
+foreach (['composer.json', 'composer.lock'] as $manifest) {
+    if (file_exists($root . '/' . $manifest)) {
+        copy($root . '/' . $manifest, $stage . '/' . $manifest);
+    }
+}
+
 if (file_exists($stage . '/composer.json')) {
     schemapress_run('rm -rf vendor', $stage);
     schemapress_run(
@@ -186,13 +204,29 @@ if (file_exists($target)) {
     unlink($target);
 }
 
+// $copied counted what came out of the working tree. The vendor rebuild then
+// replaced vendor/ wholesale, so it stopped describing the package the moment
+// that rebuild started actually running — it reported 2,090 files for a zip
+// holding 1,073. Count what is really in the stage instead.
+$packaged = 0;
+
+$staged = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($stage, RecursiveDirectoryIterator::SKIP_DOTS)
+);
+
+foreach ($staged as $file) {
+    if ($file->isFile()) {
+        $packaged++;
+    }
+}
+
 schemapress_run('zip -rq ' . escapeshellarg($target) . ' ' . escapeshellarg($slug), $build);
 schemapress_run('rm -rf ' . escapeshellarg($build), $root);
 
 printf(
     "\n  %s\n  %d files, %s\n\n",
     $name,
-    $copied,
+    $packaged,
     size_format(filesize($target))
 );
 

@@ -1,0 +1,80 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Refuse a vendor/ that was installed with require-dev.
+ *
+ * vendor/ is committed, because the person installing this plugin has no
+ * Composer and Timber has to be in the tree. That makes `composer install` —
+ * which a contributor has to run to get php-cs-fixer — write dev packages into
+ * the same directory that ships.
+ *
+ * .gitignore names every dev package, so none of their files can be added by
+ * accident. What it cannot cover is the six files under vendor/composer/ that
+ * are already tracked: the autoload maps and the install manifest, rewritten in
+ * place by every install. Those are the ones that can quietly carry a dev
+ * install into a release, and this is what stops them.
+ *
+ * installed.json lists exactly which of its packages came from require-dev, so
+ * a non-empty list is the whole test.
+ *
+ *   bin/vendor-no-dev            check the working tree — CI runs this
+ *   bin/vendor-no-dev --staged   check what is about to be committed
+ *
+ * The --staged form is called from .husky/pre-commit and does nothing unless
+ * vendor/composer/installed.json is part of the commit.
+ */
+
+const MANIFEST = 'vendor/composer/installed.json';
+
+$staged = in_array('--staged', array_slice($argv, 1), true);
+
+if ($staged) {
+    exec('git diff --cached --name-only --diff-filter=ACMR -- ' . escapeshellarg(MANIFEST), $hits);
+
+    if (!$hits) {
+        exit(0);
+    }
+
+    exec('git show :' . escapeshellarg(MANIFEST) . ' 2>/dev/null', $lines, $status);
+
+    if ($status !== 0) {
+        exit(0);
+    }
+
+    $json = implode("\n", $lines);
+    $where = 'staged';
+} else {
+    if (!is_readable(MANIFEST)) {
+        fwrite(STDERR, MANIFEST . " is missing. Run composer install --no-dev --optimize-autoloader.\n");
+        exit(1);
+    }
+
+    $json = file_get_contents(MANIFEST);
+    $where = 'checked-out';
+}
+
+$dev = json_decode($json, true)['dev-package-names'] ?? [];
+
+if (!$dev) {
+    exit(0);
+}
+
+fwrite(STDERR, sprintf("\nThe %s vendor/ was installed with dev dependencies:\n\n", $where));
+
+foreach ($dev as $name) {
+    fwrite(STDERR, "  {$name}\n");
+}
+
+fwrite(STDERR, <<<'TXT'
+
+vendor/ is committed and ships to every site running this plugin, so it has to
+hold runtime dependencies only. Restore it with:
+
+  composer install --no-dev --optimize-autoloader
+
+and re-run `composer install` afterwards if you still want the formatter.
+
+TXT);
+
+exit(1);

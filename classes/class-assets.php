@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -15,7 +16,7 @@ if (!defined('ABSPATH')) {
  */
 class Assets
 {
-    const BUILD_DIR = 'build';
+    public const BUILD_DIR = 'build';
 
     /**
      * whether an entry has been built.

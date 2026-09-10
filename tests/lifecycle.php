@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Checks for everything an entry can have happen to it after it is saved, and
  * for the machinery around collections that is not about their shape.

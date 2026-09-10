@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -15,9 +16,9 @@ if (!defined('ABSPATH')) {
  */
 class Schema
 {
-    const POST_TYPE = 'sp_schema';
-    const META_DEFINITION = '_schemapress_definition';
-    const META_TEMPLATES = '_schemapress_templates';
+    public const POST_TYPE = 'sp_schema';
+    public const META_DEFINITION = '_schemapress_definition';
+    public const META_TEMPLATES = '_schemapress_templates';
 
     /**
      * hooks post type registration.

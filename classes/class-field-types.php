@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -360,7 +361,7 @@ class FieldTypes
      *
      * @var array<string, string>
      */
-    const WIDTHS = [
+    public const WIDTHS = [
         'text' => 'half',
         'textarea' => 'full',
         'wysiwyg' => 'full',

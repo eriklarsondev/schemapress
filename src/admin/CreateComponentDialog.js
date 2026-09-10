@@ -63,7 +63,7 @@ export function CreateComponentDialog({ onClose, onCreated }) {
       title={__('Create a component', 'schemapress')}
       description={__(
         'A group of fields you can import into any collection. You can add its fields next.',
-        'schemapress',
+        'schemapress'
       )}
       footer={
         <>

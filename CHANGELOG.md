@@ -6,6 +6,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [semantic versioning](https://semver.org/) — while this is `0.x`,
 a minor bump may still change behavior, and the notes say when it does.
 
+## [Unreleased]
+
+### Added
+
+- **Formatting, and a pre-commit hook that applies it.** Prettier for JavaScript and CSS,
+  PHP-CS-Fixer for PHP, both wired into husky and lint-staged so staged files are
+  formatted on the way into a commit and a PHP file that does not parse cannot get into
+  one. `npm run format` does the same by hand, and CI checks it.
+- `CONTRIBUTING.md`, a `LICENSE` file with the GPL-2.0 text, and GitHub issue and pull
+  request templates.
+- `bin/vendor-no-dev`, which refuses a commit whose `vendor/` was installed with dev
+  dependencies. `vendor/` is committed and ships, so a dev install reaching it would send
+  a code formatter to every site running the plugin.
+- **PHP_CodeSniffer and the WordPress standards as dev dependencies**, so `npm run
+  lint:php` runs `phpcs.xml.dist` without anything installed globally. The ruleset had
+  never actually been executed; on its first run it reported no violations.
+- **A working ESLint setup.** The `@wordpress/eslint-plugin` preset could not load in
+  this tree — it pulls a TypeScript toolchain to lint a codebase with no TypeScript in
+  it, and the versions no longer line up. `.eslintrc.js` keeps the parts worth having:
+  rules-of-hooks, unused and undefined bindings, and `eslint-config-prettier` last.
+- CI gained two jobs: the wordpress.org review checks, and lint alongside the existing
+  formatting check.
+
+### Fixed
+
+- **`npm run package` shipped whatever `vendor/` happened to be in the tree.** Its
+  `--no-dev` rebuild was guarded by `file_exists($stage . '/composer.json')`, and
+  `.distignore` had already stopped `composer.json` reaching the stage — so the rebuild
+  never ran, in any release. Harmless while there were no dev dependencies; it would
+  have shipped a code formatter and 40 other packages the moment there were.
+- The packaging script reported the pre-rebuild file count: 2,090 files for a zip that
+  held 911.
+- Three unused imports and one unused local in the admin.
+- The `Plugin URI`, the readme and the POT file's bug-report address all pointed at a
+  GitHub repository that does not exist.
+
 ## [0.2.0] — 2026-09-10
 
 The release that closes the gaps an audit of 0.1.0 found. Everything below was

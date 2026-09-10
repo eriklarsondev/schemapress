@@ -26,7 +26,7 @@ const UNITS = [
   [604800, 86400, 'day'],
   [2629800, 604800, 'week'],
   [31557600, 2629800, 'month'],
-  [Infinity, 31557600, 'year']
+  [Infinity, 31557600, 'year'],
 ]
 
 /**
@@ -134,7 +134,7 @@ const clock = {
         this.timer = null
       }
     }
-  }
+  },
 }
 
 /**

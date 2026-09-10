@@ -96,7 +96,7 @@ export function App({ settings }) {
           setTypes([])
           setError(failure.message)
         }),
-    [],
+    []
   )
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export function App({ settings }) {
         <main
           className={cn(
             'min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8',
-            route.view === 'docs' && 'bg-background',
+            route.view === 'docs' && 'bg-background'
           )}
         >
           {/* above whatever screen is open, because the work it describes is
@@ -217,7 +217,7 @@ export function App({ settings }) {
           title={__('Leave without saving?', 'schemapress')}
           description={__(
             'The entry you are editing has changes that have not been saved. Leaving loses them.',
-            'schemapress',
+            'schemapress'
           )}
           confirmLabel={__('Leave', 'schemapress')}
           onConfirm={() => {
@@ -277,7 +277,7 @@ function Welcome({ onCreate }) {
       <p className="mx-auto mt-2.5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
         {__(
           'A collection is a shape of content you have many of — Team Members, News Articles, Events. Define its fields once and add entries.',
-          'schemapress',
+          'schemapress'
         )}
       </p>
 

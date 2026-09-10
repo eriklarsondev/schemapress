@@ -77,7 +77,7 @@ export function CreateTypeDialog({ onClose, onCreated }) {
       title={__('Create a collection type', 'schemapress')}
       description={__(
         'A shape of content you have many of. You can add its fields next.',
-        'schemapress',
+        'schemapress'
       )}
       footer={
         <>
@@ -98,7 +98,7 @@ export function CreateTypeDialog({ onClose, onCreated }) {
               ? sprintf(
                   /* translators: %s: the generated machine key */
                   __('Stored as %s — fixed once created.', 'schemapress'),
-                  key,
+                  key
                 )
               : __('Name it after one item: Team Member, News Article.', 'schemapress')
           }
@@ -138,7 +138,7 @@ export function CreateTypeDialog({ onClose, onCreated }) {
                 {sprintf(
                   /* translators: %s: the singular form of what was typed */
                   __('That reads as a plural. It will be stored as “%s”.', 'schemapress'),
-                  singular,
+                  singular
                 )}
               </span>
 

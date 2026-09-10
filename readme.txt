@@ -81,7 +81,7 @@ The admin screens are a React application, and what ships in `build/` is
 compiled. The source it is compiled from ships beside it in `src/`, along with
 the webpack and Tailwind configuration, so the package can be read and rebuilt
 without leaving it. Development happens at
-[github.com/eriklarson/schemapress](https://github.com/eriklarson/schemapress).
+[github.com/eriklarsondev/schemapress](https://github.com/eriklarsondev/schemapress).
 
 The plugin bundles three libraries, all GPL-compatible: Timber and Twig for the
 optional Twig functions, and league/commonmark to render the documentation

@@ -167,17 +167,13 @@ export function ConfigureTableDialog({ fields, columns, fallback = 4, onClose, o
                 {item.label}
                 <span className="ml-1.5 text-[11px] text-muted-foreground">{item.type}</span>
               </span>
-
             </div>
           ))}
         </div>
 
         <p className="text-[12px] text-muted-foreground">
           {chosen.length === 0
-            ? __(
-                'No field columns — the table falls back to each entry’s own name.',
-                'schemapress'
-              )
+            ? __('No field columns — the table falls back to each entry’s own name.', 'schemapress')
             : sprintf(
                 /* translators: %d: number of chosen columns */
                 __('%d field columns.', 'schemapress'),

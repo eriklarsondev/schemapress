@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -33,7 +34,7 @@ class Index
      * prefix for every indexed row, so the whole index for an entry can be
      * found and dropped without knowing which fields it used to have.
      */
-    const PREFIX = '_sp_f_';
+    public const PREFIX = '_sp_f_';
 
     /**
      * prefix for the same values as they currently stand, published or not.
@@ -44,7 +45,7 @@ class Index
      * silently dropped every draft — a collection of eight entries showed five
      * the moment a column header was clicked.
      */
-    const DRAFT_PREFIX = '_sp_d_';
+    public const DRAFT_PREFIX = '_sp_d_';
 
     /**
      * field types worth mirroring, and how their values compare.
@@ -57,7 +58,7 @@ class Index
      *
      * @var array<string, string> type => NUMERIC or CHAR
      */
-    const TYPES = [
+    public const TYPES = [
         'text' => 'CHAR',
         'textarea' => 'CHAR',
         'email' => 'CHAR',

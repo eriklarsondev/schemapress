@@ -42,6 +42,92 @@ jobs:
       - name: Run the suite
         run: php tests/run.php
 
+  review:
+    name: wordpress.org review checks
+    runs-on: ubuntu-latest
+
+    # phpcs.xml.dist is not the full WordPress standard — it is the subset a
+    # directory review blocks on: escaping, sanitising, nonces, capabilities,
+    # prepared SQL, prefixes, and the PHP versions the header promises. The
+    # reasoning for what is left out is at the top of that file.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - run: composer install
+
+      - run: composer lint
+
+  static:
+    name: Lint and format
+    runs-on: ubuntu-latest
+
+    # The pre-commit hook formats everything it is given, so in the ordinary
+    # case the formatting steps have nothing to find. They exist for the cases
+    # where the hook was not in the way: --no-verify, an edit made through the
+    # GitHub web UI, a contributor who cloned and never ran npm install.
+    #
+    # ESLint is here rather than in the hook on purpose. It would have to run
+    # on the same files Prettier is rewriting, and lint-staged runs separate
+    # glob groups concurrently — two processes writing one file. Catching this
+    # class of error a few minutes later is worth more than that race.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - run: npm ci
+
+      - run: composer install
+
+      - name: ESLint
+        run: npm run lint:js
+
+      - name: Prettier
+        run: npm run format:js:check
+
+      - name: PHP-CS-Fixer
+        run: npm run format:php:check
+
+  vendor:
+    name: Committed vendor/
+    runs-on: ubuntu-latest
+
+    # vendor/ is committed, so `composer install` writing require-dev into the
+    # same tree is a real way to ship a formatter to every site running this
+    # plugin. .gitignore names every dev package so none of them can be added
+    # by accident; this is the check from the other side, and it does not care
+    # what the ignore list currently says.
+    #
+    # installed.json is written by whichever install produced the tree, and it
+    # lists exactly which of its packages came from require-dev. If that list
+    # is not empty in a commit, the committed vendor/ is a dev install.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: vendor/ must be a --no-dev install
+        run: php bin/vendor-no-dev
+
   build:
     name: Build the admin
     runs-on: ubuntu-latest

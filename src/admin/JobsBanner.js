@@ -117,7 +117,7 @@ export function JobsBanner({ onFinished }) {
                     /* translators: 1: entries handled so far, 2: entries in total */
                     __('%1$d of %2$d', 'schemapress'),
                     done,
-                    job.total,
+                    job.total
                   )
                 : __('starting…', 'schemapress')}
             </span>

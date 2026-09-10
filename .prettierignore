@@ -1,0 +1,32 @@
+# What Prettier must not touch.
+#
+# Two categories. Things nobody wrote — dependencies, lockfiles, compiled
+# output — and things written as prose, where a formatter reflowing a paragraph
+# is a worse diff than the one it fixed.
+
+# --- not written here -------------------------------------------------------
+
+node_modules/
+vendor/
+build/
+tools/
+package-lock.json
+composer.lock
+languages/
+*.min.js
+*.min.css
+
+# --- prose ------------------------------------------------------------------
+
+# README.md and CHANGELOG.md are read on wordpress.org as much as in the repo,
+# and docs/ is hand-wrapped so the diffs stay readable. Prettier's markdown
+# printer would rewrap every paragraph it touched, which turns a one-word edit
+# into a forty-line change.
+*.md
+readme.txt
+
+# --- not JavaScript ---------------------------------------------------------
+
+# Twig, and PHP-CS-Fixer's business.
+*.twig
+*.php

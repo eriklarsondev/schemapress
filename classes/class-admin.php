@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -15,7 +16,7 @@ if (!defined('ABSPATH')) {
  */
 class Admin
 {
-    const PAGE_SLUG = 'schemapress';
+    public const PAGE_SLUG = 'schemapress';
 
     /**
      * what it takes to open the builder and work on content.
@@ -27,7 +28,7 @@ class Admin
      * them `manage_options`, which is the whole site. they are the plugin's own
      * now; see class-capabilities.php.
      */
-    const CAPABILITY = Capabilities::EDIT;
+    public const CAPABILITY = Capabilities::EDIT;
 
     /**
      * what it takes to change the SHAPE of content, or what the site publishes.
@@ -41,7 +42,7 @@ class Admin
      * one capability covered all of it here, so anyone who could write an entry
      * could also restructure the data model and delete the lot.
      */
-    const SCHEMA_CAPABILITY = Capabilities::MANAGE;
+    public const SCHEMA_CAPABILITY = Capabilities::MANAGE;
 
     /**
      * the screen hook returned by add_menu_page, used to scope asset loading.

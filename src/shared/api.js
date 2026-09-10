@@ -50,7 +50,7 @@ function request(path, { method = 'GET', data } = {}) {
  */
 function query(args = {}) {
   const pairs = Object.entries(args).filter(
-    ([, value]) => value !== '' && value !== undefined && value !== null,
+    ([, value]) => value !== '' && value !== undefined && value !== null
   )
 
   return pairs.length ? `?${new URLSearchParams(pairs).toString()}` : ''

@@ -32,7 +32,7 @@ import {
   Switch,
   Checkbox,
   Copyable,
-  ConfirmDialog
+  ConfirmDialog,
 } from '../../ui'
 import { site, roles } from '../../shared/settings'
 
@@ -44,7 +44,15 @@ import { site, roles } from '../../shared/settings'
  * A date can: a collection that is a diary names its entries by the day.
  */
 const TITLE_TYPES = [
-  'text', 'textarea', 'email', 'url', 'phone', 'number', 'select', 'date', 'datetime'
+  'text',
+  'textarea',
+  'email',
+  'url',
+  'phone',
+  'number',
+  'select',
+  'date',
+  'datetime',
 ]
 
 /**
@@ -69,11 +77,8 @@ const READS = [
     key: 'list',
     icon: List,
     label: __('Read many', 'schemapress'),
-    on: __(
-      'Anyone can ask for every published entry, a page at a time.',
-      'schemapress'
-    ),
-    off: __('The collection cannot be listed over HTTP.', 'schemapress')
+    on: __('Anyone can ask for every published entry, a page at a time.', 'schemapress'),
+    off: __('The collection cannot be listed over HTTP.', 'schemapress'),
   },
   {
     key: 'single',
@@ -83,8 +88,8 @@ const READS = [
       'Anyone holding an entry’s id can read that entry. Ids are random, so this alone does not reveal what else is here.',
       'schemapress'
     ),
-    off: __('Single entries are not served over HTTP.', 'schemapress')
-  }
+    off: __('Single entries are not served over HTTP.', 'schemapress'),
+  },
 ]
 
 /**
@@ -138,10 +143,10 @@ function slugOptions(fields) {
         ? sprintf(
             /* translators: %s: the name of a field that refuses duplicate values */
             __('%s · unique', 'schemapress'),
-            field.label || field.key,
+            field.label || field.key
           )
         : field.label || field.key,
-    }),
+    })
   )
 }
 
@@ -174,9 +179,9 @@ function SlugNote({ fields, slugField }) {
         /* translators: %s: the name of the field the URL is built from */
         __(
           'Two entries can share the same %s, and the second one gets a number added to its address. Mark the field “Must be unique” on the Schema tab if that should not be possible.',
-          'schemapress',
+          'schemapress'
         ),
-        labelFor(fields, slugField),
+        labelFor(fields, slugField)
       )}
     </p>
   )
@@ -211,7 +216,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
   const [titleField, setTitleField] = useState(settings.titleField || '')
   const [slugField, setSlugField] = useState(settings.slugField || '')
   const [editRoles, setEditRoles] = useState(() =>
-    Array.isArray(settings.editRoles) ? settings.editRoles : [],
+    Array.isArray(settings.editRoles) ? settings.editRoles : []
   )
 
   // whether the URL is being built from a different field than the name. read
@@ -295,7 +300,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
       onSave({
         title: name.trim() || type.label,
         description: description.trim(),
-        settings: { draftAndPublish: drafts, publicApi, titleField, slugField, editRoles }
+        settings: { draftAndPublish: drafts, publicApi, titleField, slugField, editRoles },
       })
     )
       .then(onClose)
@@ -414,7 +419,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                         { value: '', label: __('No name', 'schemapress') },
                         ...fields
                           .filter((field) => TITLE_TYPES.includes(field.type))
-                          .map((field) => ({ value: field.key, label: field.label || field.key }))
+                          .map((field) => ({ value: field.key, label: field.label || field.key })),
                       ]}
                     />
                   )}
@@ -443,7 +448,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                         onChange={setSlugField}
                         options={[
                           { value: '', label: __('A random ID', 'schemapress') },
-                          ...slugOptions(fields)
+                          ...slugOptions(fields),
                         ]}
                       />
                     )}
@@ -521,11 +526,11 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                   {editRoles.length === 0
                     ? __(
                         'Anyone who can edit content. Tick a role to narrow it to those people.',
-                        'schemapress',
+                        'schemapress'
                       )
                     : __(
                         'Only these roles, plus anyone who can change the shape of content — somebody who can delete this collection is not meaningfully kept out of its entries.',
-                        'schemapress',
+                        'schemapress'
                       )}
                 </p>
 
@@ -539,7 +544,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                         setEditRoles((current) =>
                           current.includes(role.value)
                             ? current.filter((one) => one !== role.value)
-                            : [...current, role.value],
+                            : [...current, role.value]
                         )
                       }
                     />

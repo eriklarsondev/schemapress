@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -21,7 +22,7 @@ if (!defined('ABSPATH')) {
  */
 class SchemaModel
 {
-    const VERSION = 1;
+    public const VERSION = 1;
 
     /**
      * coerces an arbitrary decoded payload into a valid definition. unknown
@@ -172,7 +173,7 @@ class SchemaModel
      *
      * @var string[]
      */
-    const TITLE_TYPES = [
+    public const TITLE_TYPES = [
         'text', 'textarea', 'email', 'url', 'phone', 'number', 'select',
         // a date names an entry in the collections that are a diary — a daily
         // note, a board meeting, a match report. a bare time does not name
@@ -223,7 +224,7 @@ class SchemaModel
      *
      * @var string[]
      */
-    const SLUG_TYPES = ['text', 'textarea', 'select', 'number', 'date', 'datetime'];
+    public const SLUG_TYPES = ['text', 'textarea', 'select', 'number', 'date', 'datetime'];
 
     /**
      * the field an entry's slug is built from, or '' for the uuid.

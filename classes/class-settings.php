@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -34,7 +35,7 @@ if (!defined('ABSPATH')) {
  */
 class Settings
 {
-    const OPTION = 'schemapress_settings';
+    public const OPTION = 'schemapress_settings';
 
     /**
      * @var array|null
@@ -63,7 +64,7 @@ class Settings
      * old text is the most this setting should be able to cost somebody who
      * turned it up without reading the note beside it.
      */
-    const MAX_CACHE_AGE = 86400;
+    public const MAX_CACHE_AGE = 86400;
 
     /**
      * whether the content API answers at all.

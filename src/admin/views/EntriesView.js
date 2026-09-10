@@ -221,7 +221,7 @@ function cell(field, value) {
         ? sprintf(
             /* translators: %d: number of items */
             __('%d items', 'schemapress'),
-            value.length,
+            value.length
           )
         : ''
 
@@ -230,7 +230,7 @@ function cell(field, value) {
         ? sprintf(
             /* translators: %d: number of images */
             _n('%d image', '%d images', value.length, 'schemapress'),
-            value.length,
+            value.length
           )
         : ''
 
@@ -251,7 +251,7 @@ function cell(field, value) {
         ? sprintf(
             /* translators: %d: number of keys in a JSON value */
             _n('%d key', '%d keys', Object.keys(value).length, 'schemapress'),
-            Object.keys(value).length,
+            Object.keys(value).length
           )
         : ''
 
@@ -395,8 +395,8 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
             /* translators: 1: number of entries, 2: the action taken */
             _n('%1$d entry %2$s.', '%1$d entries %2$s.', done, 'schemapress'),
             done,
-            BULK_PAST[action] || action,
-          ),
+            BULK_PAST[action] || action
+          )
         )
 
         if (result.failed.length) {
@@ -405,7 +405,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
               .map((failure) => failure.message)
               // the same rule broken by ten entries is one sentence, not ten
               .filter((message, index, all) => all.indexOf(message) === index)
-              .join(' '),
+              .join(' ')
           )
         }
 
@@ -434,7 +434,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
           {
             orderby,
             order: ['modified', 'date'].includes(orderby) ? 'desc' : 'asc',
-          },
+          }
     )
   }
 
@@ -502,7 +502,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
    */
   const toggle = (id) =>
     setSelected((current) =>
-      current.includes(id) ? current.filter((one) => one !== id) : [...current, id],
+      current.includes(id) ? current.filter((one) => one !== id) : [...current, id]
     )
 
   // a chosen column list wins; nobody having chosen means the first few fields,
@@ -607,7 +607,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                 {sprintf(
                   /* translators: %s: the singular name of the collection */
                   __('Create %s', 'schemapress'),
-                  type.singularLabel || type.label,
+                  type.singularLabel || type.label
                 )}
               </Button>
             </>
@@ -627,7 +627,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
             {sprintf(
               /* translators: %d: number of selected entries */
               _n('%d selected', '%d selected', selected.length, 'schemapress'),
-              selected.length,
+              selected.length
             )}
           </span>
 
@@ -638,9 +638,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                 size="sm"
                 variant={action.destructive ? 'destructive-ghost' : 'outline'}
                 disabled={working}
-                onClick={() =>
-                  action.confirm ? setConfirming(action) : runBulk(action.value)
-                }
+                onClick={() => (action.confirm ? setConfirming(action) : runBulk(action.value))}
               >
                 {action.label()}
               </Button>
@@ -659,7 +657,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
           title={__('This collection has no fields yet', 'schemapress')}
           description={__(
             'Add some in the Schema tab, then you can create entries.',
-            'schemapress',
+            'schemapress'
           )}
           className="py-16"
         />
@@ -672,15 +670,15 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
             trashed
               ? __('The trash is empty', 'schemapress')
               : term
-                ? __('Nothing matches that search', 'schemapress')
-                : __('No entries yet', 'schemapress')
+              ? __('Nothing matches that search', 'schemapress')
+              : __('No entries yet', 'schemapress')
           }
           description={
             trashed
               ? __('Deleted entries wait here, and can be restored.', 'schemapress')
               : term
-                ? __('Try a different term.', 'schemapress')
-                : __('Create the first one to get started.', 'schemapress')
+              ? __('Try a different term.', 'schemapress')
+              : __('Create the first one to get started.', 'schemapress')
           }
           className="py-16"
         />
@@ -743,7 +741,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                   className={cn(
                     'group border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40',
                     trashed ? '' : 'cursor-pointer',
-                    selected.includes(entry.id) && 'bg-accent/30',
+                    selected.includes(entry.id) && 'bg-accent/30'
                   )}
                 >
                   <td className="w-px px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
@@ -752,7 +750,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                       aria-label={sprintf(
                         /* translators: %s: the entry's title */
                         __('Select %s', 'schemapress'),
-                        entry.title,
+                        entry.title
                       )}
                       onChange={() => toggle(entry.id)}
                     />
@@ -772,7 +770,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                       className={cn(
                         'whitespace-nowrap px-3 py-2.5 text-muted-foreground',
                         // a thumbnail is a fixed size and must not be truncated
-                        field.type === 'image' ? 'w-px' : 'max-w-[16rem] truncate',
+                        field.type === 'image' ? 'w-px' : 'max-w-[16rem] truncate'
                       )}
                     >
                       {index === 0 ? (
@@ -879,7 +877,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
               __('Showing %1$d–%2$d of %3$d entries', 'schemapress'),
               from,
               to,
-              state.total,
+              state.total
             )}
           </span>
 
@@ -899,7 +897,7 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                 /* translators: 1: current page, 2: total pages */
                 __('Page %1$d of %2$d', 'schemapress'),
                 page,
-                Math.max(1, state.pages),
+                Math.max(1, state.pages)
               )}
             </span>
 
@@ -944,12 +942,10 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                 __('“%s” will be gone for good. This cannot be undone.', 'schemapress')
               : /* translators: %s: the entry's title */
                 __('“%s” will be moved to the trash, where you can restore it.', 'schemapress'),
-            removing.title,
+            removing.title
           )}
           confirmLabel={
-            trashed
-              ? __('Erase permanently', 'schemapress')
-              : __('Delete', 'schemapress')
+            trashed ? __('Erase permanently', 'schemapress') : __('Delete', 'schemapress')
           }
           onConfirm={() => remove(removing.id)}
         />
@@ -972,9 +968,9 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                     '%d entry will be gone for good. This cannot be undone.',
                     '%d entries will be gone for good. This cannot be undone.',
                     state.total,
-                    'schemapress',
+                    'schemapress'
                   ),
-                  state.total,
+                  state.total
                 )
               : sprintf(
                   /* translators: %d: number of selected entries */
@@ -982,9 +978,9 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                     '%d entry will be moved to the trash, where you can restore it.',
                     '%d entries will be moved to the trash, where you can restore them.',
                     selected.length,
-                    'schemapress',
+                    'schemapress'
                   ),
-                  selected.length,
+                  selected.length
                 )
           }
           confirmLabel={
@@ -1003,8 +999,8 @@ export function EntriesView({ type, fields, settings = {}, onOpenEntry, onConfig
                     sprintf(
                       /* translators: %d: number of entries erased */
                       _n('%d entry erased.', '%d entries erased.', result.erased, 'schemapress'),
-                      result.erased,
-                    ),
+                      result.erased
+                    )
                   )
                   reload()
                 })
@@ -1075,7 +1071,7 @@ function State({ entry }) {
           ? sprintf(
               /* translators: %d: number of unpublished changes */
               __('%d changes ahead of published', 'schemapress'),
-              entry.ahead,
+              entry.ahead
             )
           : undefined
       }
@@ -1118,7 +1114,7 @@ function Th({ children, className, sortBy: column, sort, onSort }) {
         onClick={() => onSort(column)}
         className={cn(
           'flex w-full items-center gap-1 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition-colors hover:text-foreground',
-          active ? 'text-foreground' : 'text-muted-foreground',
+          active ? 'text-foreground' : 'text-muted-foreground'
         )}
       >
         {children}

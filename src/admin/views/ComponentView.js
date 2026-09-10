@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from '@wordpress/element'
-import { __, sprintf } from '@wordpress/i18n'
+import { __ } from '@wordpress/i18n'
 import { Save, Wrench, LayoutList, SlidersHorizontal } from 'lucide-react'
 import { Card, CardBody, Loading, Alert, Button, Tabs, TabPanel } from '../../ui'
 import { FieldsEditor } from '../../shared/builder/FieldEditor'

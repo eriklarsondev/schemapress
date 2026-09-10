@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -32,12 +33,12 @@ class Query
     /**
      * how many entries a request gets when it does not say.
      */
-    const PAGE_SIZE = 25;
+    public const PAGE_SIZE = 25;
 
     /**
      * the most any single request can ask for.
      */
-    const MAX_PAGE_SIZE = 100;
+    public const MAX_PAGE_SIZE = 100;
 
     /**
      * Strapi's operators, and the SQL comparison each becomes.
@@ -48,7 +49,7 @@ class Query
      *
      * @var array<string, string>
      */
-    const OPERATORS = [
+    public const OPERATORS = [
         '$eq' => '=',
         '$ne' => '!=',
         '$lt' => '<',
@@ -73,7 +74,7 @@ class Query
      *
      * @var array<string, string>
      */
-    const RESERVED_SORT = [
+    public const RESERVED_SORT = [
         'title' => 'title',
         'slug' => 'name',
         'createdAt' => 'date',
@@ -337,8 +338,7 @@ class Query
         array $indexable,
         $relation = 'AND',
         $draft = false
-    )
-    {
+    ) {
         $clauses = [];
 
         foreach ($filters as $key => $value) {

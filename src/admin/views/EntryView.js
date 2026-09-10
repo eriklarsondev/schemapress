@@ -18,7 +18,16 @@
 
 import { Fragment, useCallback, useEffect, useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
-import { ChevronLeft, Save, Trash2, CircleDot, GitBranch, Undo2, CloudUpload, EyeOff } from 'lucide-react'
+import {
+  ChevronLeft,
+  Save,
+  Trash2,
+  CircleDot,
+  GitBranch,
+  Undo2,
+  CloudUpload,
+  EyeOff,
+} from 'lucide-react'
 import {
   Button,
   Card,
@@ -28,7 +37,7 @@ import {
   ConfirmDialog,
   Tooltip,
   Copyable,
-  cn
+  cn,
 } from '../../ui'
 import { FieldControl } from '../../shared/fields'
 import { emptyValues } from '../../shared/utils'
@@ -57,7 +66,14 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
   const [entry, setEntry] = useState(() =>
     entryId
       ? null
-      : { id: null, title: '', state: 'draft', isPublished: false, ahead: 0, values: emptyValues(fields) }
+      : {
+          id: null,
+          title: '',
+          state: 'draft',
+          isPublished: false,
+          ahead: 0,
+          values: emptyValues(fields),
+        }
   )
   const [error, setError] = useState('')
   // a conflict is not an ordinary error: it has an action attached, and the
@@ -174,7 +190,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
         values: entry.values,
         publish,
         expectedModified: entry.modified,
-      }),
+      })
     )
 
   // a save that would store what is already stored is not a save.
@@ -304,11 +320,7 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
           label={blocked() || (dirty || busy ? '' : __('No changes to save', 'schemapress'))}
           disabled={incomplete || (!dirty && !busy)}
         >
-          <Button
-            size="sm"
-            disabled={busy || !dirty || incomplete}
-            onClick={() => save(false)}
-          >
+          <Button size="sm" disabled={busy || !dirty || incomplete} onClick={() => save(false)}>
             <Save />
             {busy ? __('Saving…', 'schemapress') : __('Save', 'schemapress')}
           </Button>
@@ -337,36 +349,39 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
           <CardBody>
             {fields.length === 0 ? (
               <Alert variant="warning">
-                {__('This collection has no fields yet. Add some in the Schema tab.', 'schemapress')}
+                {__(
+                  'This collection has no fields yet. Add some in the Schema tab.',
+                  'schemapress'
+                )}
               </Alert>
             ) : (
               <UnsaveableProvider onChange={reportUnsaveable}>
-              <div className={gridClass()}>
-                {visible.map((field, index) => (
-                  <Fragment key={field.key}>
-                    {breakBefore(field, index) ? (
-                      <div aria-hidden="true" className={rowBreakClass()} />
-                    ) : null}
+                <div className={gridClass()}>
+                  {visible.map((field, index) => (
+                    <Fragment key={field.key}>
+                      {breakBefore(field, index) ? (
+                        <div aria-hidden="true" className={rowBreakClass()} />
+                      ) : null}
 
-                    {leadingSpace(field) > 0 ? (
-                      <div aria-hidden="true" className={spacerClass(leadingSpace(field))} />
-                    ) : null}
+                      {leadingSpace(field) > 0 ? (
+                        <div aria-hidden="true" className={spacerClass(leadingSpace(field))} />
+                      ) : null}
 
-                    <div className={cellClass(field)}>
-                      <FieldControl
-                        field={field}
-                        value={entry.values?.[field.key]}
-                        onChange={(value) =>
-                          setEntry({
-                            ...entry,
-                            values: { ...entry.values, [field.key]: value }
-                          })
-                        }
-                      />
-                    </div>
-                  </Fragment>
-                ))}
-              </div>
+                      <div className={cellClass(field)}>
+                        <FieldControl
+                          field={field}
+                          value={entry.values?.[field.key]}
+                          onChange={(value) =>
+                            setEntry({
+                              ...entry,
+                              values: { ...entry.values, [field.key]: value },
+                            })
+                          }
+                        />
+                      </div>
+                    </Fragment>
+                  ))}
+                </div>
               </UnsaveableProvider>
             )}
           </CardBody>
@@ -473,7 +488,7 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
   const states = {
     published: { label: __('Published', 'schemapress'), tone: 'text-emerald-600' },
     modified: { label: __('Published, edited', 'schemapress'), tone: 'text-amber-600' },
-    draft: { label: __('Draft', 'schemapress'), tone: 'text-muted-foreground' }
+    draft: { label: __('Draft', 'schemapress'), tone: 'text-muted-foreground' },
   }
 
   const state = states[entry.state] || states.draft
@@ -513,8 +528,8 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
           'This entry becomes what the front end serves, replacing whatever is there now.',
           'schemapress'
         ),
-        confirmLabel: __('Publish', 'schemapress')
-      }
+        confirmLabel: __('Publish', 'schemapress'),
+      },
     },
     {
       key: 'discard',
@@ -537,8 +552,8 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
           ),
           entry.ahead
         ),
-        confirmLabel: __('Discard', 'schemapress')
-      }
+        confirmLabel: __('Discard', 'schemapress'),
+      },
     },
     {
       key: 'unpublish',
@@ -555,9 +570,9 @@ function StatusCard({ entry, busy, blocked, onPublish, onUnpublish, onDiscard })
           'It comes off the front end immediately. The draft is kept, so you can publish it again later.',
           'schemapress'
         ),
-        confirmLabel: __('Unpublish', 'schemapress')
-      }
-    }
+        confirmLabel: __('Unpublish', 'schemapress'),
+      },
+    },
   ]
 
   const pending = actions.find((action) => action.key === confirming)
@@ -686,7 +701,7 @@ function IdCard({ entry, type }) {
             {closed
               ? __(
                   'Not answering yet: turn on Read one in this collection’s settings.',
-                  'schemapress',
+                  'schemapress'
                 )
               : __('Not answering yet: publish this entry first.', 'schemapress')}
           </p>
@@ -736,7 +751,7 @@ function Label({ children, className }) {
     <p
       className={cn(
         'text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
-        className,
+        className
       )}
     >
       {children}

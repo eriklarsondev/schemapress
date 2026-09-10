@@ -108,6 +108,6 @@ export function visibleFields(fields = [], values = {}) {
  */
 export function conditionTargets(fields = [], exclude = '') {
   return fields.filter(
-    (field) => field.key !== exclude && !['group', 'repeater', 'wysiwyg'].includes(field.type),
+    (field) => field.key !== exclude && !['group', 'repeater', 'wysiwyg'].includes(field.type)
   )
 }

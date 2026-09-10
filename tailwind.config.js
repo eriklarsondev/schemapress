@@ -16,7 +16,7 @@ module.exports = {
   content: ['./src/**/*.{js,jsx}'],
   important: '.schemapress',
   corePlugins: {
-    preflight: false
+    preflight: false,
   },
   theme: {
     extend: {
@@ -25,50 +25,50 @@ module.exports = {
         input: {
           DEFAULT: 'hsl(var(--sp-input))',
           // the faint recess that lets the border soften; see style.css
-          fill: 'hsl(var(--sp-input-fill))'
+          fill: 'hsl(var(--sp-input-fill))',
         },
         ring: 'hsl(var(--sp-ring))',
         background: 'hsl(var(--sp-background))',
         foreground: 'hsl(var(--sp-foreground))',
         primary: {
           DEFAULT: 'hsl(var(--sp-primary))',
-          foreground: 'hsl(var(--sp-primary-foreground))'
+          foreground: 'hsl(var(--sp-primary-foreground))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--sp-secondary))',
-          foreground: 'hsl(var(--sp-secondary-foreground))'
+          foreground: 'hsl(var(--sp-secondary-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--sp-muted))',
-          foreground: 'hsl(var(--sp-muted-foreground))'
+          foreground: 'hsl(var(--sp-muted-foreground))',
         },
         accent: {
           DEFAULT: 'hsl(var(--sp-accent))',
-          foreground: 'hsl(var(--sp-accent-foreground))'
+          foreground: 'hsl(var(--sp-accent-foreground))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--sp-destructive))',
-          foreground: 'hsl(var(--sp-destructive-foreground))'
+          foreground: 'hsl(var(--sp-destructive-foreground))',
         },
         card: {
           DEFAULT: 'hsl(var(--sp-card))',
-          foreground: 'hsl(var(--sp-card-foreground))'
+          foreground: 'hsl(var(--sp-card-foreground))',
         },
         popover: {
           DEFAULT: 'hsl(var(--sp-popover))',
-          foreground: 'hsl(var(--sp-popover-foreground))'
+          foreground: 'hsl(var(--sp-popover-foreground))',
         },
         appbar: {
           DEFAULT: 'hsl(var(--sp-appbar))',
           foreground: 'hsl(var(--sp-appbar-foreground))',
           muted: 'hsl(var(--sp-appbar-muted))',
-          active: 'hsl(var(--sp-appbar-active))'
-        }
+          active: 'hsl(var(--sp-appbar-active))',
+        },
       },
       borderRadius: {
         lg: 'var(--sp-radius)',
         md: 'calc(var(--sp-radius) - 2px)',
-        sm: 'calc(var(--sp-radius) - 4px)'
+        sm: 'calc(var(--sp-radius) - 4px)',
       },
       fontFamily: {
         sans: [
@@ -77,30 +77,30 @@ module.exports = {
           '"Segoe UI"',
           'Roboto',
           '"Helvetica Neue"',
-          'sans-serif'
+          'sans-serif',
         ],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       keyframes: {
         'sp-in': {
           from: { opacity: '0', transform: 'translateY(-4px) scale(.98)' },
-          to: { opacity: '1', transform: 'translateY(0) scale(1)' }
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
         'sp-collapse-down': {
           from: { height: '0' },
-          to: { height: 'var(--radix-collapsible-content-height)' }
+          to: { height: 'var(--radix-collapsible-content-height)' },
         },
         'sp-collapse-up': {
           from: { height: 'var(--radix-collapsible-content-height)' },
-          to: { height: '0' }
-        }
+          to: { height: '0' },
+        },
       },
       animation: {
         'sp-in': 'sp-in .14s ease-out',
         'sp-collapse-down': 'sp-collapse-down .18s ease-out',
-        'sp-collapse-up': 'sp-collapse-up .18s ease-out'
-      }
-    }
+        'sp-collapse-up': 'sp-collapse-up .18s ease-out',
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 }

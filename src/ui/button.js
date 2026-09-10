@@ -22,20 +22,20 @@ const buttonVariants = cva(
         'destructive-outline':
           'border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:border-destructive/50',
         'destructive-ghost': 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
-        link: 'text-primary underline-offset-4 hover:underline'
+        link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-3.5 text-[13px] [&_svg]:size-4',
         sm: 'h-8 px-2.5 text-xs [&_svg]:size-3.5',
         lg: 'h-10 px-5 text-sm [&_svg]:size-4',
         icon: 'size-8 [&_svg]:size-4',
-        'icon-sm': 'size-7 [&_svg]:size-3.5'
-      }
+        'icon-sm': 'size-7 [&_svg]:size-3.5',
+      },
     },
     defaultVariants: {
       variant: 'default',
-      size: 'default'
-    }
+      size: 'default',
+    },
   }
 )
 

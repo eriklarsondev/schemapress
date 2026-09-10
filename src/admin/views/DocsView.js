@@ -75,7 +75,7 @@ export function DocsView({ docs, page }) {
           title={__('No documentation was found', 'schemapress')}
           description={__(
             'The documentation is compiled from the plugin’s docs directory, and no source files are there.',
-            'schemapress',
+            'schemapress'
           )}
         />
       </div>
@@ -117,7 +117,7 @@ export function DocsView({ docs, page }) {
                 <p className="mt-3 max-w-[40rem] text-[16px] leading-relaxed text-muted-foreground">
                   {__(
                     'Define a collection, fill in its entries, and read them from your theme. Nothing about presentation is stored here — what the content looks like is your templates’ business.',
-                    'schemapress',
+                    'schemapress'
                   )}
                 </p>
               ) : null}
@@ -127,7 +127,7 @@ export function DocsView({ docs, page }) {
               <Alert variant="warning" className="mb-8">
                 {__(
                   'A Markdown parser is not installed, so the documentation below is shown as plain text. Run composer install to format it.',
-                  'schemapress',
+                  'schemapress'
                 )}
               </Alert>
             ) : null}
@@ -242,7 +242,7 @@ function Splash({ sections }) {
           <p className="mt-3.5 max-w-[42rem] text-[16px] leading-relaxed text-appbar-muted">
             {__(
               'Define a collection, fill in its entries, and read them from your theme or over HTTP. Nothing about presentation is stored here — what the content looks like is your templates’ business.',
-              'schemapress',
+              'schemapress'
             )}
           </p>
         </div>
@@ -440,13 +440,13 @@ function PagerLink({ section, back }) {
       }}
       className={cn(
         'group flex flex-col gap-1.5 rounded-xl border border-border p-4 transition-all hover:border-primary/50 hover:bg-accent/40 hover:shadow-sm',
-        back ? 'items-start text-left' : 'items-end text-right',
+        back ? 'items-start text-left' : 'items-end text-right'
       )}
     >
       <span
         className={cn(
           'flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground',
-          back ? 'flex-row' : 'flex-row-reverse',
+          back ? 'flex-row' : 'flex-row-reverse'
         )}
       >
         <Icon className="size-3" aria-hidden="true" />
@@ -585,7 +585,10 @@ function useCodeChrome(root, section) {
       label.className = 'sp-code__lang'
       label.textContent = LANGUAGES[language] || language || __('Code', 'schemapress')
 
-      bar.append(label, copyButton(() => code?.textContent || ''))
+      bar.append(
+        label,
+        copyButton(() => code?.textContent || '')
+      )
       block.parentNode?.insertBefore(shell, block)
       shell.append(bar, block)
     })
@@ -707,7 +710,7 @@ function Link({ id, label, current }) {
         '-ml-px block w-full border-l py-1.5 pl-3.5 pr-2 text-left text-[12.5px] leading-snug transition-colors',
         current === id
           ? 'border-primary font-medium text-foreground'
-          : 'border-transparent text-muted-foreground hover:text-foreground',
+          : 'border-transparent text-muted-foreground hover:text-foreground'
       )}
     >
       {label}
@@ -756,7 +759,7 @@ function useCurrentHeading(section) {
           setCurrent(first)
         }
       },
-      { rootMargin: '-64px 0px -70% 0px' },
+      { rootMargin: '-64px 0px -70% 0px' }
     )
 
     headings.forEach((heading) => observer.observe(heading))

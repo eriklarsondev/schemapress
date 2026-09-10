@@ -3,11 +3,11 @@
         'name' => 'eriklarson/schemapress',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '1efe12cf423a9b480c4c3a33bb7e2681b5e746ea',
+        'reference' => '1e886a258c2546c771829d76e2300b7b567f9942',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => true,
+        'dev' => false,
     ),
     'versions' => array(
         'dflydev/dot-access-data' => array(
@@ -22,7 +22,7 @@
         'eriklarson/schemapress' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '1efe12cf423a9b480c4c3a33bb7e2681b5e746ea',
+            'reference' => '1e886a258c2546c771829d76e2300b7b567f9942',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

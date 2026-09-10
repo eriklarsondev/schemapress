@@ -1,0 +1,49 @@
+name: Feature request
+description: Something the plugin should be able to do and cannot.
+labels: ['enhancement']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Worth reading the **Known rough edges** section of the README first — several of
+        the obvious gaps are known, and it says which ones are planned.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What you are trying to build, and where the plugin stops you. Describe the
+        situation rather than the feature — it often turns out there is either an existing
+        way to do it or a better shape for the thing you are asking for.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: How you imagine it working. A sketch of the admin, or the API call you
+        wish you could make.
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What you are doing instead
+      description: Any workaround you have found. This is genuinely useful for judging how
+        much the gap costs.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      multiple: true
+      options:
+        - Modeling — field types, components, validation
+        - Editing — the entries admin, drafts, bulk actions
+        - Permissions
+        - Reading — REST API, PHP, Twig
+        - Operations — jobs, import/export, WP-CLI
+        - Documentation
+        - Something else

@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -26,7 +27,7 @@ if (!defined('ABSPATH')) {
  */
 class Component
 {
-    const POST_TYPE = 'sp_component';
+    public const POST_TYPE = 'sp_component';
 
     /**
      * hooks post type registration.

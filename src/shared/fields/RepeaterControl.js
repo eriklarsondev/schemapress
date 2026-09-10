@@ -36,7 +36,9 @@ function rowLabel(field, row, index) {
   )
 
   if (readable) {
-    const text = String(row.values[readable.key]).replace(/<[^>]*>/g, '').trim()
+    const text = String(row.values[readable.key])
+      .replace(/<[^>]*>/g, '')
+      .trim()
 
     return text.length > 60 ? `${text.slice(0, 60)}…` : text
   }
@@ -113,7 +115,7 @@ export function RepeaterField({ field, value, onChange, context }) {
     onChange(
       replaceAt(rows, index, {
         ...rows[index],
-        values: { ...rows[index].values, [key]: next }
+        values: { ...rows[index].values, [key]: next },
       })
     )
 

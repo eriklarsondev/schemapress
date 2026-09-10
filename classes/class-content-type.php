@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -21,14 +22,14 @@ if (!defined('ABSPATH')) {
  */
 class ContentType
 {
-    const META_KEY = '_schemapress_key';
-    const META_PLURAL = '_schemapress_plural';
+    public const META_KEY = '_schemapress_key';
+    public const META_PLURAL = '_schemapress_plural';
 
     /**
      * post types are capped at 20 characters, and the prefix takes four.
      */
-    const POST_TYPE_PREFIX = 'spc_';
-    const KEY_LIMIT = 16;
+    public const POST_TYPE_PREFIX = 'spc_';
+    public const KEY_LIMIT = 16;
 
     /**
      * @var array<int, array>|null

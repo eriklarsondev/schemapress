@@ -1,7 +1,8 @@
 <?php
+
 /**
  * Plugin Name:       SchemaPress
- * Plugin URI:        https://github.com/eriklarson/schemapress
+ * Plugin URI:        https://github.com/eriklarsondev/schemapress
  * Description:       Define a collection type — a named shape with typed fields — and get an admin for filling it in and a REST API for reading it back.
  * Version:           0.2.0
  * Author:            Erik Larson

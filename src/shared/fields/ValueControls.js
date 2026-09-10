@@ -155,7 +155,7 @@ export function ColorField({ field, value, onChange }) {
                     : // a swatch light enough to vanish into the form still has
                       // to read as a chip, so the ring is a shade of the color
                       // itself rather than a border that only works on dark ones
-                      'ring-black/15',
+                      'ring-black/15'
                 )}
               />
             ))}
@@ -252,7 +252,11 @@ export function JsonField({ field, value, onChange }) {
       label={field.label}
       help={field.help}
       required={field.required}
-      error={invalid ? __('That is not valid JSON, so it has not been stored.', 'schemapress') : undefined}
+      error={
+        invalid
+          ? __('That is not valid JSON, so it has not been stored.', 'schemapress')
+          : undefined
+      }
     >
       {(id) => (
         <JsonEditor
@@ -299,10 +303,21 @@ export function JsonField({ field, value, onChange }) {
  * @param {Object} props
  * @return {JSX.Element} The editor.
  */
-function JsonEditor({ id, text, rows, invalid, value, preview, onChange, onFormat, onPaste, onBlur }) {
+function JsonEditor({
+  id,
+  text,
+  rows,
+  invalid,
+  value,
+  preview,
+  onChange,
+  onFormat,
+  onPaste,
+  onBlur,
+}) {
   const html = useMemo(
     () => (text === '' ? '' : Prism.highlight(text, Prism.languages.json, 'json')),
-    [text],
+    [text]
   )
 
   const empty = text.trim() === ''
@@ -330,8 +345,8 @@ function JsonEditor({ id, text, rows, invalid, value, preview, onChange, onForma
               invalid
                 ? __('Fix the JSON first', 'schemapress')
                 : empty
-                  ? __('Nothing to format yet', 'schemapress')
-                  : ''
+                ? __('Nothing to format yet', 'schemapress')
+                : ''
             }
             // a disabled button emits no pointer events, so Tooltip has to know
             // to wrap it in something that can still be hovered — and the
@@ -382,9 +397,9 @@ function JsonEditor({ id, text, rows, invalid, value, preview, onChange, onForma
           className="sp-json-layer"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => complete(event, onChange)}
-            onPaste={onPaste}
-            onBlur={onBlur}
-          />
+          onPaste={onPaste}
+          onBlur={onBlur}
+        />
       </div>
 
       {preview ? <JsonPreview value={value} stale={invalid} /> : null}
@@ -454,9 +469,7 @@ function JsonNode({ name, value }) {
   }
 
   const entries =
-    kind === 'array'
-      ? value.map((item, index) => [String(index), item])
-      : Object.entries(value)
+    kind === 'array' ? value.map((item, index) => [String(index), item]) : Object.entries(value)
 
   return (
     <li className="py-px">
@@ -657,9 +670,7 @@ function replace(el, from, to, text, commit) {
   el.setSelectionRange(from, to)
 
   const inserted =
-    text === ''
-      ? document.execCommand('delete')
-      : document.execCommand('insertText', false, text)
+    text === '' ? document.execCommand('delete') : document.execCommand('insertText', false, text)
 
   if (!inserted) {
     commit(el.value.slice(0, from) + text + el.value.slice(to))

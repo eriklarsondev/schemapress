@@ -108,8 +108,7 @@ export function TypeView({ type, onChanged, onDeleted }) {
    * @param {Array} fields
    * @return {Promise<void>} Resolves once stored.
    */
-  const saveFields = (fields) =>
-    update({ fields }).catch((failure) => setError(failure.message))
+  const saveFields = (fields) => update({ fields }).catch((failure) => setError(failure.message))
 
   if (error) {
     return (

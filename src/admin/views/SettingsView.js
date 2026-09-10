@@ -20,16 +20,7 @@
 
 import { useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
-import {
-  List,
-  FileSearch,
-  Globe,
-  Lock,
-  Code2,
-  ShieldCheck,
-  Timer,
-  Trash2,
-} from 'lucide-react'
+import { List, FileSearch, Globe, Lock, Code2, ShieldCheck, Timer, Trash2 } from 'lucide-react'
 import {
   Card,
   CardBody,
@@ -127,7 +118,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
       apiCacheMaxAge: site().apiCacheMaxAge,
       deleteDataOnUninstall: site().deleteDataOnUninstall,
       collections: pairsOf(types),
-    }),
+    })
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -152,8 +143,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
    * @param {Object} read
    * @return {string} "Team Members — read many".
    */
-  const name = (type, read) =>
-    `${type.pluralLabel || type.label} — ${read.label.toLowerCase()}`
+  const name = (type, read) => `${type.pluralLabel || type.label} — ${read.label.toLowerCase()}`
 
   // what pressing Save would newly expose. the master switch is NOT counted
   // here — it asks for itself the moment it is flipped, and counting it again
@@ -166,9 +156,8 @@ export function SettingsView({ types = [], onSaved, onImported }) {
   const opening = rest
     ? types.flatMap((type) =>
         READS.filter(
-          (read) =>
-            collections[type.id]?.[read.key] && !before.collections[type.id]?.[read.key],
-        ).map((read) => name(type, read)),
+          (read) => collections[type.id]?.[read.key] && !before.collections[type.id]?.[read.key]
+        ).map((read) => name(type, read))
       )
     : []
 
@@ -201,7 +190,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
             apiCacheMaxAge: result.settings.apiCacheMaxAge,
             deleteDataOnUninstall: result.settings.deleteDataOnUninstall,
             collections: stored,
-          }),
+          })
         )
         setBusy(false)
         onSaved?.()
@@ -251,7 +240,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           <span
             className={cn(
               'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
-              rest ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+              rest ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
             )}
           >
             {rest ? <Globe className="size-4" /> : <Lock className="size-4" />}
@@ -264,11 +253,11 @@ export function SettingsView({ types = [], onSaved, onImported }) {
               {rest
                 ? __(
                     'Collections can be read over HTTP. Reads are public and unauthenticated — anyone with the address gets them — and only published entries are ever served.',
-                    'schemapress',
+                    'schemapress'
                   )
                 : __(
                     'The schemapress/api namespace is not registered, so it does not appear under /wp-json/ and every address below it answers 404. What each collection had chosen is kept for when this is turned back on.',
-                    'schemapress',
+                    'schemapress'
                   )}
             </p>
           </div>
@@ -302,7 +291,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
               {__(
                 'How your theme reads content — SchemaPress::collection() and sp_collection(). They run on the server and never go over HTTP, so the switch above does not touch them and a page the site renders itself is unaffected either way.',
-                'schemapress',
+                'schemapress'
               )}
             </p>
           </div>
@@ -315,11 +304,11 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           {rest
             ? __(
                 'Each one answers independently, and publishes nothing until its own switch is on.',
-                'schemapress',
+                'schemapress'
               )
             : __(
                 'Kept as they were. These take effect again when the API above is turned back on.',
-                'schemapress',
+                'schemapress'
               )}
         </p>
       </div>
@@ -351,7 +340,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
         <span>
           {__(
             'Only published entries are ever served. Drafts, unpublished edits and anything in the trash are never readable over the API, whatever these switches say.',
-            'schemapress',
+            'schemapress'
           )}
         </span>
       </p>
@@ -368,7 +357,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
               {__(
                 'Every API response carries an ETag, so a client that asks again for something it already has gets a 304 and no body. That happens whatever this is set to.',
-                'schemapress',
+                'schemapress'
               )}
             </p>
 
@@ -376,11 +365,11 @@ export function SettingsView({ types = [], onSaved, onImported }) {
               {Number(cacheAge) > 0
                 ? __(
                     'Above zero this also tells caches you do not control — a CDN, a proxy — not to ask at all for that long. A correction published now may take that long to appear.',
-                    'schemapress',
+                    'schemapress'
                   )
                 : __(
                     'At zero, nothing is ever served stale: a cache must check with the site before reusing a response, and the ETag makes checking cheap.',
-                    'schemapress',
+                    'schemapress'
                   )}
             </p>
 
@@ -398,7 +387,10 @@ export function SettingsView({ types = [], onSaved, onImported }) {
       <div className="mt-1">
         <h2 className="px-1 text-[14px] font-semibold">{__('Data', 'schemapress')}</h2>
         <p className="mt-0.5 px-1 text-[12px] text-muted-foreground">
-          {__('Moving collections between installations, and what happens on the way out.', 'schemapress')}
+          {__(
+            'Moving collections between installations, and what happens on the way out.',
+            'schemapress'
+          )}
         </p>
       </div>
 
@@ -409,7 +401,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           <span
             className={cn(
               'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
-              deleteData ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground',
+              deleteData ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
             )}
           >
             <Trash2 className="size-4" />
@@ -424,11 +416,11 @@ export function SettingsView({ types = [], onSaved, onImported }) {
               {deleteData
                 ? __(
                     'Deleting SchemaPress from the Plugins screen will permanently erase every collection, every entry and every setting. There is no undo, and deactivating is not the same thing — only deleting.',
-                    'schemapress',
+                    'schemapress'
                   )
                 : __(
                     'Deleting the plugin leaves your collections and entries in the database, so reinstalling picks them back up. Turn this on if you would rather it cleaned up after itself.',
-                    'schemapress',
+                    'schemapress'
                   )}
             </p>
           </div>
@@ -450,7 +442,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           title={__('Erase everything on uninstall?', 'schemapress')}
           description={__(
             'If SchemaPress is ever deleted from the Plugins screen, every collection and every entry goes with it, permanently. Export your schema first if you have not already.',
-            'schemapress',
+            'schemapress'
           )}
           confirmLabel={__('Turn it on', 'schemapress')}
           onConfirm={() => {
@@ -468,7 +460,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           title={__('Turn on the REST Content API?', 'schemapress')}
           description={__(
             'The schemapress/api namespace returns to the WordPress REST API, and collections that publish themselves become readable over HTTP.',
-            'schemapress',
+            'schemapress'
           )}
           confirmLabel={__('Turn it on', 'schemapress')}
           onConfirm={() => {
@@ -485,7 +477,7 @@ export function SettingsView({ types = [], onSaved, onImported }) {
           title={__('Turn off the REST Content API?', 'schemapress')}
           description={__(
             'The schemapress/api namespace is removed from the WordPress REST API, so anything fetching content over HTTP will break. Your theme is unaffected, and each collection keeps its switches.',
-            'schemapress',
+            'schemapress'
           )}
           confirmLabel={__('Turn it off', 'schemapress')}
           onConfirm={() => {
@@ -507,10 +499,10 @@ export function SettingsView({ types = [], onSaved, onImported }) {
               'This makes %2$s readable by anyone who knows the address, without logging in. Drafts and unpublished edits are never served.',
               'This makes %1$d things readable by anyone who knows the address, without logging in: %2$s. Drafts and unpublished edits are never served.',
               opening.length,
-              'schemapress',
+              'schemapress'
             ),
             opening.length,
-            opening.join(', '),
+            opening.join(', ')
           )}
           confirmLabel={__('Publish', 'schemapress')}
           onConfirm={save}
@@ -552,7 +544,7 @@ function CollectionCard({ type, pair, disabled, onToggle }) {
         // inert rather than gone. what this collection had chosen is what comes
         // back when the API is switched on again, so it stays legible — grayed
         // is the difference between "not in effect" and "not decided"
-        disabled && 'pointer-events-none select-none opacity-50',
+        disabled && 'pointer-events-none select-none opacity-50'
       )}
     >
       {/* no status badge. the switches below are the status, and a chip saying
@@ -571,7 +563,7 @@ function CollectionCard({ type, pair, disabled, onToggle }) {
             {sprintf(
               /* translators: %d: number of entries */
               _n('%d entry', '%d entries', type.entries || 0, 'schemapress'),
-              type.entries || 0,
+              type.entries || 0
             )}
           </span>
         </p>
@@ -589,13 +581,13 @@ function CollectionCard({ type, pair, disabled, onToggle }) {
                   <read.icon
                     className={cn(
                       'size-3.5 shrink-0',
-                      on ? 'text-foreground' : 'text-muted-foreground/60',
+                      on ? 'text-foreground' : 'text-muted-foreground/60'
                     )}
                   />
                   <span
                     className={cn(
                       'truncate text-[13px]',
-                      on ? 'font-medium' : 'text-muted-foreground',
+                      on ? 'font-medium' : 'text-muted-foreground'
                     )}
                   >
                     {read.label}
@@ -609,7 +601,7 @@ function CollectionCard({ type, pair, disabled, onToggle }) {
                     /* translators: 1: a shape of read, 2: the collection's name */
                     __('%1$s — %2$s', 'schemapress'),
                     read.label,
-                    name,
+                    name
                   )}
                   onChange={(next) => onToggle(read.key, next)}
                 />

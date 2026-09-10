@@ -1,4 +1,5 @@
 <?php
+
 /**
  * An in-memory WordPress, big enough to run the plugin's real code paths.
  *
@@ -58,13 +59,34 @@ function sp_test_reset()
 
 // --- escaping and sanitizing -------------------------------------------------
 
-function sanitize_text_field($value) { return trim(strip_tags((string) $value)); }
-function sanitize_textarea_field($value) { return trim(strip_tags((string) $value)); }
-function sanitize_key($value) { return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $value)); }
-function sanitize_title($value) { return sanitize_key(str_replace(' ', '-', (string) $value)); }
-function wp_kses_post($value) { return (string) $value; }
-function sanitize_email($value) { return trim((string) $value); }
-function is_email($value) { return (bool) filter_var((string) $value, FILTER_VALIDATE_EMAIL); }
+function sanitize_text_field($value)
+{
+    return trim(strip_tags((string) $value));
+}
+function sanitize_textarea_field($value)
+{
+    return trim(strip_tags((string) $value));
+}
+function sanitize_key($value)
+{
+    return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $value));
+}
+function sanitize_title($value)
+{
+    return sanitize_key(str_replace(' ', '-', (string) $value));
+}
+function wp_kses_post($value)
+{
+    return (string) $value;
+}
+function sanitize_email($value)
+{
+    return trim((string) $value);
+}
+function is_email($value)
+{
+    return (bool) filter_var((string) $value, FILTER_VALIDATE_EMAIL);
+}
 
 function esc_url_raw($value)
 {
@@ -79,17 +101,50 @@ function esc_url_raw($value)
     return $value;
 }
 
-function esc_url($value) { return (string) $value; }
-function esc_attr($value) { return htmlspecialchars((string) $value, ENT_QUOTES); }
-function esc_html($value) { return htmlspecialchars((string) $value, ENT_QUOTES); }
-function absint($value) { return abs((int) $value); }
-function wp_rand($min = 0, $max = PHP_INT_MAX) { return random_int($min, $max); }
-function wp_slash($value) { return $value; }
-function wp_unslash($value) { return $value; }
-function __($text, $domain = null) { return $text; }
-function esc_html__($text, $domain = null) { return $text; }
-function esc_attr__($text, $domain = null) { return htmlspecialchars((string) $text, ENT_QUOTES); }
-function wp_strip_all_tags($text) { return strip_tags((string) $text); }
+function esc_url($value)
+{
+    return (string) $value;
+}
+function esc_attr($value)
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES);
+}
+function esc_html($value)
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES);
+}
+function absint($value)
+{
+    return abs((int) $value);
+}
+function wp_rand($min = 0, $max = PHP_INT_MAX)
+{
+    return random_int($min, $max);
+}
+function wp_slash($value)
+{
+    return $value;
+}
+function wp_unslash($value)
+{
+    return $value;
+}
+function __($text, $domain = null)
+{
+    return $text;
+}
+function esc_html__($text, $domain = null)
+{
+    return $text;
+}
+function esc_attr__($text, $domain = null)
+{
+    return htmlspecialchars((string) $text, ENT_QUOTES);
+}
+function wp_strip_all_tags($text)
+{
+    return strip_tags((string) $text);
+}
 
 // WordPress polyfills this in wp-includes/compat.php when the mbstring
 // extension is absent, so plugin code may call it unguarded. this CLI has no
@@ -102,8 +157,14 @@ if (!function_exists('mb_strlen')) {
         return count($matches[0]);
     }
 }
-function wpautop($value) { return '<p>' . $value . '</p>'; }
-function do_shortcode($value) { return $value; }
+function wpautop($value)
+{
+    return '<p>' . $value . '</p>';
+}
+function do_shortcode($value)
+{
+    return $value;
+}
 
 function wp_trim_words($text, $count = 55, $more = null)
 {
@@ -193,11 +254,26 @@ function current_user_can($cap, $id = null)
 
     return is_array($caps) ? !empty($caps[$cap]) : true;
 }
-function add_menu_page() { return 'toplevel_page_schemapress'; }
-function add_submenu_page() { return 'schemapress_page_docs'; }
-function admin_url($path = '') { return 'http://example.test/wp-admin/' . $path; }
-function rest_url($path = '') { return 'http://example.test/wp-json/' . $path; }
-function wp_json_encode($value) { return json_encode($value); }
+function add_menu_page()
+{
+    return 'toplevel_page_schemapress';
+}
+function add_submenu_page()
+{
+    return 'schemapress_page_docs';
+}
+function admin_url($path = '')
+{
+    return 'http://example.test/wp-admin/' . $path;
+}
+function rest_url($path = '')
+{
+    return 'http://example.test/wp-json/' . $path;
+}
+function wp_json_encode($value)
+{
+    return json_encode($value);
+}
 
 // --- options -----------------------------------------------------------------
 
@@ -231,14 +307,20 @@ function wp_generate_uuid4()
 {
     return sprintf(
         '%04x%04x-%04x-4%03x-%04x-%04x%04x%04x',
-        random_int(0, 0xffff), random_int(0, 0xffff),
+        random_int(0, 0xffff),
+        random_int(0, 0xffff),
         random_int(0, 0xffff),
         random_int(0, 0x0fff),
         random_int(0, 0x3fff) | 0x8000,
-        random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff)
+        random_int(0, 0xffff),
+        random_int(0, 0xffff),
+        random_int(0, 0xffff)
     );
 }
-function is_wp_error($value) { return $value instanceof WP_Error; }
+function is_wp_error($value)
+{
+    return $value instanceof WP_Error;
+}
 
 // --- REST --------------------------------------------------------------------
 
@@ -276,22 +358,46 @@ class WP_REST_Response implements ArrayAccess
         $this->status = $status;
     }
 
-    public function header($name, $value) { $this->headers[$name] = $value; }
-    public function get_headers() { return $this->headers; }
-    public function get_status() { return $this->status; }
-    public function get_data() { return $this->data; }
+    public function header($name, $value)
+    {
+        $this->headers[$name] = $value;
+    }
+    public function get_headers()
+    {
+        return $this->headers;
+    }
+    public function get_status()
+    {
+        return $this->status;
+    }
+    public function get_data()
+    {
+        return $this->data;
+    }
 
     #[\ReturnTypeWillChange]
-    public function offsetGet($offset) { return $this->data[$offset] ?? null; }
+    public function offsetGet($offset)
+    {
+        return $this->data[$offset] ?? null;
+    }
 
     #[\ReturnTypeWillChange]
-    public function offsetExists($offset) { return isset($this->data[$offset]); }
+    public function offsetExists($offset)
+    {
+        return isset($this->data[$offset]);
+    }
 
     #[\ReturnTypeWillChange]
-    public function offsetSet($offset, $value) { $this->data[$offset] = $value; }
+    public function offsetSet($offset, $value)
+    {
+        $this->data[$offset] = $value;
+    }
 
     #[\ReturnTypeWillChange]
-    public function offsetUnset($offset) { unset($this->data[$offset]); }
+    public function offsetUnset($offset)
+    {
+        unset($this->data[$offset]);
+    }
 }
 
 function rest_ensure_response($data)
@@ -316,26 +422,50 @@ class WP_REST_Request implements ArrayAccess
         $this->headers = $headers;
     }
 
-    public function get_query_params() { return $this->query; }
-    public function get_param($key) { return $this->params[$key] ?? null; }
+    public function get_query_params()
+    {
+        return $this->query;
+    }
+    public function get_param($key)
+    {
+        return $this->params[$key] ?? null;
+    }
 
     // WordPress normalizes a header name to lowercase with underscores, which
     // is why the API asks for `if_none_match` rather than `If-None-Match`
-    public function get_header($name) { return $this->headers[$name] ?? null; }
+    public function get_header($name)
+    {
+        return $this->headers[$name] ?? null;
+    }
 
-    public function get_json_params() { return $this->params['__json'] ?? []; }
-
-    #[\ReturnTypeWillChange]
-    public function offsetGet($offset) { return $this->params[$offset] ?? null; }
-
-    #[\ReturnTypeWillChange]
-    public function offsetExists($offset) { return isset($this->params[$offset]); }
-
-    #[\ReturnTypeWillChange]
-    public function offsetSet($offset, $value) { $this->params[$offset] = $value; }
+    public function get_json_params()
+    {
+        return $this->params['__json'] ?? [];
+    }
 
     #[\ReturnTypeWillChange]
-    public function offsetUnset($offset) { unset($this->params[$offset]); }
+    public function offsetGet($offset)
+    {
+        return $this->params[$offset] ?? null;
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetExists($offset)
+    {
+        return isset($this->params[$offset]);
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetSet($offset, $value)
+    {
+        $this->params[$offset] = $value;
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($offset)
+    {
+        unset($this->params[$offset]);
+    }
 }
 
 class WP_Error
@@ -351,15 +481,30 @@ class WP_Error
         $this->data = $data;
     }
 
-    public function get_error_code() { return $this->code; }
-    public function get_error_message() { return $this->message; }
-    public function get_error_data() { return $this->data; }
+    public function get_error_code()
+    {
+        return $this->code;
+    }
+    public function get_error_message()
+    {
+        return $this->message;
+    }
+    public function get_error_data()
+    {
+        return $this->data;
+    }
 }
 
 // --- post types --------------------------------------------------------------
 
-function register_post_type($type, $args = []) { $GLOBALS['wp_post_types'][$type] = true; }
-function post_type_exists($type) { return isset($GLOBALS['wp_post_types'][$type]); }
+function register_post_type($type, $args = [])
+{
+    $GLOBALS['wp_post_types'][$type] = true;
+}
+function post_type_exists($type)
+{
+    return isset($GLOBALS['wp_post_types'][$type]);
+}
 
 // --- posts -------------------------------------------------------------------
 
@@ -590,14 +735,18 @@ function get_posts($args = [])
         }));
     }
 
-    usort($found, function ($a, $b) { return strcmp($a->post_title, $b->post_title); });
+    usort($found, function ($a, $b) {
+        return strcmp($a->post_title, $b->post_title);
+    });
 
     if (!empty($args['numberposts']) && $args['numberposts'] > 0) {
         $found = array_slice($found, 0, (int) $args['numberposts']);
     }
 
     if (($args['fields'] ?? '') === 'ids') {
-        return array_map(function ($post) { return $post->ID; }, $found);
+        return array_map(function ($post) {
+            return $post->ID;
+        }, $found);
     }
 
     return $found;
@@ -938,8 +1087,14 @@ function delete_post_meta($id, $key)
 
 // --- attachments -------------------------------------------------------------
 
-function wp_attachment_is_image($id) { return get_post_type($id) === 'attachment'; }
-function wp_get_attachment_url($id) { return 'http://example.test/uploads/' . $id . '.jpg'; }
+function wp_attachment_is_image($id)
+{
+    return get_post_type($id) === 'attachment';
+}
+function wp_get_attachment_url($id)
+{
+    return 'http://example.test/uploads/' . $id . '.jpg';
+}
 function wp_get_attachment_metadata($id)
 {
     // the sizes are in here, which is the point: the resolver reads them from
@@ -953,12 +1108,30 @@ function wp_get_attachment_metadata($id)
         ],
     ];
 }
-function wp_get_attachment_caption($id) { return ''; }
-function get_post_mime_type($id) { return 'image/jpeg'; }
-function get_intermediate_image_sizes() { return ['thumbnail']; }
-function wp_get_attachment_image_src($id, $size) { return ['http://example.test/uploads/' . $id . '-t.jpg', 150, 150]; }
-function wp_get_attachment_image_srcset($id, $size) { return ''; }
-function get_permalink($post) { return 'http://example.test/?p=' . (is_object($post) ? $post->ID : $post); }
+function wp_get_attachment_caption($id)
+{
+    return '';
+}
+function get_post_mime_type($id)
+{
+    return 'image/jpeg';
+}
+function get_intermediate_image_sizes()
+{
+    return ['thumbnail'];
+}
+function wp_get_attachment_image_src($id, $size)
+{
+    return ['http://example.test/uploads/' . $id . '-t.jpg', 150, 150];
+}
+function wp_get_attachment_image_srcset($id, $size)
+{
+    return '';
+}
+function get_permalink($post)
+{
+    return 'http://example.test/?p=' . (is_object($post) ? $post->ID : $post);
+}
 
 // --- the plugin --------------------------------------------------------------
 
@@ -1011,7 +1184,10 @@ $GLOBALS['wpdb'] = new SP_Test_Wpdb();
  */
 $GLOBALS['wp_cron'] = [];
 
-function wp_next_scheduled($hook) { return $GLOBALS['wp_cron'][$hook] ?? false; }
+function wp_next_scheduled($hook)
+{
+    return $GLOBALS['wp_cron'][$hook] ?? false;
+}
 
 function wp_schedule_single_event($when, $hook)
 {
@@ -1034,9 +1210,18 @@ class SP_Test_Role
     public $name;
     public $capabilities = [];
 
-    public function __construct($name) { $this->name = $name; }
-    public function add_cap($cap) { $this->capabilities[$cap] = true; }
-    public function remove_cap($cap) { unset($this->capabilities[$cap]); }
+    public function __construct($name)
+    {
+        $this->name = $name;
+    }
+    public function add_cap($cap)
+    {
+        $this->capabilities[$cap] = true;
+    }
+    public function remove_cap($cap)
+    {
+        unset($this->capabilities[$cap]);
+    }
 }
 
 class SP_Test_Roles
@@ -1062,22 +1247,37 @@ function wp_roles()
     return $GLOBALS['wp_roles_instance'];
 }
 
-function get_role($name) { return wp_roles()->role_objects[$name] ?? null; }
+function get_role($name)
+{
+    return wp_roles()->role_objects[$name] ?? null;
+}
 
-function translate_user_role($name) { return $name; }
+function translate_user_role($name)
+{
+    return $name;
+}
 
 function wp_get_current_user()
 {
     return (object) ['roles' => $GLOBALS['wp_current_roles'] ?? ['administrator']];
 }
 
-function home_url() { return 'https://example.test'; }
-
-if (!function_exists('_n')) {
-    function _n($single, $plural, $number, $domain = 'default') { return (int) $number === 1 ? $single : $plural; }
+function home_url()
+{
+    return 'https://example.test';
 }
 
-function wp_parse_url($url, $component = -1) { return parse_url($url, $component); }
+if (!function_exists('_n')) {
+    function _n($single, $plural, $number, $domain = 'default')
+    {
+        return (int) $number === 1 ? $single : $plural;
+    }
+}
+
+function wp_parse_url($url, $component = -1)
+{
+    return parse_url($url, $component);
+}
 
 function sanitize_hex_color($color)
 {

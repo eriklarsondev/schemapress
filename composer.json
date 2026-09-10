@@ -8,9 +8,22 @@
     "timber/timber": "^2.0",
     "league/commonmark": "^2.4"
   },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.75",
+    "squizlabs/php_codesniffer": "^3.13",
+    "wp-coding-standards/wpcs": "^3.1",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+  },
   "config": {
     "allow-plugins": {
-      "composer/installers": true
+      "composer/installers": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true
     }
+  },
+  "scripts": {
+    "format": "php-cs-fixer fix",
+    "format:check": "php-cs-fixer fix --dry-run --diff",
+    "lint": "phpcs --standard=phpcs.xml.dist"
   }
 }

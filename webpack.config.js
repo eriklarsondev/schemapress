@@ -12,11 +12,11 @@ module.exports = {
   ...defaultConfig,
   entry: {
     // one screen: the content-type builder and the content manager
-    admin: path.resolve(__dirname, 'src/admin/index.js')
+    admin: path.resolve(__dirname, 'src/admin/index.js'),
   },
   output: {
     ...defaultConfig.output,
     path: path.resolve(__dirname, 'build'),
-    filename: '[name].js'
-  }
+    filename: '[name].js',
+  },
 }

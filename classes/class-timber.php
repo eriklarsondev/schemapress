@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -26,7 +27,7 @@ class Timber
     /**
      * the Timber major version these functions are registered against.
      */
-    const REQUIRES = 2;
+    public const REQUIRES = 2;
 
     /**
      * hooks the Twig function registration.

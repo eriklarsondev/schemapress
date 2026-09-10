@@ -13,15 +13,7 @@ import { cn, portalContainer, LAYERS } from './utils'
  * @param {Object} props
  * @return {JSX.Element} The select.
  */
-export function Select({
-  value,
-  onChange,
-  options = [],
-  placeholder,
-  id,
-  disabled,
-  className
-}) {
+export function Select({ value, onChange, options = [], placeholder, id, disabled, className }) {
   return (
     <SelectPrimitive.Root
       // Radix reserves the empty string for "no value", so an empty option is

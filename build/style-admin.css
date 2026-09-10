@@ -2329,7 +2329,10 @@
    `.sp-control` class is here so a control that is NOT a native element — a
    Radix select trigger is a <button> — wears exactly the same surface instead
    of a hand-copied approximation of it that drifts a padding at a time */
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']),
+.schemapress
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not(
+    [type="file"]
+  ):not([type="color"]),
 .schemapress textarea,
 .schemapress select,
 .schemapress .sp-control {
@@ -2370,20 +2373,27 @@
    `sp-inset-icon` leaves room for an icon sitting inside the field.
    `sp-auto-width` gives the width back to whatever the layout says. */
 .schemapress
-  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-inset-icon {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not(
+    [type="file"]
+  ).sp-inset-icon {
   padding-left: 2.125rem;
 }
 
 .schemapress
-  input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']).sp-auto-width {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not(
+    [type="file"]
+  ).sp-auto-width {
   width: auto;
 }
 
-.schemapress input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']):focus,
+.schemapress
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not(
+    [type="file"]
+  ):not([type="color"]):focus,
 .schemapress textarea:focus,
 .schemapress select:focus,
 .schemapress .sp-control:focus,
-.schemapress .sp-control[data-state='open'] {
+.schemapress .sp-control[data-state="open"] {
   outline: 2px solid transparent;
   outline-offset: 2px;
   /* white once you are in it: the fill marks a field you have not reached yet,
@@ -2395,7 +2405,7 @@
 
 /* wp-admin gives checkboxes a 1px margin and its own box; ours are Radix
    elements, so the native control only appears in the multi-select field */
-.schemapress input[type='checkbox'] {
+.schemapress input[type="checkbox"] {
   margin: 0;
 }
 
@@ -2409,7 +2419,7 @@
    deliberately specific enough to beat wp-admin, which means it also beats
    `size-9` on the element, and the class sat there for a release doing
    nothing — see the note on the escape hatches above. */
-.schemapress input[type='color'] {
+.schemapress input[type="color"] {
   box-sizing: border-box;
   flex: none;
   width: 2.25rem;
@@ -2427,21 +2437,21 @@
 /* every browser draws the swatch as an inset child carrying its own padding
    and border, which inside a 36px box is a small square rattling around in a
    large one. these are the only way to reach it */
-.schemapress input[type='color']::-webkit-color-swatch-wrapper {
+.schemapress input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 
-.schemapress input[type='color']::-webkit-color-swatch {
+.schemapress input[type="color"]::-webkit-color-swatch {
   border: 0;
   border-radius: calc(var(--sp-radius) - 5px);
 }
 
-.schemapress input[type='color']::-moz-color-swatch {
+.schemapress input[type="color"]::-moz-color-swatch {
   border: 0;
   border-radius: calc(var(--sp-radius) - 5px);
 }
 
-.schemapress input[type='color']:focus-visible {
+.schemapress input[type="color"]:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 2px;
   border-color: hsl(var(--sp-ring));
@@ -2659,7 +2669,9 @@ body.toplevel_page_schemapress #wpfooter {
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
 }
 
 /* the icon is built as DOM rather than mounted, so it carries no utility
@@ -2676,7 +2688,7 @@ body.toplevel_page_schemapress #wpfooter {
   color: hsl(210 40% 96%);
 }
 
-.schemapress .sp-prose .sp-code__copy[data-copied='true'] {
+.schemapress .sp-prose .sp-code__copy[data-copied="true"] {
   color: hsl(156 62% 62%);
 }
 
@@ -2728,7 +2740,7 @@ body.toplevel_page_schemapress #wpfooter {
    browser default rather than imposing a look — the look is the skin's, and it
    is the one authors already know from the post editor. */
 .schemapress .schemapress-rte button,
-.schemapress .schemapress-rte input[type='button'] {
+.schemapress .schemapress-rte input[type="button"] {
   font: inherit;
   cursor: pointer;
 }
@@ -3079,7 +3091,10 @@ body.toplevel_page_schemapress #wpfooter {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.12s, background-color 0.12s, border-color 0.12s;
+  transition:
+    color 0.12s,
+    background-color 0.12s,
+    border-color 0.12s;
 }
 
 .schemapress .sp-prose .sp-tabs__tab:hover {
@@ -3087,7 +3102,7 @@ body.toplevel_page_schemapress #wpfooter {
   color: hsl(210 40% 96%);
 }
 
-.schemapress .sp-prose .sp-tabs__tab[aria-selected='true'] {
+.schemapress .sp-prose .sp-tabs__tab[aria-selected="true"] {
   border-bottom-color: hsl(224 71% 62%);
   color: hsl(210 40% 98%);
 }
@@ -3132,7 +3147,7 @@ body.toplevel_page_schemapress #wpfooter {
 /* a chip in the callout's own color: at a glance the kind is read from the
    left edge, before the word naming it has been */
 .schemapress .sp-prose .sp-callout__title::before {
-  content: '';
+  content: "";
   flex: none;
   width: 6px;
   height: 6px;
@@ -3264,7 +3279,7 @@ body.toplevel_page_schemapress #wpfooter {
 }
 
 .schemapress .sp-prose .sp-status::before {
-  content: '';
+  content: "";
   flex: none;
   width: 8px;
   height: 8px;

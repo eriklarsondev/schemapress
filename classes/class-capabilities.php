@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -35,12 +36,12 @@ class Capabilities
     /**
      * what it takes to open the builder and work on entries.
      */
-    const EDIT = 'schemapress_edit_content';
+    public const EDIT = 'schemapress_edit_content';
 
     /**
      * what it takes to change the SHAPE of content, or what the site publishes.
      */
-    const MANAGE = 'schemapress_manage_schema';
+    public const MANAGE = 'schemapress_manage_schema';
 
     /**
      * which roles get which capability when the plugin is activated.
@@ -51,7 +52,7 @@ class Capabilities
      *
      * @var array<string, string[]>
      */
-    const ROLE_GRANTS = [
+    public const ROLE_GRANTS = [
         'administrator' => [self::EDIT, self::MANAGE],
         'editor' => [self::EDIT],
     ];

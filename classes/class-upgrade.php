@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -28,17 +29,17 @@ if (!defined('ABSPATH')) {
  */
 class Upgrade
 {
-    const OPTION = 'schemapress_version';
+    public const OPTION = 'schemapress_version';
 
     /**
      * the lock, so two requests arriving together do not both upgrade.
      */
-    const LOCK = 'schemapress_upgrade_lock';
+    public const LOCK = 'schemapress_upgrade_lock';
 
     /**
      * how long a lock is honored before it is assumed to be a crashed run.
      */
-    const LOCK_TTL = 300;
+    public const LOCK_TTL = 300;
 
     /**
      * hooks the check.

@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -30,22 +31,22 @@ class Entries
     /**
      * what the front end serves.
      */
-    const META_VALUES = '_schemapress_values';
+    public const META_VALUES = '_schemapress_values';
 
     /**
      * what is being worked on.
      */
-    const META_DRAFT = '_schemapress_draft';
+    public const META_DRAFT = '_schemapress_draft';
 
     /**
      * how many saves the draft is ahead of the published copy.
      */
-    const META_AHEAD = '_schemapress_ahead';
+    public const META_AHEAD = '_schemapress_ahead';
 
     /**
      * when the published copy was last moved forward.
      */
-    const META_PUBLISHED_AT = '_schemapress_published_at';
+    public const META_PUBLISHED_AT = '_schemapress_published_at';
 
     /**
      * the draft's name, while it differs from the published one.
@@ -54,7 +55,7 @@ class Entries
      * unpublished edits needs somewhere else to keep what it is currently
      * called. absent means the two agree.
      */
-    const META_DRAFT_TITLE = '_schemapress_draft_title';
+    public const META_DRAFT_TITLE = '_schemapress_draft_title';
 
     /**
      * the entry's public identifier.
@@ -65,7 +66,7 @@ class Entries
      * particular database. the post id stays, internally, as the primary key it
      * is — nothing outside this class needs to know it.
      */
-    const META_UID = '_schemapress_uid';
+    public const META_UID = '_schemapress_uid';
 
     /**
      * the field key a collection uses to name its entries, when it declares one.
@@ -90,13 +91,13 @@ class Entries
      * ten, because a page you can see all of at once is a page you can compare
      * across — and because the pager below it then means something.
      */
-    const PER_PAGE = 10;
+    public const PER_PAGE = 10;
 
     /**
      * the two ways an entry can be read.
      */
-    const PUBLISHED = 'published';
-    const DRAFT = 'draft';
+    public const PUBLISHED = 'published';
+    public const DRAFT = 'draft';
 
     /**
      * a page of entries.

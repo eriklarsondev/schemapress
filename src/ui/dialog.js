@@ -7,17 +7,17 @@
  * every panel it contains.
  */
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
-import { __ } from "@wordpress/i18n";
-import { Button } from "./button";
-import { cn, portalContainer, LAYERS } from "./utils";
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { X } from 'lucide-react'
+import { __ } from '@wordpress/i18n'
+import { Button } from './button'
+import { cn, portalContainer, LAYERS } from './utils'
 
 const SIZES = {
-  md: "w-[min(40rem,calc(100vw-2rem))]",
-  lg: "w-[min(56rem,calc(100vw-2rem))]",
-  xl: "w-[min(72rem,calc(100vw-2rem))]",
-};
+  md: 'w-[min(40rem,calc(100vw-2rem))]',
+  lg: 'w-[min(56rem,calc(100vw-2rem))]',
+  xl: 'w-[min(72rem,calc(100vw-2rem))]',
+}
 
 /**
  * Modal dialog with a sticky header and footer around a scrolling body.
@@ -31,7 +31,7 @@ export function Dialog({
   title,
   description,
   badge,
-  size = "lg",
+  size = 'lg',
   footer,
   children,
 }) {
@@ -39,7 +39,7 @@ export function Dialog({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal container={portalContainer()}>
         <DialogPrimitive.Overlay
-          className={cn("fixed inset-0 bg-black/40", LAYERS.dialogOverlay)}
+          className={cn('fixed inset-0 bg-black/40', LAYERS.dialogOverlay)}
         />
         {/* centered by flex, not by a transform. a transform would be the
             obvious way, but the open animation animates `transform` too and
@@ -49,14 +49,14 @@ export function Dialog({
             dialog stay reachable instead of hanging off the top */}
         <div
           className={cn(
-            "pointer-events-none fixed inset-0 flex items-center justify-center p-4",
-            LAYERS.dialogContent,
+            'pointer-events-none fixed inset-0 flex items-center justify-center p-4',
+            LAYERS.dialogContent
           )}
         >
           <DialogPrimitive.Content
             className={cn(
-              "pointer-events-auto flex max-h-[calc(100vh-4rem)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl animate-sp-in focus:outline-none",
-              SIZES[size],
+              'pointer-events-auto flex max-h-[calc(100vh-4rem)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl animate-sp-in focus:outline-none',
+              SIZES[size]
             )}
             // configuration dialogs are dense; closing on an accidental
             // outside click would discard a half-finished edit
@@ -78,11 +78,7 @@ export function Dialog({
               </div>
 
               <DialogPrimitive.Close asChild>
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={__("Close", "schemapress")}
-                >
+                <Button size="icon-sm" variant="ghost" aria-label={__('Close', 'schemapress')}>
                   <X />
                 </Button>
               </DialogPrimitive.Close>
@@ -99,5 +95,5 @@ export function Dialog({
         </div>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
-  );
+  )
 }

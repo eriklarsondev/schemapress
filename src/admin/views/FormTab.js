@@ -72,12 +72,7 @@ import { move } from '../../shared/utils'
 import { conditionTargets } from '../../shared/conditions'
 // the canvas must break its rows exactly the way the entry form does, or it is
 // a picture of a layout rather than the layout
-import {
-  breakBefore,
-  rowBreakClass,
-  startsRow,
-  widthOf as drawnWidth,
-} from '../../shared/layout'
+import { breakBefore, rowBreakClass, startsRow, widthOf as drawnWidth } from '../../shared/layout'
 
 /** The types whose control takes a placeholder, mirroring SchemaModel. */
 const PLACEHOLDER_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number']
@@ -502,10 +497,10 @@ export function FormTab({ fields, onChange }) {
     setDraft((current) =>
       pin(
         current.map((field, i) =>
-          i === index ? { ...field, config: { ...field.config, width } } : field,
+          i === index ? { ...field, config: { ...field.config, width } } : field
         ),
-        current,
-      ),
+        current
+      )
     )
 
   /**
@@ -568,7 +563,7 @@ export function FormTab({ fields, onChange }) {
 
     setDraft((current) => {
       const marked = current.map((field, i) =>
-        i === from ? { ...field, config: { ...field.config, offset: 0, new_row: true } } : field,
+        i === from ? { ...field, config: { ...field.config, offset: 0, new_row: true } } : field
       )
 
       // moving to a later index counts the field being moved, so the boundary
@@ -583,7 +578,7 @@ export function FormTab({ fields, onChange }) {
       }
 
       return move(marked, from, to).map((field, i) =>
-        i === to + 1 ? { ...field, config: { ...field.config, new_row: true } } : field,
+        i === to + 1 ? { ...field, config: { ...field.config, new_row: true } } : field
       )
     })
 
@@ -638,7 +633,7 @@ export function FormTab({ fields, onChange }) {
                 new_row: false,
               },
             }
-          : field,
+          : field
       )
 
       // moving to a later index counts the field being moved, so the gap it
@@ -829,7 +824,7 @@ export function FormTab({ fields, onChange }) {
       <Alert variant="info">
         {__(
           'Drag a field onto another to reorder, into a row’s spare space to fill it, or onto a New row strip to give it a row of its own. Click a card for its placeholder, help text and whether it is required.',
-          'schemapress',
+          'schemapress'
         )}
       </Alert>
 
@@ -878,7 +873,7 @@ export function FormTab({ fields, onChange }) {
                   dragging={dragging !== -1}
                   over={over === at}
                 />
-              ),
+              )
             )}
           </div>
         </CardBody>
@@ -965,7 +960,7 @@ function Gap({ at, span, start, newRow, dragging, over }) {
         data-sp-gap={at}
         className={cn(
           'relative flex h-3 items-center justify-center rounded-full transition-colors sm:col-span-12',
-          over ? 'bg-primary' : 'bg-transparent',
+          over ? 'bg-primary' : 'bg-transparent'
         )}
       >
         {over ? (
@@ -988,9 +983,7 @@ function Gap({ at, span, start, newRow, dragging, over }) {
         start > 0 && STARTS[start + 1],
         // the same border either way, in a color that is not there: the box has
         // to be the same size lit as unlit
-        over
-          ? 'border-primary bg-primary/10 text-primary'
-          : 'border-transparent text-transparent',
+        over ? 'border-primary bg-primary/10 text-primary' : 'border-transparent text-transparent'
       )}
     >
       {over ? (
@@ -1014,7 +1007,6 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
 
   const width = widthOf(field)
   const option = WIDTHS.find((candidate) => candidate.value === width)
-  const offset = offsetOf(field)
 
   return (
     <div
@@ -1034,7 +1026,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
             // destination is a shape on screen rather than a guess. thicker
             // than a resting card on purpose: it is a target now, not content
             'cursor-grabbing items-center justify-center border-2 border-dashed border-ring/60 bg-accent/40'
-          : 'border border-border hover:border-primary/40',
+          : 'border border-border hover:border-primary/40'
       )}
     >
       {/* while it is being dragged the card IS a drop target — put it back
@@ -1065,7 +1057,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
           aria-label={sprintf(
             /* translators: %s: the field's label */
             __('Required: %s', 'schemapress'),
-            field.label,
+            field.label
           )}
           title={
             field.required
@@ -1080,7 +1072,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
             'flex size-5 shrink-0 items-center justify-center rounded border text-[13px] font-semibold leading-none transition-colors',
             field.required
               ? 'border-destructive/40 bg-destructive/10 text-destructive'
-              : 'border-border text-muted-foreground/50 hover:border-primary/50 hover:text-foreground',
+              : 'border-border text-muted-foreground/50 hover:border-primary/50 hover:text-foreground'
           )}
         >
           <span aria-hidden="true">*</span>
@@ -1101,7 +1093,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
               aria-label={sprintf(
                 /* translators: %s: the field's label */
                 __('Width of %s', 'schemapress'),
-                field.label,
+                field.label
               )}
               className="flex h-5 min-w-[1.75rem] shrink-0 items-center justify-center rounded border border-border px-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
             >
@@ -1132,7 +1124,7 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
       <div
         className={cn(
           'relative flex h-9 w-full items-center rounded-md border border-input bg-input-fill px-2.5 text-[12px] text-muted-foreground transition-colors group-hover:border-primary/40',
-          dragging && 'hidden',
+          dragging && 'hidden'
         )}
       >
         <span className="min-w-0 flex-1 truncate">{field.config?.placeholder || ''}</span>
@@ -1187,7 +1179,7 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
       title={draft.label || __('Field', 'schemapress')}
       description={__(
         'What this field asks for. Where it sits is set by dragging it on the canvas.',
-        'schemapress',
+        'schemapress'
       )}
       badge={<Badge variant="outline">{draft.type}</Badge>}
       footer={
@@ -1280,14 +1272,14 @@ function ConditionSettings({ field, siblings, onChange }) {
         label={__('Only show this field sometimes', 'schemapress')}
         help={__(
           'A hidden field keeps whatever was already in it, and still delivers it.',
-          'schemapress',
+          'schemapress'
         )}
         checked={on}
         onChange={(next) =>
           onChange(
             next
               ? { field: targets[0].key, operator: 'filled', value: '' }
-              : { field: '', operator: 'filled', value: '' },
+              : { field: '', operator: 'filled', value: '' }
           )
         }
       />

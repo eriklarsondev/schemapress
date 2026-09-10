@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -15,7 +16,7 @@ if (!defined('ABSPATH')) {
  */
 class Rest
 {
-    const NAMESPACE = 'schemapress/admin/v1';
+    public const NAMESPACE = 'schemapress/admin/v1';
 
     /**
      * hooks route registration.
@@ -1151,7 +1152,6 @@ class Rest
         return get_post_type(absint($request['id'])) === Component::POST_TYPE
             && $this->canManageSchema();
     }
-
 
     /**
      * whether the current user may edit a specific content type's entries.

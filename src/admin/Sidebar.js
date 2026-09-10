@@ -34,7 +34,7 @@ export function Sidebar({
   onSelectComponent,
   onCreateComponent,
   onOpenDocs,
-  onOpenSettings
+  onOpenSettings,
 }) {
   // a collection is identified by a post id, a documentation page by its slug,
   // so the two are compared differently against the same route
@@ -244,8 +244,8 @@ function Item({ label, icon: Icon, count, active, open, sub, onClick }) {
           // the parent of the section you are reading. it says so without
           // taking the background and the bar, which belong to the one row that
           // is actually the page on screen
-          open ? 'font-medium text-foreground' : 'text-muted-foreground',
-        ),
+          open ? 'font-medium text-foreground' : 'text-muted-foreground'
+        )
   )
 
   const body = (

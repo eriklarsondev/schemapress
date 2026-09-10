@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Writes languages/schemapress.pot from the strings in the source.
  *
@@ -143,7 +144,7 @@ $out[] = '# This file is distributed under the GPL-2.0-or-later license.';
 $out[] = 'msgid ""';
 $out[] = 'msgstr ""';
 $out[] = '"Project-Id-Version: SchemaPress\\n"';
-$out[] = '"Report-Msgid-Bugs-To: https://github.com/eriklarson/schemapress/issues\\n"';
+$out[] = '"Report-Msgid-Bugs-To: https://github.com/eriklarsondev/schemapress/issues\\n"';
 $out[] = '"POT-Creation-Date: ' . gmdate('Y-m-d H:iO') . '\\n"';
 $out[] = '"MIME-Version: 1.0\\n"';
 $out[] = '"Content-Type: text/plain; charset=UTF-8\\n"';

@@ -43,8 +43,8 @@ export function RichTextField({ field, value, onChange }) {
           const push = () => onChangeRef.current(instance.getContent())
 
           instance.on('change keyup undo redo SetContent', push)
-        }
-      }
+        },
+      },
     })
 
     // the text tab writes straight to the textarea, bypassing TinyMCE events

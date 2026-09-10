@@ -223,7 +223,7 @@ export function SelectField({ field, value, onChange }) {
                 onChange(
                   event.target.checked
                     ? [...selected, option.value]
-                    : selected.filter((entry) => entry !== option.value),
+                    : selected.filter((entry) => entry !== option.value)
                 )
               }
             />

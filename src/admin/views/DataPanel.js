@@ -17,16 +17,7 @@
 import { useRef, useState } from '@wordpress/element'
 import { __, sprintf, _n } from '@wordpress/i18n'
 import { Download, Upload, FileJson, AlertTriangle } from 'lucide-react'
-import {
-  Card,
-  CardBody,
-  Button,
-  Checkbox,
-  Alert,
-  Segmented,
-  Field,
-  ConfirmDialog,
-} from '../../ui'
+import { Card, CardBody, Button, Checkbox, Alert, Segmented, Field, ConfirmDialog } from '../../ui'
 import { api } from '../../shared/api'
 
 /**
@@ -128,8 +119,8 @@ export function DataPanel({ types = [], onImported }) {
         setError(
           failure instanceof SyntaxError
             ? __('That file is not valid JSON.', 'schemapress')
-            : failure.message,
-        ),
+            : failure.message
+        )
       )
       .finally(() => {
         // so choosing the same file twice in a row fires a change event the
@@ -162,8 +153,8 @@ export function DataPanel({ types = [], onImported }) {
             __('%1$d created, %2$d updated, %3$d entries.', 'schemapress'),
             created,
             report.collections.length - created,
-            report.entries,
-          ),
+            report.entries
+          )
         )
 
         // what happened and what to look at are separate messages. the import
@@ -177,8 +168,8 @@ export function DataPanel({ types = [], onImported }) {
             sprintf(
               /* translators: %s: why an entry was not imported */
               __('Skipped: %s', 'schemapress'),
-              one.message,
-            ),
+              one.message
+            )
           ),
         ]
 
@@ -216,7 +207,7 @@ export function DataPanel({ types = [], onImported }) {
                 <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                   {__(
                     'A JSON document holding your collections and their fields. Commit it, diff it, or read it into another install.',
-                    'schemapress',
+                    'schemapress'
                   )}
                 </p>
               </div>
@@ -237,7 +228,7 @@ export function DataPanel({ types = [], onImported }) {
                         setChosen((current) =>
                           current.includes(type.id)
                             ? current.filter((one) => one !== type.id)
-                            : [...current, type.id],
+                            : [...current, type.id]
                         )
                       }
                     />
@@ -251,7 +242,7 @@ export function DataPanel({ types = [], onImported }) {
               label={__('Include the entries', 'schemapress')}
               help={__(
                 'The content as well as its shape. Images travel as attachment ids, which will not resolve on a site that does not have them.',
-                'schemapress',
+                'schemapress'
               )}
               onChange={setWithEntries}
             />
@@ -280,7 +271,7 @@ export function DataPanel({ types = [], onImported }) {
                 <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                   {__(
                     'Collections are matched on their machine key, so re-importing a file updates what it made rather than making it again.',
-                    'schemapress',
+                    'schemapress'
                   )}
                 </p>
               </div>
@@ -292,11 +283,11 @@ export function DataPanel({ types = [], onImported }) {
                 mode === 'merge'
                   ? __(
                       'A field the file does not mention is left alone. Nothing an import does can orphan stored values.',
-                      'schemapress',
+                      'schemapress'
                     )
                   : __(
                       'The collection becomes exactly what the file says. A field it does not mention is deleted, and the values stored under it are orphaned.',
-                      'schemapress',
+                      'schemapress'
                     )
               }
             >
@@ -334,7 +325,7 @@ export function DataPanel({ types = [], onImported }) {
               <span>
                 {__(
                   'An import never turns on a collection’s public API, whatever the file says. Publishing is a decision about this site.',
-                  'schemapress',
+                  'schemapress'
                 )}
               </span>
             </p>
@@ -350,7 +341,7 @@ export function DataPanel({ types = [], onImported }) {
           title={sprintf(
             /* translators: %s: the chosen file's name */
             __('Import %s?', 'schemapress'),
-            pending.name,
+            pending.name
           )}
           description={sprintf(
             mode === 'replace'
@@ -359,16 +350,16 @@ export function DataPanel({ types = [], onImported }) {
                   'It holds %d collection. Any field it does not mention will be deleted from a collection that already exists, and the values stored under it orphaned.',
                   'It holds %d collections. Any field they do not mention will be deleted from collections that already exist, and the values stored under them orphaned.',
                   incoming,
-                  'schemapress',
+                  'schemapress'
                 )
               : /* translators: %d: number of collections in the file */
                 _n(
                   'It holds %d collection. Existing fields it does not mention are left alone.',
                   'It holds %d collections. Existing fields they do not mention are left alone.',
                   incoming,
-                  'schemapress',
+                  'schemapress'
                 ),
-            incoming,
+            incoming
           )}
           confirmLabel={__('Import', 'schemapress')}
           onConfirm={runImport}
@@ -379,7 +370,7 @@ export function DataPanel({ types = [], onImported }) {
               label={__('Restore the entries too', 'schemapress')}
               help={__(
                 'An entry the destination refuses — a unique value already taken, a required field added since — is skipped rather than stopping the import.',
-                'schemapress',
+                'schemapress'
               )}
               onChange={setRestoreEntries}
             />

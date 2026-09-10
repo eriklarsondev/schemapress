@@ -1,0 +1,84 @@
+name: Bug report
+description: Something behaves differently from how it is documented.
+labels: ['bug']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report security vulnerabilities here — use
+        [private vulnerability reporting](https://github.com/eriklarsondev/schemapress/security/advisories/new)
+        instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >
+        The smallest collection definition that shows the problem. A schema export from
+        Settings → Portability is the most useful thing you can attach.
+      placeholder: |
+        1. Create a collection with a ... field
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: schemapress-version
+    attributes:
+      label: SchemaPress version
+      placeholder: '0.2.0'
+    validations:
+      required: true
+
+  - type: input
+    id: wordpress-version
+    attributes:
+      label: WordPress version
+      placeholder: '6.8'
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: '8.3'
+    validations:
+      required: true
+
+  - type: textarea
+    id: surface
+    attributes:
+      label: Where it happens
+      description: >
+        The admin, the REST API, the PHP functions, Twig, or WP-CLI. If it is the API,
+        the request and the response you got.
+
+  - type: textarea
+    id: errors
+    attributes:
+      label: Errors
+      description: >
+        Anything in the PHP error log or the browser console. Paste as text rather than a
+        screenshot where you can.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I rebuilt or reinstalled the plugin, and `build/` and `vendor/` are both present
+          required: true
+        - label: I checked whether an existing issue already covers this
+          required: true

@@ -9,7 +9,14 @@ import { Fragment } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Alert } from '../../ui'
 import { visibleFields } from '../conditions'
-import { breakBefore, cellClass, gridClass, leadingSpace, rowBreakClass, spacerClass } from '../layout'
+import {
+  breakBefore,
+  cellClass,
+  gridClass,
+  leadingSpace,
+  rowBreakClass,
+  spacerClass,
+} from '../layout'
 import {
   TextField,
   TextareaField,

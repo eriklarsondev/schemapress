@@ -1,0 +1,33 @@
+# Format what is being committed, and refuse a commit that cannot parse.
+#
+# Installed by `npm install` — the "prepare" script runs husky, which points
+# core.hooksPath at .husky/_. To skip the hook once: git commit --no-verify.
+#
+# `set -e` is not optional here. A husky v9 hook is a plain script, so without
+# it the exit status is whatever the LAST command returned and a failing
+# lint-staged is silently discarded — the commit goes through unformatted and
+# nothing says so.
+set -e
+
+# The work is described in the "lint-staged" block of package.json rather than
+# here, because lint-staged does the one thing a hand-written hook gets wrong:
+# a file staged in PART with `git add -p` has the rest of its changes stashed
+# before the formatters run and restored afterwards, so work you deliberately
+# held back cannot be swept into the commit by a formatter rewriting the file
+# on disk.
+# Said here rather than in bin/php-format, which is where the skip actually
+# happens: lint-staged swallows the output of a task that succeeds, so a notice
+# printed in there is never seen by anybody. This is the same condition, one
+# level up, where it is visible.
+if [ ! -x vendor/bin/php-cs-fixer ]; then
+	echo "  note: php-cs-fixer is not installed, so PHP formatting is skipped."
+	echo "        Expected mid-release, when vendor/ is a --no-dev install."
+	echo "        'composer install' brings it back. CI checks formatting anyway."
+fi
+
+npx lint-staged
+
+# vendor/ is committed, and `composer install` writes require-dev into it. This
+# refuses a commit that would carry a dev install into the tree that ships. It
+# does nothing unless vendor/composer/installed.json is part of the commit.
+bin/vendor-no-dev --staged

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Procedural aliases for the reading API.
  *

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * End-to-end checks for collection types.
  *
@@ -420,7 +421,9 @@ check('lists US states and territories', 56, count(SchemaPress\Datasets::options
 // comma-separated — so this is the case a naive split silently mangles
 $korea = array_values(array_filter(
     SchemaPress\Datasets::options('countries'),
-    function ($option) { return $option['value'] === 'KR'; }
+    function ($option) {
+        return $option['value'] === 'KR';
+    }
 ));
 
 check('keeps a comma inside a label', 'Korea, Republic of', $korea[0]['label']);

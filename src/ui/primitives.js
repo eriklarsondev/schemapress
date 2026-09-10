@@ -69,10 +69,10 @@ const badgeVariants = cva(
         outline: 'border border-border text-muted-foreground',
         mono: 'bg-muted font-mono text-muted-foreground',
         success: 'bg-emerald-100 text-emerald-800',
-        warning: 'bg-amber-100 text-amber-900'
-      }
+        warning: 'bg-amber-100 text-amber-900',
+      },
     },
-    defaultVariants: { variant: 'default' }
+    defaultVariants: { variant: 'default' },
   }
 )
 
@@ -95,10 +95,10 @@ const alertVariants = cva('rounded-md border px-3 py-2.5 text-[13px]', {
       info: 'border-sky-300 bg-sky-50 text-sky-900',
       warning: 'border-amber-300 bg-amber-50 text-amber-900',
       error: 'border-red-300 bg-red-50 text-red-900',
-      success: 'border-emerald-300 bg-emerald-50 text-emerald-900'
-    }
+      success: 'border-emerald-300 bg-emerald-50 text-emerald-900',
+    },
   },
-  defaultVariants: { variant: 'info' }
+  defaultVariants: { variant: 'info' },
 })
 
 /**

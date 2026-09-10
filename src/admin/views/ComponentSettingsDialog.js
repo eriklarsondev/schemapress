@@ -48,7 +48,7 @@ export function ComponentSettingsDialog({ component, onClose, onSave, onDelete }
     setError('')
 
     Promise.resolve(
-      onSave({ label: name.trim() || component.label, description: description.trim() }),
+      onSave({ label: name.trim() || component.label, description: description.trim() })
     )
       .then(onClose)
       .catch((failure) => {
@@ -65,7 +65,7 @@ export function ComponentSettingsDialog({ component, onClose, onSave, onDelete }
       title={sprintf(
         /* translators: %s: the component's name */
         __('%s settings', 'schemapress'),
-        component.label,
+        component.label
       )}
       description={__('What this component is, and where it shows up.', 'schemapress')}
       footer={
@@ -126,7 +126,7 @@ export function ComponentSettingsDialog({ component, onClose, onSave, onDelete }
             <span>
               {__(
                 'Importing this into a collection copies its fields in. Editing it afterwards does not reach collections that already imported it.',
-                'schemapress',
+                'schemapress'
               )}
             </span>
           </span>
@@ -142,9 +142,9 @@ export function ComponentSettingsDialog({ component, onClose, onSave, onDelete }
             /* translators: %s: the component's name */
             __(
               'Collections that already imported “%s” keep their copy of the fields — importing copies rather than links, so nothing they hold is lost.',
-              'schemapress',
+              'schemapress'
             ),
-            component.label,
+            component.label
           )}
           confirmLabel={__('Delete', 'schemapress')}
           onConfirm={() => {

@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -27,12 +28,12 @@ if (!defined('ABSPATH')) {
  */
 class Docs
 {
-    const PAGE_SLUG = 'schemapress-docs';
+    public const PAGE_SLUG = 'schemapress-docs';
 
     /**
      * where the Markdown sources live, relative to the plugin root.
      */
-    const SOURCE_DIR = 'docs';
+    public const SOURCE_DIR = 'docs';
 
     /**
      * hooks the submenu page.

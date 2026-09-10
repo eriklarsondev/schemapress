@@ -23,7 +23,17 @@ import { Button, Input, Field, Switch, Heading, Select } from '../../ui'
  * The server enforces whatever the definition says, so this list is about what
  * is worth asking, not about what is possible.
  */
-const UNIQUE_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'number', 'date', 'datetime', 'time']
+const UNIQUE_TYPES = [
+  'text',
+  'textarea',
+  'email',
+  'url',
+  'phone',
+  'number',
+  'date',
+  'datetime',
+  'time',
+]
 
 /**
  * Renders the settings panel for a field's type.
@@ -131,7 +141,7 @@ function TypeSettings({ field, config, update }) {
           label={__('Most images', 'schemapress')}
           help={__(
             '0 for unlimited. There is no minimum — “required” already means at least one.',
-            'schemapress',
+            'schemapress'
           )}
         >
           {(id) => (
@@ -151,7 +161,10 @@ function TypeSettings({ field, config, update }) {
       return (
         <Field
           label={__('Editor height', 'schemapress')}
-          help={__('In rows. A payload is usually either three lines or three hundred.', 'schemapress')}
+          help={__(
+            'In rows. A payload is usually either three lines or three hundred.',
+            'schemapress'
+          )}
         >
           {(id) => (
             <Input
@@ -257,7 +270,7 @@ function SelectOptions({ config, onChange }) {
               /* translators: 1: dataset name, 2: number of choices */
               __('%1$s — %2$d choices, kept up to date for you.', 'schemapress'),
               dataset.label,
-              dataset.options.length,
+              dataset.options.length
             )}
           </p>
 
@@ -270,62 +283,68 @@ function SelectOptions({ config, onChange }) {
           </p>
         </div>
       ) : (
-      <div className="flex flex-col gap-2">
-        <Heading>{__('Options', 'schemapress')}</Heading>
+        <div className="flex flex-col gap-2">
+          <Heading>{__('Options', 'schemapress')}</Heading>
 
-        {/* label before value: the label is the thing you are deciding, and the
+          {/* label before value: the label is the thing you are deciding, and the
             value is what gets stored under it — a consequence of that decision */}
-        {options.map((option, index) => (
-          <div key={index} className="flex items-end gap-2">
-            <Field label={__('Label', 'schemapress')} className="flex-1">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={option.label}
-                  onChange={(event) =>
-                    onChange({
-                      options: replaceAt(options, index, { ...option, label: event.target.value }),
-                    })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={__('Value', 'schemapress')} className="flex-1">
-              {(id) => (
-                <Input
-                  id={id}
-                  className="font-mono text-[12px]"
-                  value={option.value}
-                  onChange={(event) =>
-                    onChange({
-                      options: replaceAt(options, index, { ...option, value: event.target.value }),
-                    })
-                  }
-                />
-              )}
-            </Field>
+          {options.map((option, index) => (
+            <div key={index} className="flex items-end gap-2">
+              <Field label={__('Label', 'schemapress')} className="flex-1">
+                {(id) => (
+                  <Input
+                    id={id}
+                    value={option.label}
+                    onChange={(event) =>
+                      onChange({
+                        options: replaceAt(options, index, {
+                          ...option,
+                          label: event.target.value,
+                        }),
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={__('Value', 'schemapress')} className="flex-1">
+                {(id) => (
+                  <Input
+                    id={id}
+                    className="font-mono text-[12px]"
+                    value={option.value}
+                    onChange={(event) =>
+                      onChange({
+                        options: replaceAt(options, index, {
+                          ...option,
+                          value: event.target.value,
+                        }),
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Button
+                size="icon"
+                variant="destructive-ghost"
+                aria-label={__('Remove option', 'schemapress')}
+                onClick={() => onChange({ options: removeAt(options, index) })}
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+
+          <div>
             <Button
-              size="icon"
-              variant="destructive-ghost"
-              aria-label={__('Remove option', 'schemapress')}
-              onClick={() => onChange({ options: removeAt(options, index) })}
+              size="sm"
+              variant="outline"
+              onClick={() => onChange({ options: [...options, { value: '', label: '' }] })}
             >
-              <Trash2 />
+              <Plus />
+              {__('Add option', 'schemapress')}
             </Button>
           </div>
-        ))}
-
-        <div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onChange({ options: [...options, { value: '', label: '' }] })}
-          >
-            <Plus />
-            {__('Add option', 'schemapress')}
-          </Button>
         </div>
-      </div>
       )}
     </div>
   )

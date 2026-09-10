@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -36,28 +37,28 @@ class Batch
     /**
      * where the queue lives.
      */
-    const OPTION = 'schemapress_jobs';
+    public const OPTION = 'schemapress_jobs';
 
     /**
      * the lock, so two cron runs cannot process the same cursor.
      */
-    const LOCK = 'schemapress_jobs_lock';
+    public const LOCK = 'schemapress_jobs_lock';
 
     /**
      * the cron hook jobs are drained on.
      */
-    const HOOK = 'schemapress/run_jobs';
+    public const HOOK = 'schemapress/run_jobs';
 
     /**
      * how many entries one step handles.
      */
-    const CHUNK = 100;
+    public const CHUNK = 100;
 
     /**
      * how many entries a collection can hold before the work is queued rather
      * than done on the spot.
      */
-    const INLINE_LIMIT = 200;
+    public const INLINE_LIMIT = 200;
 
     /**
      * how long one drain may run before it reschedules itself.
@@ -65,12 +66,12 @@ class Batch
      * twenty seconds, which is comfortably under the shortest PHP time limit
      * this plugin is likely to meet and long enough to be worth the trip.
      */
-    const BUDGET = 20;
+    public const BUDGET = 20;
 
     /**
      * how long a lock is honored before it is assumed to be a crashed run.
      */
-    const LOCK_TTL = 300;
+    public const LOCK_TTL = 300;
 
     /**
      * hooks the drain.

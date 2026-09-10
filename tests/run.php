@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Runs every suite, in its own process.
  *

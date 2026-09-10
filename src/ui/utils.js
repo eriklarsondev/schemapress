@@ -33,7 +33,7 @@ export const LAYERS = {
   confirmOverlay: 'z-[100020]',
   confirmContent: 'z-[100030]',
   // dropdowns, popovers and selects: above any dialog they were opened from
-  transient: 'z-[100100]'
+  transient: 'z-[100100]',
 }
 
 let container = null

@@ -1,4 +1,5 @@
 <?php
+
 namespace SchemaPress;
 
 if (!defined('ABSPATH')) {
@@ -44,7 +45,7 @@ class Portability
      * the format's own version, so an importer can refuse a file from a future
      * it does not understand rather than half-reading it.
      */
-    const FORMAT = 1;
+    public const FORMAT = 1;
 
     /**
      * how many entries one export carries before it is refused.
@@ -55,13 +56,13 @@ class Portability
      * thousand rows in it — which is what a database backup is for, and what
      * this would silently fail at.
      */
-    const MAX_ENTRIES = 5000;
+    public const MAX_ENTRIES = 5000;
 
     /**
      * WordPress's own ceiling on a post type name, which the entry post type —
      * `spc_` and the collection's key — has to fit under.
      */
-    const POST_TYPE_LIMIT = 20;
+    public const POST_TYPE_LIMIT = 20;
 
     /**
      * one or more collections as a portable document.

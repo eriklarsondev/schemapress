@@ -42,7 +42,7 @@ import {
 } from 'lucide-react'
 import { move, removeAt, replaceAt, toKey, uniqueKey } from '../utils'
 import { datasets } from '../settings'
-import { Button, Input, Field, Select, Switch, Badge, Dialog, Tabs, TabPanel, cn } from '../../ui'
+import { Button, Input, Field, Select, Badge, Dialog, Tabs, TabPanel, cn } from '../../ui'
 import { api } from '../api'
 import { FieldConfig } from './FieldConfig'
 
@@ -123,7 +123,7 @@ function summarize(field) {
         ? sprintf(
             /* translators: %d: number of choices */
             __('%d choices', 'schemapress'),
-            count,
+            count
           )
         : __('no choices yet', 'schemapress')
     }
@@ -139,7 +139,7 @@ function summarize(field) {
         sprintf(
           /* translators: %d: number of sub fields */
           __('%d sub fields', 'schemapress'),
-          count,
+          count
         ),
         ...bounds,
       ].join(' · ')
@@ -149,7 +149,7 @@ function summarize(field) {
       return sprintf(
         /* translators: %d: number of sub fields */
         __('%d sub fields', 'schemapress'),
-        (field.fields || []).length,
+        (field.fields || []).length
       )
 
     default:
@@ -181,7 +181,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
   const addField = (type) => {
     const key = uniqueKey(
       'field',
-      fields.map((field) => field.key),
+      fields.map((field) => field.key)
     )
 
     onChange([
@@ -214,7 +214,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
   const addDataset = (dataset) => {
     const key = uniqueKey(
       toKey(dataset.label),
-      fields.map((field) => field.key),
+      fields.map((field) => field.key)
     )
 
     onChange([
@@ -366,7 +366,15 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
  * @param {Object} props
  * @return {JSX.Element} The picker.
  */
-function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, onImport, onClose }) {
+function FieldTypePicker({
+  fieldTypes,
+  nested,
+  editing,
+  onPick,
+  onPickDataset,
+  onImport,
+  onClose,
+}) {
   const [tab, setTab] = useState('primitives')
   const [components, setComponents] = useState(null)
 
@@ -379,8 +387,7 @@ function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, o
       // itself, which is not a shape anybody meant to describe
       .then(
         (result) =>
-          live &&
-          setComponents((result.components || []).filter((one) => one.id !== editing))
+          live && setComponents((result.components || []).filter((one) => one.id !== editing))
       )
       .catch(() => live && setComponents([]))
 
@@ -456,7 +463,7 @@ function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, o
                         {sprintf(
                           /* translators: %d: number of choices */
                           __('%d choices', 'schemapress'),
-                          set.options.length,
+                          set.options.length
                         )}
                       </span>
                     </span>
@@ -474,11 +481,12 @@ function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, o
             </p>
           ) : components.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
-              <p className="text-[13px] font-medium">
-                {__('No components yet', 'schemapress')}
-              </p>
+              <p className="text-[13px] font-medium">{__('No components yet', 'schemapress')}</p>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
-                {__('Make one from the sidebar to reuse a shape across collections.', 'schemapress')}
+                {__(
+                  'Make one from the sidebar to reuse a shape across collections.',
+                  'schemapress'
+                )}
               </p>
             </div>
           ) : (
@@ -503,12 +511,7 @@ function FieldTypePicker({ fieldTypes, nested, editing, onPick, onPickDataset, o
                       {component.description ||
                         sprintf(
                           /* translators: %d: number of fields */
-                          _n(
-                            '%d field',
-                            '%d fields',
-                            component.fields,
-                            'schemapress'
-                          ),
+                          _n('%d field', '%d fields', component.fields, 'schemapress'),
                           component.fields
                         )}
                     </span>
@@ -648,8 +651,7 @@ function FieldRow({
         // the card being dragged becomes the slot it will land in: an outlined
         // gap the size of the card, so the destination is a shape on screen
         // rather than something to infer from where the cursor happens to be
-        dragging &&
-          'cursor-grabbing border-dashed border-ring/60 bg-accent/40 [&_*]:invisible',
+        dragging && 'cursor-grabbing border-dashed border-ring/60 bg-accent/40 [&_*]:invisible'
       )}
     >
       {/* open, the row is a title bar over the form rather than another white
@@ -658,13 +660,13 @@ function FieldRow({
       <div
         className={cn(
           'group flex items-center gap-3 p-3 transition-colors',
-          open && 'border-b border-border bg-muted/60',
+          open && 'border-b border-border bg-muted/60'
         )}
       >
         <span
           className={cn(
             'flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors',
-            open ? 'bg-background text-foreground' : switchable ? 'bg-muted' : 'bg-background',
+            open ? 'bg-background text-foreground' : switchable ? 'bg-muted' : 'bg-background'
           )}
         >
           <Icon className="size-4" />
@@ -687,9 +689,7 @@ function FieldRow({
             {field.required ? (
               <Badge variant="warning">{__('required', 'schemapress')}</Badge>
             ) : null}
-            {field.unique ? (
-              <Badge variant="outline">{__('unique', 'schemapress')}</Badge>
-            ) : null}
+            {field.unique ? <Badge variant="outline">{__('unique', 'schemapress')}</Badge> : null}
           </span>
 
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
@@ -717,7 +717,7 @@ function FieldRow({
             aria-hidden="true"
             className={cn(
               'ml-1 size-4 text-muted-foreground/40 transition-transform',
-              open && !stepped && 'rotate-90',
+              open && !stepped && 'rotate-90'
             )}
           />
         </span>
@@ -738,7 +738,7 @@ function FieldRow({
                             label: event.target.value,
                             key: uniqueKey(toKey(event.target.value), siblingKeys),
                           }
-                        : { label: event.target.value },
+                        : { label: event.target.value }
                     )
                   }
                 />
@@ -897,7 +897,7 @@ function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSa
               /* translators: 1: current step, 2: total steps */
               __('Step %1$d of %2$d', 'schemapress'),
               step + 1,
-              steps.length,
+              steps.length
             )}
           </span>
 
@@ -942,7 +942,7 @@ function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSa
                               label: event.target.value,
                               key: uniqueKey(toKey(event.target.value), siblingKeys),
                             }
-                          : { label: event.target.value },
+                          : { label: event.target.value }
                       )
                     }
                   />
@@ -973,9 +973,9 @@ function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSa
                 /* translators: %s: the repeater's label */
                 __(
                   'Add the fields for a single row. Whoever fills in %s gets one set of these per row, and can add as many rows as they need.',
-                  'schemapress',
+                  'schemapress'
                 ),
-                (draft.label || '').toLowerCase(),
+                (draft.label || '').toLowerCase()
               )}
             </p>
 
@@ -1023,7 +1023,7 @@ function Steps({ steps, current, onGo }) {
                   'flex size-10 items-center justify-center rounded-full border-2 bg-background transition-colors',
                   done || active
                     ? 'border-primary text-primary'
-                    : 'border-border text-muted-foreground/60',
+                    : 'border-border text-muted-foreground/60'
                 )}
               >
                 {Icon ? <Icon className="size-4" /> : <span>{index + 1}</span>}
@@ -1032,7 +1032,7 @@ function Steps({ steps, current, onGo }) {
               <span
                 className={cn(
                   'text-center text-[12px] leading-tight transition-colors',
-                  active ? 'font-medium text-foreground' : 'text-muted-foreground',
+                  active ? 'font-medium text-foreground' : 'text-muted-foreground'
                 )}
               >
                 {step.label}
@@ -1049,7 +1049,7 @@ function Steps({ steps, current, onGo }) {
                 aria-hidden="true"
                 className={cn(
                   '-mx-3 mt-5 h-0.5 w-12 transition-colors',
-                  done ? 'bg-primary' : 'bg-border',
+                  done ? 'bg-primary' : 'bg-border'
                 )}
               />
             ) : null}

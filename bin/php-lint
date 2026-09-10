@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# `php -l` over every file given, which `php -l` itself will not do — hand it
+# more than one path and it checks the first and silently ignores the rest.
+# Exists so the pre-commit hook can pass lint-staged a plain command and let it
+# append however many staged PHP files there are — see the "lint-staged" block
+# in package.json.
+#
+# Quiet on success. A parse error is the one thing that must never reach a
+# commit: PHP does not fail gracefully on it, it takes the site down at the
+# point the file is required.
+
+status=0
+
+for file in "$@"; do
+	if ! output=$(php -l "$file" 2>&1); then
+		printf '%s\n' "$output" >&2
+		status=1
+	fi
+done
+
+exit $status

@@ -77,7 +77,7 @@ export function ConfirmDialog({
   // the entries too" is part of answering "import this?", and putting it on the
   // screen behind would mean setting it, opening the dialog, and being asked
   // about something you have already said
-  children
+  children,
 }) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -93,9 +93,7 @@ export function ConfirmDialog({
             LAYERS.confirmContent
           )}
         >
-          <DialogPrimitive.Content
-            className="pointer-events-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background p-5 shadow-xl animate-sp-in focus:outline-none"
-          >
+          <DialogPrimitive.Content className="pointer-events-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background p-5 shadow-xl animate-sp-in focus:outline-none">
             <DialogPrimitive.Title className="text-base font-semibold">
               {title}
             </DialogPrimitive.Title>
