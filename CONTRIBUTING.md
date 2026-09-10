@@ -220,9 +220,14 @@ does **not** ship, because it would otherwise turn up inside somebody's WordPres
 Describe what changed and why the approach was chosen. The second half matters more than
 the first; the diff already says what changed.
 
-CI must be green. It runs five jobs: the suite on three PHP versions; the wordpress.org
-review checks (`phpcs.xml.dist`); lint and formatting (ESLint, Prettier, PHP-CS-Fixer); a
-`build/`-matches-`src/` check; and the `vendor/`-is-dev-free check.
+CI must be green, and `main` requires it — every one of these is a required check:
+
+| Job | What it runs |
+| --- | --- |
+| `PHP 8.2` / `8.3` / `8.4` | `php -l` over every file, then the suite |
+| `wordpress.org review checks` | `phpcs.xml.dist` |
+| `Lint and format` | ESLint, Prettier, PHP-CS-Fixer |
+| `Build the admin` | rebuilds and checks `build/` still matches `src/` |
 
 ## Releasing
 
