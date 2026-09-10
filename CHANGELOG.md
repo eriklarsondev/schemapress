@@ -16,9 +16,21 @@ a minor bump may still change behavior, and the notes say when it does.
   one. `npm run format` does the same by hand, and CI checks it.
 - `CONTRIBUTING.md`, a `LICENSE` file with the GPL-2.0 text, and GitHub issue and pull
   request templates.
-- `bin/vendor-no-dev`, which refuses a commit whose `vendor/` was installed with dev
-  dependencies. `vendor/` is committed and ships, so a dev install reaching it would send
-  a code formatter to every site running the plugin.
+### Changed
+
+- **Timber is no longer a dependency.** It was in `require`, but the plugin never needed
+  it: `Timber::available()` is a `class_exists` check and the Documentation screen has
+  always had a branch for its absence. Shipping a copy also put a second Timber on the
+  autoloader beside the theme's, and load order decided which one answered. It is now a
+  `suggest` — install it in the theme — and a `require-dev` so the Twig functions can
+  still be exercised locally. The shipped `vendor/` drops from 4.5 MB to 2.1 MB and from
+  twelve packages to eight.
+- **`vendor/` is no longer committed.** The zip is built by `npm run package`, which runs
+  its own `composer install --no-dev` into a staging copy, so distribution never needed
+  Composer output in git. Committing it cost a permanently dirty working tree — every
+  install rewrites six tracked files under `vendor/composer/` — and required a guard
+  script and a CI job purely to stop a dev install reaching a release. Both are gone.
+  Installing from a git clone now needs `composer install`.
 - **PHP_CodeSniffer and the WordPress standards as dev dependencies**, so `npm run
   lint:php` runs `phpcs.xml.dist` without anything installed globally. The ruleset had
   never actually been executed; on its first run it reported no violations.

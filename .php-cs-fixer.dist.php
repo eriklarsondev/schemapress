@@ -17,7 +17,7 @@
  * different job from this one and the two do not overlap.
  *
  * No risky rules. Every fixer enabled here is a whitespace or token-level
- * transform that cannot change behaviour, so `npm run format` is always safe
+ * transform that cannot change behavior, so `npm run format` is always safe
  * to run over a dirty tree.
  *
  *   composer format        fix          (or npm run format:php)

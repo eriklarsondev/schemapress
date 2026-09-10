@@ -19,25 +19,9 @@ set -e
 # happens: lint-staged swallows the output of a task that succeeds, so a notice
 # printed in there is never seen by anybody. This is the same condition, one
 # level up, where it is visible.
-#
-# It has to be the SAME condition. Testing for the binary on disk is not it —
-# `git restore vendor/` leaves the gitignored binaries in place and reverts
-# only the tracked autoload maps, so the file is there and unusable.
-# installed.json is what composer actually rewrites; bin/php-format and
-# bin/vendor-no-dev both read this field.
-if ! php -r '
-	$f = "vendor/composer/installed.json";
-	$dev = is_file($f) ? (json_decode(file_get_contents($f), true)["dev-package-names"] ?? []) : [];
-	exit($dev === [] ? 1 : 0);
-' 2>/dev/null; then
-	echo "  note: the PHP dev tooling is not installed, so PHP formatting is skipped."
-	echo "        Expected mid-release, or after 'git restore vendor/'."
-	echo "        'composer install' brings it back. CI checks formatting anyway."
+if [ ! -x vendor/bin/php-cs-fixer ]; then
+	echo "  note: php-cs-fixer is not installed, so PHP formatting is skipped."
+	echo "        Run 'composer install'. CI checks formatting anyway."
 fi
 
 npx lint-staged
-
-# vendor/ is committed, and `composer install` writes require-dev into it. This
-# refuses a commit that would carry a dev install into the tree that ships. It
-# does nothing unless vendor/composer/installed.json is part of the commit.
-bin/vendor-no-dev --staged

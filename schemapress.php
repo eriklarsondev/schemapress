@@ -13,9 +13,11 @@
  * Requires PHP:      8.2
  * Requires at least: 6.2
  *
- * Requires PHP 8.2 because Timber 2 does. WordPress checks this header before
- * activating, which is the only thing standing between an older site and a
- * fatal error the moment the autoloader reaches Timber.
+ * Requires PHP 8.2. That used to be Timber's floor, and Timber is no longer a
+ * dependency — it is nette/utils, underneath league/commonmark, that declares
+ * 8.2 today. The number is unchanged and so is the reason for the header:
+ * WordPress checks it before activating, which is the only thing standing
+ * between an older site and a fatal error inside the autoloader.
  *
  * THE VERSION IS IN TWO PLACES and has to be: WordPress reads the header with a
  * regular expression before any PHP runs, so it cannot be a constant, and the

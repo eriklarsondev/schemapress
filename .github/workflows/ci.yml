@@ -103,31 +103,6 @@ jobs:
       - name: PHP-CS-Fixer
         run: npm run format:php:check
 
-  vendor:
-    name: Committed vendor/
-    runs-on: ubuntu-latest
-
-    # vendor/ is committed, so `composer install` writing require-dev into the
-    # same tree is a real way to ship a formatter to every site running this
-    # plugin. .gitignore names every dev package so none of them can be added
-    # by accident; this is the check from the other side, and it does not care
-    # what the ignore list currently says.
-    #
-    # installed.json is written by whichever install produced the tree, and it
-    # lists exactly which of its packages came from require-dev. If that list
-    # is not empty in a commit, the committed vendor/ is a dev install.
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          coverage: none
-
-      - name: vendor/ must be a --no-dev install
-        run: php bin/vendor-no-dev
-
   build:
     name: Build the admin
     runs-on: ubuntu-latest

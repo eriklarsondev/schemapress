@@ -70,7 +70,7 @@ assets
 # --- writing about the plugin, rather than the plugin ------------------------
 #
 # readme.txt ships, because that IS the directory listing. LICENSE ships, because
-# the GPL requires the licence to travel with the work and the directory expects
+# the GPL requires the license to travel with the work and the directory expects
 # to find it. The rest is written for somebody reading the repository, and would
 # otherwise turn up inside a stranger's WordPress admin.
 

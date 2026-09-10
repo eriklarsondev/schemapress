@@ -1,19 +1,22 @@
 {
   "name": "eriklarson/schemapress",
-  "description": "Define reusable page content schemas and render them with Timber",
+  "description": "Define reusable page content schemas and read them back over PHP, Twig and HTTP",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=8.2",
-    "timber/timber": "^2.0",
     "league/commonmark": "^2.4"
   },
   "require-dev": {
+    "timber/timber": "^2.0",
     "friendsofphp/php-cs-fixer": "^3.75",
     "squizlabs/php_codesniffer": "^3.13",
     "wp-coding-standards/wpcs": "^3.1",
     "phpcompatibility/phpcompatibility-wp": "^2.1",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+  },
+  "suggest": {
+    "timber/timber": "2.x registers the Twig functions. Install it in the THEME, not here — see the note in classes/class-timber.php."
   },
   "config": {
     "allow-plugins": {

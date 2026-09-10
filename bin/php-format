@@ -22,56 +22,21 @@
 #
 # ON A MISSING FORMATTER
 #
-# It has to be possible to commit without one, and the reason is the release
-# workflow in CONTRIBUTING.md. vendor/ is committed, so updating it for a
-# release means `composer install --no-dev`, which DELETES php-cs-fixer — and
-# the very next thing you do is commit that vendor/. A hook that refuses the
-# commit because the formatter it just removed is missing has made the
-# documented workflow impossible, which is what it used to do.
+# A contributor who cloned and ran `npm install` but not `composer install` has
+# no formatter, and refusing their commit over it helps nobody. Say so plainly
+# and let it through: CI runs the formatting check on every push and fails
+# there if this pass skipped something that needed it.
 #
-# The same state happens to a contributor who cloned and ran npm install but
-# not composer install. Both want the same answer: say so plainly, and let the
-# commit through. Nothing is lost — CI runs the formatting check on every push
-# and fails there if this pass was skipped over something that needed it.
-#
-# WHAT IS NOT THE TEST: whether vendor/bin/php-cs-fixer is on disk. Discard the
-# working-tree changes to vendor/ — `git restore vendor/`, which is the obvious
-# thing to do after `composer install` dirties those six tracked files — and
-# git puts the autoload maps back to their committed --no-dev state while
-# leaving the GITIGNORED binaries exactly where they were. php-cs-fixer is then
-# present, executable, and fatal on the first class it looks up. This script
-# used to check for the file, find it, run it, and fail the commit with an
-# uncaught Error about XdebugHandler.
-#
-# installed.json is the honest answer, because composer rewrites it on every
-# install and it names the packages that are actually there. bin/vendor-no-dev
-# reads the same field for the same reason.
+# This used to be far more involved, because vendor/ was committed and could be
+# left in states where the binary was present but unusable. It is gitignored
+# now, so the file being there means it works.
 
 fixer=vendor/bin/php-cs-fixer
 
-dev_dependencies_installed() {
-	[ -f vendor/composer/installed.json ] || return 1
-
-	php -r '
-		$f = "vendor/composer/installed.json";
-		$dev = json_decode(file_get_contents($f), true)["dev-package-names"] ?? [];
-		exit($dev === [] ? 1 : 0);
-	' 2>/dev/null
-}
-
-if ! dev_dependencies_installed || [ ! -x "$fixer" ]; then
+if [ ! -x "$fixer" ]; then
 	echo ""
-
-	if [ -f vendor/autoload.php ]; then
-		echo "  PHP formatting skipped: vendor/ holds runtime dependencies only,"
-		echo "  so php-cs-fixer is not usable. Expected while committing a release"
-		echo "  vendor/, or after 'git restore vendor/'. Run 'composer install'."
-	else
-		echo "  PHP formatting skipped: no vendor/ at all."
-		echo "  Run 'composer install'."
-	fi
-
-	echo "  CI checks formatting regardless, so nothing goes unnoticed."
+	echo "  PHP formatting skipped: php-cs-fixer is not installed."
+	echo "  Run 'composer install'. CI checks formatting regardless."
 	echo ""
 
 	exit 0

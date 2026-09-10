@@ -9,6 +9,13 @@ Timber is optional. Without it everything on the **PHP** page works exactly the 
 only the Twig functions below are missing, and a theme not using Twig would not have called
 them. Timber **2.x** is what these register against.
 
+:::note Timber goes in your theme
+This plugin does not bundle Timber and does not install it. A Timber site already has one,
+and a second copy shipped inside a plugin would sit on the autoloader beside it — a class
+already declared is never asked for again, so load order would decide which version your
+templates got. These functions register themselves against whichever Timber is present.
+:::
+
 ### Two ways, and the first is the Timber one
 
 **Fetch in the page template, pass it in the context.** This is how a Timber theme already

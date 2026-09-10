@@ -11,4 +11,4 @@ contact_links:
 
   - name: Contributing
     url: https://github.com/eriklarsondev/schemapress/blob/main/CONTRIBUTING.md
-    about: Setting up, why vendor/ and build/ are committed, and how to open a PR.
+    about: Setting up, why build/ is committed, and how to open a PR.

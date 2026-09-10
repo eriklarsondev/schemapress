@@ -26,12 +26,16 @@ composer install
 npm install && npm run build
 ```
 
-`composer install` brings in the Markdown parser that renders these pages and Timber's
-library. `npm run build` compiles the admin screens.
+`composer install` brings in the Markdown parser that renders these pages. `npm run build`
+compiles the admin screens.
+
+It does **not** install Timber, and neither does the release. Timber is optional here and
+belongs in your theme — see **Twig & Timber**.
 
 :::note Working from a release
-A packaged release ships with `vendor/` and `build/` already in it. The two commands above
-are only needed when you are working from the repository.
+A packaged release ships with `vendor/` and `build/` already in it — the zip is built with
+its own `--no-dev` install. The two commands above are only needed when you are working
+from the repository, where `build/` is committed but `vendor/` is not.
 :::
 
 If the admin screens do not appear, `build/` is missing — run the npm step. If this

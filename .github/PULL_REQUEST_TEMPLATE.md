@@ -15,8 +15,6 @@ than the first — the diff already says what changed.
 
 - [ ] `npm test` passes
 - [ ] `npm run build` was run and `build/` is committed with the change, if `src/` changed
-- [ ] `vendor/composer/` is not in this diff, unless a dependency genuinely changed
-      (see CONTRIBUTING.md — `composer install` dirties it and that is expected)
 - [ ] The relevant page in `docs/` is updated, if a user would notice the change
 - [ ] `CHANGELOG.md` has a line under the unreleased heading
 

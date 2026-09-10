@@ -2,10 +2,10 @@
 
 Thanks for looking. This is a WordPress plugin that ships to sites through the plugin
 directory, which shapes almost everything below — most of the unusual rules here exist
-because the person installing this has no Composer, no npm, and no way to build anything.
+because the person installing this unzips a folder and has no way to build anything.
 
 - [Getting set up](#getting-set-up)
-- [The unusual part: `vendor/` and `build/` are committed](#the-unusual-part-vendor-and-build-are-committed)
+- [The unusual part: `build/` is committed](#the-unusual-part-build-is-committed)
 - [Formatting](#formatting)
 - [Tests](#tests)
 - [Making a change](#making-a-change)
@@ -24,7 +24,7 @@ into.
 git clone https://github.com/eriklarsondev/schemapress.git wp-content/plugins/schemapress
 cd wp-content/plugins/schemapress
 
-composer install     # Timber, the Markdown parser, and PHP-CS-Fixer
+composer install     # the Markdown parser, plus the linters and Timber for development
 npm install          # the admin's toolchain, and the pre-commit hook
 npm run build
 ```
@@ -50,44 +50,42 @@ npm run pot            # regenerate languages/schemapress.pot
 npm run package        # build the zip the plugin directory serves
 ```
 
-## The unusual part: `vendor/` and `build/` are committed
+## The unusual part: `build/` is committed
 
-Both directories are in the repository, which is not what you would normally do. The
-reason is the same for each: **the person installing this plugin unzips a folder into
-`wp-content/plugins` and activates it.** They have no Composer and no npm. Anything they
-cannot produce themselves has to be in the tree already, so as far as distribution is
-concerned the compiled output *is* source.
+`build/` is in the repository, which is not what you would normally do. The reason is
+that the person installing this plugin unzips a folder into `wp-content/plugins` and
+activates it — they have no npm, so the compiled admin has to be in the tree already.
+As far as distribution is concerned, the compiled output *is* source.
 
-This has two consequences you will run into.
+**So a change to `src/` must be rebuilt and committed with it.** CI fails if the
+committed `build/` does not match what `src/` produces, because a mismatch ships an admin
+that does not match its own source.
 
-**A change to `src/` must be rebuilt and committed with it.** CI fails if the committed
-`build/` does not match what `src/` produces, because a mismatch ships an admin that does
-not match its own source.
+`vendor/` is **not** committed, and used to be, on the same reasoning. It did not hold
+up: the zip is built by `npm run package`, which runs its own `composer install --no-dev`
+into a staging copy, so distribution never needed Composer output in git. What it cost
+was a permanently dirty working tree — every `composer install` rewrites six tracked
+files under `vendor/composer/` — plus a guard script and a CI job whose only purpose was
+to stop a dev install reaching a release. Ignoring the directory deleted all of it.
 
-**`composer install` makes `vendor/` dirty, and that is expected.** PHP-CS-Fixer is a
-`require-dev` dependency, so installing it writes 33 packages into the same directory that
-ships. Three things keep them out of a release, and it is worth knowing which does what:
+The one thing this changes: installing straight from a git clone now needs
+`composer install`. Without it the plugin still runs, but the documentation screen renders
+as plain text, because CommonMark is not there to parse it.
 
-1. **`.gitignore` names every dev package**, so those 9 MB are untracked and invisible.
-   `git add vendor/` cannot pick any of them up. If you change `require-dev`, regenerate
-   the list — the command is in the comment above it.
-2. **Six files under `vendor/composer/` are already tracked** — the autoload maps and
-   `installed.json` — and every install rewrites them in place. They will show as modified
-   for as long as you have dev dependencies installed. This is normal. `bin/vendor-no-dev`
-   runs in the pre-commit hook and refuses to let them into a commit while they describe a
-   dev install; CI runs the same check against the committed tree.
+### Timber is optional, and is not installed here
 
-   In practice this means **`git add -A` will stop your commit**, because it sweeps those
-   six files in. Leave them out and carry on:
+`timber/timber` is a `require-dev` dependency and a `suggest`, never a hard requirement.
+The Twig functions are registered only when Timber is already loaded —
+`Timber::available()` is a `class_exists` check, and `class-docs.php` has a branch that
+says so on the Documentation screen. The PHP and HTTP APIs work without it.
 
-   ```bash
-   git restore --staged vendor/
-   ```
+**If you use Timber, it belongs in your theme.** Shipping a copy inside this plugin would
+put a second Timber on the autoloader beside the theme's, and since a class already
+declared is never asked for again, which one wins comes down to load order. Dropping it
+also took the shipped `vendor/` from 4.5 MB to 2.1 MB.
 
-   The hook says exactly this when it fires. The only time you *should* be staging
-   `vendor/` is a release — see below.
-3. **`npm run package` rebuilds `vendor/` with `--no-dev` into a staging copy**, so the
-   released zip is dev-free regardless of what your working tree looks like.
+It is in `require-dev` so that `composer install` gives you a Timber to exercise the Twig
+functions against locally. `npm run package` builds with `--no-dev`, so it never ships.
 
 ### `config.platform` is pinned to PHP 8.2
 
@@ -102,25 +100,8 @@ PHP 8.5: it locked `symfony/console` 8.1 and `sebastian/diff` 9, both of which n
 complained — the maintainer's machine was fine. CI failed on the 8.2 jobs, after the lock
 was already committed.
 
-So if you add a dev dependency, the lock it produces is the one a contributor on 8.2 has
-to be able to install. The pin makes that automatic. Runtime dependencies are unaffected
-either way; they all support 8.2 already.
-
-If you need to commit a genuine dependency change:
-
-```bash
-composer install --no-dev --optimize-autoloader   # restore the shipping state
-git add vendor/ composer.json composer.lock
-git commit
-composer install                                  # get the tooling back
-```
-
-**The hook will tell you PHP formatting was skipped during that commit, and that is
-correct.** `--no-dev` deletes php-cs-fixer, and the commit you are making is the one that
-records its absence — there is no order of operations in which the formatter exists for
-it. So a missing formatter is a notice rather than a refusal; CI still checks formatting
-on the push, so nothing gets through unchecked. The same notice appears if you cloned and
-ran `npm install` but not `composer install`.
+So if you add a dependency, the lock it produces is the one a contributor on 8.2 has to
+be able to install. The pin makes that automatic.
 
 ## Formatting
 
@@ -133,11 +114,11 @@ style the admin was already written in, and 100 columns was chosen by measuring 
 against the existing source (80 moved 1,984 lines, 120 moved 1,418, 100 moved 855).
 
 **PHP: PHP-CS-Fixer** (`.php-cs-fixer.dist.php`). PSR-12, again because that is what the
-codebase already was. Only non-risky fixers are enabled, so it cannot change behaviour and
+codebase already was. Only non-risky fixers are enabled, so it cannot change behavior and
 is always safe to run over a dirty tree.
 
 Neither of these is `phpcs`. `phpcs.xml.dist` is a separate, security-focused ruleset —
-escaping, sanitising, nonces, capabilities, prepared SQL, the things a wordpress.org
+escaping, sanitizing, nonces, capabilities, prepared SQL, the things a wordpress.org
 review blocks on. It deliberately excludes the WordPress *style* sniffs, and the reasoning
 is written at the top of that file. Run it with `npm run lint:php` or `composer lint`; it
 comes with `composer install` and CI runs it on every push. `npm run lint:php:fix` is
@@ -159,10 +140,10 @@ A local `.php-cs-fixer.php` overrides the committed `.dist` file if you want to
 experiment; it is not gitignored, so do not commit it.
 
 **The pre-commit hook** (husky plus lint-staged; see the `lint-staged` block in
-`package.json`) formats staged files, refuses a commit containing a PHP file that does not
-parse, and blocks a dev-install `vendor/`. A file staged in part with `git add -p` has the
-rest of its changes stashed while the formatters run, so nothing you held back gets swept
-in. `git commit --no-verify` skips it, and CI catches what that misses.
+`package.json`) formats staged files and refuses a commit containing a PHP file that does
+not parse. A file staged in part with `git add -p` has the rest of its changes stashed
+while the formatters run, so nothing you held back gets swept in. `git commit
+--no-verify` skips it, and CI catches what that misses.
 
 ## Tests
 
@@ -185,7 +166,7 @@ value and an actual value; follow what is already in `tests/collections.php`.
    not obvious from the code — this codebase explains *why* rather than *what*, and a
    comment restating the line above it will be asked about in review.
 3. Run `npm test` and `npm run build`. Commit `build/` alongside the source.
-4. If you changed behaviour a user would notice, update the relevant page in `docs/`.
+4. If you changed behavior a user would notice, update the relevant page in `docs/`.
 5. Add a line to `CHANGELOG.md` under the unreleased heading.
 
 **You do not need to run `npm run pot`.** The translation template records a file and line
@@ -245,8 +226,7 @@ review checks (`phpcs.xml.dist`); lint and formatting (ESLint, Prettier, PHP-CS-
 
 ## Releasing
 
-Maintainers only, and the order matters — step 5 removes the tooling the earlier steps
-need.
+Maintainers only.
 
 1. **Bump the version in all four places.** The plugin header `Version:`,
    `SCHEMAPRESS_VERSION` in `schemapress.php`, `Stable tag:` in `readme.txt`, and
@@ -256,23 +236,12 @@ need.
    tagged.
 3. **`npm run pot`.** Once per release, not per commit — see above.
 4. **`npm run build`** and commit `build/`.
-5. **Refresh the shipping `vendor/`:**
-
-   ```bash
-   composer install --no-dev --optimize-autoloader
-   git add vendor/
-   git commit
-   ```
-
-   The hook will say PHP formatting was skipped. That is correct — this commit is the one
-   that records the formatter's absence.
-
-6. **`npm run package`**, then `composer install` to get the tooling back.
+5. **`npm run package`.**
 
 The zip is correct regardless of what your working tree looks like: `bin/package.php`
-rebuilds `vendor/` with `--no-dev` into a staging copy of its own. Step 5 is about the
-`vendor/` in the **repository**, which matters to anyone installing by cloning rather
-than by unzipping.
+copies what `.distignore` allows, then throws away `vendor/` and rebuilds it with
+`composer install --no-dev --optimize-autoloader` in a staging copy of its own. Your
+local dev dependencies cannot reach a release.
 
 ## Reporting bugs
 

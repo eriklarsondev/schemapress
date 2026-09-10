@@ -63,9 +63,9 @@ that on in advance.
 | | |
 | --- | --- |
 | WordPress | 6.2+ |
-| PHP | 8.2+ (enforced in the plugin header — Timber 2 needs it) |
+| PHP | 8.2+ (enforced in the plugin header) |
 | Node | 18+ for the build |
-| Timber | Optional, 2.x, only for the Twig functions |
+| Timber | Optional, 2.x, only for the Twig functions — install it in your **theme**, not here |
 
 ## Getting set up
 
@@ -73,14 +73,15 @@ that on in advance.
 git clone https://github.com/eriklarsondev/schemapress.git wp-content/plugins/schemapress
 cd wp-content/plugins/schemapress
 
-composer install          # Timber, the Markdown parser, and PHP-CS-Fixer
+composer install          # the Markdown parser, plus the linters and Timber for dev
 npm install && npm run build
 ```
 
 Activate it in **Plugins**, then open **SchemaPress** in the admin menu.
 
 If the admin screens do not appear, `build/` is missing — run the npm step. If the built-in
-documentation renders as plain text, `vendor/` is missing — run the composer step.
+documentation renders as plain text, `vendor/` is missing — run the composer step. `vendor/`
+is not committed; the release zip carries its own, built with `--no-dev`.
 
 ```bash
 npm start                 # watch build while working on the admin
@@ -95,7 +96,7 @@ npm run package           # build the zip the plugin directory serves
 ```
 
 `lint:php` runs `phpcs.xml.dist` — deliberately not the full WordPress standard, but the
-subset a directory review blocks on: escaping, sanitising, nonces, capabilities, prepared
+subset a directory review blocks on: escaping, sanitizing, nonces, capabilities, prepared
 SQL, prefixes, and the PHP versions the header promises. What it leaves out, and why, is
 written at the top of that file. It comes with `composer install`; nothing global is
 needed.
@@ -104,10 +105,9 @@ needed.
 staging copy, and refuses to build at all if the plugin header, `SCHEMAPRESS_VERSION`
 and the readme's `Stable tag` disagree.
 
-CI runs five jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review checks; lint
-and formatting; a check that the committed `build/` matches `src/` — the plugin ships
-built, so a change to the admin has to be rebuilt and committed with it; and a check that
-the committed `vendor/` holds runtime dependencies only.
+CI runs four jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review checks;
+lint and formatting; and a check that the committed `build/` matches `src/` — the plugin
+ships built, so a change to the admin has to be rebuilt and committed with it.
 
 ## How it fits together
 
@@ -228,5 +228,5 @@ not the issue tracker.
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).
 
-The same licence WordPress uses, and the one the plugin directory requires. Contributions
+The same license WordPress uses, and the one the plugin directory requires. Contributions
 are accepted under it; there is no CLA.

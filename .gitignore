@@ -1,94 +1,40 @@
 # SchemaPress
 #
-# The governing rule for a WordPress plugin: anything the person installing it
-# cannot produce themselves has to be committed. They have no Composer and no
-# npm — they unzip a folder into wp-content/plugins and activate it. So the
-# compiled output is source as far as distribution is concerned.
+# vendor/ and build/ are NOT treated the same way, and the difference is the
+# one thing worth understanding here.
 #
-#   vendor/   committed — Timber and Twig
+#   vendor/   ignored — rebuilt by `composer install`, and by `npm run package`
+#             with --no-dev on the way into the zip
 #   build/    committed — the admin bundles
 #
-# Neither is ignored below, deliberately. If this ever becomes a repo that is
-# only ever deployed through CI, both can be ignored and built on the way out;
-# until then, leaving them out ships a plugin that half works.
+# build/ stays because a change to src/ has to ship compiled, and CI checks the
+# committed bundle still matches its source.
 #
-# Before packaging a release, rebuild both without dev dependencies:
+# vendor/ used to be committed too, on the reasoning that somebody installing
+# the plugin has no Composer. That is true of the ZIP, and the zip is built
+# with its own --no-dev install, so nothing about distribution needed it in
+# git. What it cost was a working tree that was permanently dirty: every
+# `composer install` rewrites six tracked files under vendor/composer/, so
+# `git add -A` had to be policed, and a whole guard script and CI job existed
+# to stop a dev install reaching a release. None of that machinery is needed
+# once the directory is simply ignored.
 #
-#   composer install --no-dev --optimize-autoloader
-#   npm ci && npm run build
+# Installing straight from a git clone now needs one extra step:
+#
+#   composer install
 
 # --- dependencies -----------------------------------------------------------
 
 node_modules/
 
-# --- dev dependencies inside a committed vendor/ ----------------------------
-#
-# vendor/ is committed, because the person installing this plugin has no
-# Composer — Timber is the templating engine and has to be in the tree. But
-# `composer install` also writes require-dev into that same tree, and between
-# php-cs-fixer and PHP_CodeSniffer that is 41 packages nobody's site should
-# ever receive.
-#
-# So every dev package is ignored by name. `composer install` gives a
-# contributor a working formatter and linter; `git status` stays clean; a stray
-# `git add vendor/` cannot pick any of it up. CI checks the same thing from the
-# other direction — see the "vendor" job, which fails if a commit's
-# vendor/composer/installed.json lists any dev package at all.
-#
-# Regenerate this list after changing require-dev:
-#
-#   php -r '$l=json_decode(file_get_contents("composer.lock"),true);
-#     $d=array_map(fn($p)=>$p["name"],$l["packages-dev"]); sort($d);
-#     foreach($d as $n) echo "vendor/$n/\n";'
-
-vendor/bin/
-vendor/clue/ndjson-react/
-vendor/composer/pcre/
-vendor/composer/semver/
-vendor/composer/xdebug-handler/
-vendor/dealerdirect/phpcodesniffer-composer-installer/
-vendor/ergebnis/agent-detector/
-vendor/evenement/evenement/
-vendor/fidry/cpu-core-counter/
-vendor/friendsofphp/php-cs-fixer/
-vendor/phpcompatibility/php-compatibility/
-vendor/phpcompatibility/phpcompatibility-paragonie/
-vendor/phpcompatibility/phpcompatibility-wp/
-vendor/phpcsstandards/phpcsextra/
-vendor/phpcsstandards/phpcsutils/
-vendor/psr/container/
-vendor/psr/log/
-vendor/react/cache/
-vendor/react/child-process/
-vendor/react/dns/
-vendor/react/event-loop/
-vendor/react/promise/
-vendor/react/socket/
-vendor/react/stream/
-vendor/sebastian/diff/
-vendor/squizlabs/php_codesniffer/
-vendor/symfony/console/
-vendor/symfony/event-dispatcher/
-vendor/symfony/event-dispatcher-contracts/
-vendor/symfony/filesystem/
-vendor/symfony/finder/
-vendor/symfony/options-resolver/
-vendor/symfony/polyfill-intl-grapheme/
-vendor/symfony/polyfill-intl-normalizer/
-vendor/symfony/polyfill-php81/
-vendor/symfony/polyfill-php84/
-vendor/symfony/process/
-vendor/symfony/service-contracts/
-vendor/symfony/stopwatch/
-vendor/symfony/string/
-vendor/wp-coding-standards/wpcs/
+vendor/
 
 # --- generated at runtime ---------------------------------------------------
 
 # Nothing writes here any more — the Tailwind safelist this described was
 # removed, and the plugin now writes no files at all, which is the right answer
 # for something installed into a directory it may not own. Kept so a stray
-# working copy of the old behaviour cannot be committed by accident.
+# working copy of the old behavior cannot be committed by accident.
 generated/
 
 # --- release artifacts ------------------------------------------------------
