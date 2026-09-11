@@ -1,32 +1,18 @@
 /**
  * Controls holding something that cannot be stored.
  *
- * MOST FIELDS CANNOT BE IN THIS STATE. A text field holds text; whatever you
- * type is what gets saved. But two of them parse what you type before they will
- * commit it — JSON and Color — and while it does not parse they keep the text
- * on screen and DO NOT call onChange, because half-written JSON is not a value
- * and storing it would replace the last good one with nothing.
+ * JSON and Color parse what you type before committing it, and while it does not
+ * parse they keep the text on screen without calling onChange — half-written JSON
+ * is not a value. That text then lives only in the control's own state, so
+ * without this the form cannot see it: typing `{"a":` and pressing Save reported
+ * success and stored whatever the field held before you started.
  *
- * Which is right, and left a hole: the broken text lives in the control's own
- * state and never reaches the entry's values, so the form could not see it. You
- * could type `{"a":` into a JSON field, press Save, and the entry saved happily
- * — storing whatever the field held BEFORE you started typing. Nothing was lost
- * loudly. The save reported success, and the thing you wrote was simply not in
- * it.
+ * So a control registers while it is unsaveable, and the form gates Save on it —
+ * the same gate an empty required field goes through.
  *
- * So a control can say so. It registers while it is unsaveable and deregisters
- * when it is not, and the form asks before letting Save be pressed — the same
- * gate a required field that is still empty goes through, and for the same
- * reason: a control that cannot answer is a control the entry is not ready past.
- *
- * A CONTEXT RATHER THAN A PROP, because the controls that need it are not
- * reliably at the top level. A JSON field can sit inside a group inside a
- * repeater row, and threading a callback down through FieldList, RepeaterField
- * and back into FieldList is four files that have to agree — where nesting is
- * exactly what a context is for.
- *
- * Outside a provider the hook does nothing, so a control still works on a screen
- * that has no Save button to gate.
+ * A context rather than a prop, because a JSON field can sit inside a group
+ * inside a repeater row. Outside a provider the hook does nothing, so a control
+ * still works on a screen with no Save button to gate.
  */
 
 import { createContext, useContext, useEffect, useId } from '@wordpress/element'

@@ -10,5 +10,5 @@ contact_links:
     about: The same pages the plugin's own Documentation screen shows.
 
   - name: Contributing
-    url: https://github.com/eriklarsondev/schemapress/blob/main/CONTRIBUTING.md
+    url: https://github.com/eriklarsondev/schemapress/blob/main/.github/CONTRIBUTING.md
     about: Setting up, why build/ is committed, and how to open a PR.

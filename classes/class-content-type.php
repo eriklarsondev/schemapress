@@ -7,18 +7,13 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * content types: the collections a site is made of.
+ * The collections a site is made of — Team Members, News Articles, Grants. Each
+ * is a named shape holding many entries of that shape.
  *
- * Team Members, News Articles, Grants. Each one is a named shape — a list of
- * fields — and holds many entries of that shape.
- *
- * a type registers a post type of its own, so its entries inherit ids,
+ * A type registers a post type of its own, so its entries inherit ids,
  * capabilities, search and trash from WordPress rather than from a table this
- * plugin would have to maintain. the type itself is stored as an `sp_schema`
- * post, which is why its definition gets the same treatment.
- *
- * NOT revisions. an entry's values are post meta, and WordPress does not
- * revision meta — see registerPostType.
+ * plugin would have to maintain. Not revisions: an entry's values are post meta,
+ * and WordPress does not revision meta — see registerPostType.
  */
 class ContentType
 {
@@ -37,6 +32,22 @@ class ContentType
     private static $cache = null;
 
     /**
+     * Whether the entry counts in the cache are real, as opposed to not yet
+     * knowable. See fillCounts().
+     *
+     * @var boolean
+     */
+    private static $counted = false;
+
+    /**
+     * Whether fillCounts() is already running. Counting an entry reads back
+     * through get() and so through all(), which would otherwise re-enter it.
+     *
+     * @var boolean
+     */
+    private static $counting = false;
+
+    /**
      * registers every type's post type.
      */
     public function __construct()
@@ -47,12 +58,9 @@ class ContentType
     }
 
     /**
-     * a type's machine key: the SINGULAR form, derived from its title on first
-     * use and stable afterwards — it names the post type entries are stored
-     * against, so it cannot follow a later rename.
-     *
-     * singular because everything downstream reads as one of the things: the
-     * post type holds one entry per row, and "New Team Member" is the button.
+     * A type's machine key: the singular form, derived from its title on first use
+     * and stable afterwards — it names the post type entries are stored against,
+     * so it cannot follow a later rename.
      *
      * @param integer $type_id
      *
@@ -75,11 +83,9 @@ class ContentType
     }
 
     /**
-     * a type's plural key, used where a plural genuinely reads better — the
-     * sidebar, a listing heading, a REST route.
-     *
-     * derived from the singular key rather than from the title, so the two can
-     * never disagree about what the noun is.
+     * A type's plural key — the sidebar, a listing heading, a REST route. Derived
+     * from the singular key rather than the title, so the two can never disagree
+     * about what the noun is.
      *
      * @param integer $type_id
      *
@@ -105,10 +111,8 @@ class ContentType
     }
 
     /**
-     * the human labels, singular and plural.
-     *
-     * these follow the title, not the frozen key, so renaming a type renames
-     * what people read while leaving what the database uses alone.
+     * The human labels. These follow the title, not the frozen key, so renaming a
+     * type renames what people read while leaving what the database uses alone.
      *
      * @param integer $type_id
      *
@@ -125,7 +129,7 @@ class ContentType
     }
 
     /**
-     * slugifies a title into a singular key unique among content types.
+     * Slugifies a title into a singular key unique among content types.
      *
      * @param string  $title
      * @param integer $type_id the type being keyed, excluded from the clash check
@@ -170,9 +174,7 @@ class ContentType
     }
 
     /**
-     * guarantees a plural key does not collide with another type's.
-     *
-     * two types named Person and People would otherwise pluralize to the same
+     * Two types named Person and People would otherwise pluralize to the same
      * thing, and a route keyed on the plural would be ambiguous.
      *
      * @param string  $base
@@ -208,7 +210,7 @@ class ContentType
     }
 
     /**
-     * the post type a collection's entries are stored as.
+     * The post type a collection's entries are stored as.
      *
      * @param integer $type_id
      *
@@ -227,6 +229,8 @@ class ContentType
     public static function all()
     {
         if (self::$cache !== null) {
+            self::fillCounts();
+
             return self::$cache;
         }
 
@@ -249,16 +253,10 @@ class ContentType
                 // the machine names: singular identifies, plural addresses
                 'key' => self::key($post->ID),
                 'plural' => $plural,
-                // the address this collection answers on. the plural, because a
-                // route returns many of the thing, and hyphenated, because that
-                // is what a URL is written with — Api::idFor reads a hyphen as
-                // an underscore precisely so the machine name does not have to
-                // be spelled the way the database spells it.
-                //
-                // derived here rather than in the admin so there is one answer
-                // to "what is this collection's address": a screen that built it
-                // by hand would be a second one, and the copy button would hand
-                // somebody a URL this plugin never agreed to
+                // Plural because a route returns many of the thing, hyphenated
+                // because that is what a URL is written with — Api::idFor reads a
+                // hyphen as an underscore. Derived here rather than in the admin
+                // so there is one answer to "what is this collection's address"
                 'apiSlug' => str_replace('_', '-', $plural),
                 'postType' => self::postType($post->ID),
                 // whether entries here have a working copy, or saving is
@@ -287,15 +285,52 @@ class ContentType
         // until the stack gave out, on the one request every screen begins with
         self::$cache = $types;
 
-        foreach (self::$cache as $index => $type) {
-            self::$cache[$index]['entries'] = Entries::count($type['id']);
-        }
+        self::fillCounts();
 
         return self::$cache;
     }
 
     /**
-     * finds a type by id.
+     * Fills in how many entries each collection holds, once that is knowable.
+     *
+     * registerAll() reaches all() on `init` BEFORE it has registered the post
+     * types, and wp_count_posts() answers with an empty object for a post type
+     * that does not exist yet — so counting there reports nothing for every
+     * collection and then caches that for the whole request. `wp schemapress
+     * list` showed every collection holding zero entries.
+     *
+     * So the counts are filled on the first call that can actually see the post
+     * types, and only once. Until then they stay null, which is what an unknown
+     * count should look like rather than a confident zero.
+     *
+     * @return void
+     */
+    private static function fillCounts()
+    {
+        // the re-entrancy guard is the point: counting reads back through get()
+        // and so through all(), which calls this again
+        if (self::$counted || self::$counting || self::$cache === null) {
+            return;
+        }
+
+        foreach (self::$cache as $type) {
+            if (!post_type_exists($type['postType'])) {
+                return;
+            }
+        }
+
+        self::$counting = true;
+
+        foreach (self::$cache as $index => $type) {
+            self::$cache[$index]['entries'] = Entries::count($type['id']);
+        }
+
+        self::$counting = false;
+        self::$counted = true;
+    }
+
+    /**
+     * Finds a type by id.
      *
      * @param integer $type_id
      *
@@ -313,10 +348,8 @@ class ContentType
     }
 
     /**
-     * every collection, for the reading API.
-     *
-     * kept as its own method because Content asks for collections by intent,
-     * not by reaching into the admin's listing shape.
+     * Every collection, for the reading API. Its own method because Content asks
+     * for collections by intent, not by reaching into the admin's listing shape.
      *
      * @return array
      */
@@ -338,11 +371,9 @@ class ContentType
     }
 
     /**
-     * registers one type's post type by id.
-     *
-     * called when a type is created, because the init hook has already run by
-     * then — without this, its first entry would be stored against a post type
-     * nothing has declared, and would not come back until the next request.
+     * Called when a type is created, because the init hook has already run by
+     * then — without this, its first entry is stored against a post type nothing
+     * has declared and does not come back until the next request.
      *
      * @param integer $type_id
      *
@@ -360,11 +391,9 @@ class ContentType
     }
 
     /**
-     * registers one type's post type.
-     *
-     * entries are private storage: they are read through this plugin's API and
-     * rendered by whatever template asks for them, so they have no archive, no
-     * permalink and no admin screen competing with the builder.
+     * Entries are private storage: read through this plugin's API and rendered by
+     * whatever template asks, so they have no archive, no permalink and no admin
+     * screen competing with the builder.
      *
      * @param array $type
      *
@@ -408,5 +437,6 @@ class ContentType
     public static function flush()
     {
         self::$cache = null;
+        self::$counted = false;
     }
 }

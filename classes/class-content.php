@@ -7,37 +7,22 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the public API.
- *
- * aliased to the global `SchemaPress`, so a theme reaches it with no import:
+ * The reading API, aliased to the global `SchemaPress` so a theme reaches it
+ * with no import:
  *
  *   SchemaPress::collection('team_members')->get();
  *   SchemaPress::collection('team_members')->find(12);
  *
- * the class is called Content because that is what it returns; the global name
- * is the plugin's, because that is what a theme author is looking for when they
- * start typing. `Content` is aliased too — it was the original name and a
- * template written against it still runs.
- *
- * the point of it is that nothing above this line knows how WordPress stores
- * any of this. entries happen to be posts and values happen to be one meta row,
- * and neither fact is visible from here — which is what lets the storage change
- * without every template changing with it.
+ * Nothing above this line knows how WordPress stores any of it, which is what
+ * lets the storage change without every template changing with it.
  */
 class Content
 {
     /**
-     * a collection, by either of its machine names.
+     * A collection, by either of its machine names — `team_member` or
+     * `team_members`.
      *
-     *   SchemaPress::collection('team_member')    // the singular key
-     *   SchemaPress::collection('team_members')   // the plural reads better in a loop
-     *
-     * both work on purpose. the singular is the identity and the plural is how
-     * you address a list of them, and which one a template author reaches for
-     * depends on the sentence they are writing. refusing one of them would only
-     * produce an empty loop and no explanation.
-     *
-     * an unknown name still returns a Collection rather than null: templates
+     * An unknown name still returns a Collection rather than null: templates
      * iterate what they are given, and one that renders nothing beats one that
      * fatals on a typo.
      *
@@ -51,7 +36,7 @@ class Content
     }
 
     /**
-     * every collection's singular key, for discovery.
+     * Every collection's singular key, for discovery.
      *
      * @return string[]
      */
@@ -61,7 +46,7 @@ class Content
     }
 
     /**
-     * whether a collection exists.
+     * Whether a collection exists.
      *
      * @param string $key
      *
@@ -73,7 +58,7 @@ class Content
     }
 
     /**
-     * resolves a collection name — singular or plural — to its type id.
+     * Resolves a collection name — singular or plural — to its type id.
      *
      * @param string $name
      *

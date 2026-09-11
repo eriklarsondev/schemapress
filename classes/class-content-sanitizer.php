@@ -7,22 +7,17 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * validates and coerces entry values against a content type's fields.
+ * Coerces entry values against a content type's fields: drops what the definition
+ * does not declare, fills what it declares but the payload omits, and runs every
+ * scalar through its type's sanitizer. After this, stored values match the shape.
  *
- * this is the single write-side gate. it drops anything the definition does not
- * declare, fills anything it declares but the payload omits, and runs every
- * scalar through its field type's sanitizer. after this runs, stored values are
- * guaranteed to match the definition's shape.
- *
- * it is also the read-side reconciler: a field added after an entry was saved
- * resolves to its type default rather than being absent, so nothing downstream
- * needs to guard.
+ * Also the read-side reconciler — a field added after an entry was saved resolves
+ * to its type default rather than being absent, so nothing downstream guards.
  */
 class ContentSanitizer
 {
     /**
-     * sanitizes a flat value bag against a field list. every declared field is
-     * present in the result; undeclared keys are dropped.
+     * Every declared field is present in the result; undeclared keys are dropped.
      *
      * @param mixed $values
      * @param array $fields
@@ -45,7 +40,7 @@ class ContentSanitizer
     }
 
     /**
-     * sanitizes one value, recursing for nesting types.
+     * Sanitizes one value, recursing for nesting types.
      *
      * @param mixed $value
      * @param array $field
@@ -72,7 +67,7 @@ class ContentSanitizer
     }
 
     /**
-     * sanitizes repeater rows, enforcing the configured min and max.
+     * Sanitizes repeater rows, enforcing the configured min and max.
      *
      * @param mixed $value
      * @param array $field
@@ -112,10 +107,8 @@ class ContentSanitizer
     }
 
     /**
-     * generates a short, collision-resistant row id.
-     *
-     * rows carry their own identity so reordering never re-keys one, which is
-     * what stops a React list dropping focus mid-edit.
+     * Rows carry their own identity so reordering never re-keys one, which is what
+     * stops a React list dropping focus mid-edit.
      *
      * @return string
      */

@@ -1226,6 +1226,62 @@ $upgrade->run();
 
 check('and does nothing on the next request', '', (string) get_post_meta($recordId, '_schemapress_uid', true));
 
+// the lock is released whatever happens. it used to be deleted on the last line
+// of run(), so a run that died in the backfill left it behind forever — the
+// version had already been recorded, so no later request reached the delete
+check('a finished upgrade leaves no lock behind', false, get_option(SchemaPress\Upgrade::LOCK));
+
+// two requests arriving together must not both upgrade. the lock was a
+// get-then-update, so both could read "no lock" and both proceed
+update_option(SchemaPress\Upgrade::OPTION, 'older');
+update_option(SchemaPress\Upgrade::LOCK, time());
+delete_post_meta($recordId, '_schemapress_uid');
+$upgrade->run();
+
+check('a held lock turns the second request away', '', (string) get_post_meta($recordId, '_schemapress_uid', true));
+
+// unless it is old enough to be a crashed run rather than one in flight
+update_option(SchemaPress\Upgrade::LOCK, time() - (SchemaPress\Upgrade::LOCK_TTL + 1));
+$upgrade->run();
+
+check('a stale lock is taken over', true, (string) get_post_meta($recordId, '_schemapress_uid', true) !== '');
+
+// --- entry counts -------------------------------------------------------------
+
+echo "\nEntry counts\n";
+
+sp_test_reset();
+
+$counted = sp_test_type('Widget', [['label' => 'Name', 'type' => 'text']]);
+
+foreach (['one', 'two', 'three'] as $name) {
+    Entries::save($counted, null, ['values' => ['name' => $name], 'publish' => true]);
+}
+
+Entries::save($counted, null, ['values' => ['name' => 'draft']]);
+
+ContentType::flush();
+
+$listed = ContentType::all()[0];
+
+check('a collection reports how many entries it holds', 4, $listed['entries']);
+
+// ContentType::registerAll() reaches all() on `init` BEFORE it registers the
+// post types, and wp_count_posts() answers with an empty object for one that
+// does not exist yet. Counting there reported nothing for every collection and
+// cached that for the whole request — `wp schemapress list` showed every
+// collection empty. The counts now wait until the post types are visible.
+ContentType::flush();
+unset($GLOBALS['wp_post_types'][ContentType::postType($counted)]);
+
+$early = ContentType::all()[0];
+
+check('an unregistered post type is not counted as zero', null, $early['entries']);
+
+ContentType::register($counted);
+
+check('and the count arrives once it is registered', 4, ContentType::all()[0]['entries']);
+
 // --- lifecycle ---------------------------------------------------------------
 
 echo "\nLifecycle\n";

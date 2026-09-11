@@ -7,30 +7,26 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the Timber integration.
- *
- * this plugin renders nothing. it models content and hands it over; what a page
- * looks like is the theme's Twig. so the integration is one thing only —
- * exposing the reading API to Twig, so a template can ask for a collection
- * without the PHP file above it having to fetch and pass one down:
+ * The Timber integration: exposing the reading API to Twig, so a template can
+ * ask for a collection without the PHP file above it fetching and passing one
+ * down.
  *
  *   {% for person in sp_collection('team_members') %}
  *     {{ person.name }}
  *   {% endfor %}
  *
- * Timber is optional. Without it the PHP API is unaffected — only these Twig
- * functions are missing, and a theme that is not using Twig would not have
- * called them.
+ * Timber is optional and not bundled. Without it the PHP API is unaffected —
+ * only these Twig functions are missing.
  */
 class Timber
 {
     /**
-     * the Timber major version these functions are registered against.
+     * The Timber major version these functions are registered against.
      */
     public const REQUIRES = 2;
 
     /**
-     * hooks the Twig function registration.
+     * Hooks the Twig function registration.
      */
     public function __construct()
     {
@@ -38,7 +34,7 @@ class Timber
     }
 
     /**
-     * whether Timber is loaded and a version this plugin can register with.
+     * Whether Timber is loaded and a version this plugin can register with.
      *
      * @return boolean
      */
@@ -48,7 +44,7 @@ class Timber
     }
 
     /**
-     * the loaded Timber major version, or 0 when Timber is absent.
+     * The loaded Timber major version, or 0 when Timber is absent.
      *
      * @return integer
      */
@@ -66,7 +62,7 @@ class Timber
     }
 
     /**
-     * exposes the reading API to Twig.
+     * Exposes the reading API to Twig.
      *
      * @param array $functions
      *
@@ -76,10 +72,6 @@ class Timber
     {
         $exposed = [
             'sp_collection' => [Content::class, 'collection'],
-            // one entry by id. the procedural helper has existed since the
-            // start and this did not, so a Twig template asking for
-            // sp_entry() got an undefined function while the PHP beside it
-            // worked — the two surfaces are meant to be the same API
             'sp_entry' => [self::class, 'entry'],
             'sp_collections' => [Content::class, 'collections'],
             'sp_has_collection' => [Content::class, 'has'],
@@ -93,9 +85,7 @@ class Timber
     }
 
     /**
-     * one entry of a collection, by id.
-     *
-     * mirrors schemapress_entry() in includes/helpers.php — the Twig name stays sp_entry, which is safe because it is registered into this plugin's own Twig environment rather than the global one.
+     * Mirrors schemapress_entry() in includes/helpers.php.
      *
      * @param string $key
      * @param string $id

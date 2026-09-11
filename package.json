@@ -5,18 +5,39 @@
   "description": "Define reusable page content schemas and bind them to page templates",
   "license": "GPL-2.0-or-later",
   "private": true,
+  "prettier": {
+    "arrowParens": "always",
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "endOfLine": "lf",
+    "overrides": [
+      {
+        "files": "*.css",
+        "options": {
+          "singleQuote": false
+        }
+      }
+    ],
+    "jsxSingleQuote": false,
+    "printWidth": 100,
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false
+  },
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",
     "format": "npm run format:js && npm run format:php",
     "format:js": "prettier --write .",
-    "format:php": "vendor/bin/php-cs-fixer fix",
+    "format:php": "vendor/bin/php-cs-fixer fix --config=.config/php-cs-fixer.php",
     "format:check": "npm run format:js:check && npm run format:php:check",
     "format:js:check": "prettier --check .",
-    "format:php:check": "vendor/bin/php-cs-fixer fix --dry-run --diff",
+    "format:php:check": "vendor/bin/php-cs-fixer fix --config=.config/php-cs-fixer.php --dry-run --diff",
     "lint:js": "eslint . --ext .js",
-    "lint:php": "vendor/bin/phpcs --standard=phpcs.xml.dist",
-    "lint:php:fix": "vendor/bin/phpcbf --standard=phpcs.xml.dist",
+    "lint:php": "vendor/bin/phpcs --standard=.config/phpcs.xml",
+    "lint:php:fix": "vendor/bin/phpcbf --standard=.config/phpcs.xml",
     "lint:php:syntax": "find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 -P4 php -l",
     "test": "php tests/run.php",
     "pot": "php bin/make-pot.php",

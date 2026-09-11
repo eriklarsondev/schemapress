@@ -7,19 +7,17 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * expands stored values into the payload a template or a client consumes.
+ * Expands stored values into the payload a template or a client consumes.
  *
- * stored values are deliberately thin — an image is an attachment id and rich
- * text is raw content. neither is usable on its own, so this class dereferences
- * them at read time. keeping
- * the expansion here (rather than at save time) means a resized image or a
- * renamed entry is reflected immediately, without re-saving everything that
- * refers to it.
+ * Stored values are deliberately thin — an image is an attachment id, rich text
+ * is raw content — so this dereferences them at read time. Doing it here rather
+ * than at save time means a resized image or a renamed entry is reflected
+ * immediately, without re-saving everything that refers to it.
  */
 class Resolver
 {
     /**
-     * resolves a value bag against its field definitions.
+     * Resolves a value bag against its field definitions.
      *
      * @param mixed   $values
      * @param array   $fields
@@ -45,7 +43,7 @@ class Resolver
     }
 
     /**
-     * resolves one value according to its field type.
+     * Resolves one value according to its field type.
      *
      * @param mixed   $value
      * @param array   $field
@@ -81,7 +79,7 @@ class Resolver
     }
 
     /**
-     * resolves repeater rows, preserving order and row identity.
+     * Resolves repeater rows, preserving order and row identity.
      *
      * @param mixed   $value
      * @param array   $field
@@ -106,9 +104,9 @@ class Resolver
     }
 
     /**
-     * runs stored rich text through shortcodes and paragraph formatting so the
-     * client receives display-ready HTML. the_content is deliberately not
-     * applied — it invites unrelated plugins to inject markup into a response.
+     * Shortcodes and paragraph formatting, so the client receives display-ready
+     * HTML. the_content is deliberately not applied — it invites unrelated plugins
+     * to inject markup into a response.
      *
      * @param mixed $value
      *
@@ -124,8 +122,7 @@ class Resolver
     }
 
     /**
-     * expands an attachment id into url, dimensions, alt text and every
-     * registered size.
+     * Expands an attachment id into url, dimensions, alt text and every size.
      *
      * @param mixed $value
      *
@@ -174,18 +171,13 @@ class Resolver
     }
 
     /**
-     * every generated size of an image, read from the attachment's own metadata.
+     * Every generated size, read from the attachment's own metadata rather than by
+     * calling wp_get_attachment_image_src() per size — which is a filtered call
+     * per size per image per entry, two and a half thousand of them on a page of a
+     * hundred entries.
      *
-     * this used to loop get_intermediate_image_sizes() calling
-     * wp_get_attachment_image_src() for each one, which is a filtered call per
-     * size per image per entry — a page of a hundred entries with three images
-     * each and eight registered sizes made two and a half thousand of them, for
-     * a listing that renders one thumbnail.
-     *
-     * the metadata already holds the file, width and height of every size that
-     * was actually generated, and the URLs all sit beside the full-size one. so
-     * one array and some string work replaces the lot, and a size that was never
-     * generated is absent rather than silently reported at the wrong dimensions.
+     * A size that was never generated is absent rather than reported at the wrong
+     * dimensions.
      *
      * @param mixed  $meta the attachment metadata
      * @param string $url  the full-size URL
@@ -217,12 +209,9 @@ class Resolver
     }
 
     /**
-     * expands a list of attachment ids into a list of attachments.
-     *
-     * an id that no longer resolves — the image was deleted from the media
-     * library, or the gallery came in from an export written on another site —
-     * is dropped rather than left as a null in the middle of the list. a
-     * template looping a gallery should never have to test each item.
+     * An id that no longer resolves is dropped rather than left as a null in the
+     * middle of the list, so a template looping a gallery never has to test each
+     * item.
      *
      * @param mixed $value
      *
@@ -244,8 +233,8 @@ class Resolver
     }
 
     /**
-     * normalizes a link value, dropping it entirely when no url is set so the
-     * client can test for presence rather than for an empty string.
+     * Dropped entirely when no url is set, so the client can test for presence
+     * rather than for an empty string.
      *
      * @param mixed $value
      *

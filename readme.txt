@@ -72,8 +72,11 @@ same entry get a refusal rather than one of them silently losing their work.
 
 = Requirements =
 
-PHP 8.2 or newer, because Timber 2 needs it. Timber itself is optional and only
-affects the Twig functions.
+PHP 8.2 or newer. That is what league/commonmark's own dependencies require —
+the Markdown parser behind the documentation screen.
+
+Timber is optional, is not bundled, and only affects the Twig functions. Install
+it in your theme if you want them.
 
 = Source code =
 
@@ -83,9 +86,10 @@ the webpack and Tailwind configuration, so the package can be read and rebuilt
 without leaving it. Development happens at
 [github.com/eriklarsondev/schemapress](https://github.com/eriklarsondev/schemapress).
 
-The plugin bundles three libraries, all GPL-compatible: Timber and Twig for the
-optional Twig functions, and league/commonmark to render the documentation
-screen.
+The plugin bundles league/commonmark and its dependencies — league/config,
+dflydev/dot-access-data, nette/schema, nette/utils, psr/event-dispatcher and two
+Symfony polyfills — to render the documentation screen. All are MIT or
+BSD-licensed and so GPL-compatible.
 
 == Installation ==
 
@@ -143,13 +147,6 @@ now if you would rather not wait for cron.
 = Are there relations between collections? =
 
 Not yet. It is the largest remaining gap against Strapi and the next feature in.
-
-== Screenshots ==
-
-1. The Schema tab: a collection's fields, their types and their rules.
-2. The Entries tab, with bulk actions and per-column sorting.
-3. An entry, with its draft and published copies tracked separately.
-4. The Settings screen: the API master switch, export and import.
 
 == Changelog ==
 

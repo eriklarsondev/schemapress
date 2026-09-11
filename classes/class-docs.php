@@ -7,24 +7,19 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the documentation screen.
+ * The documentation screen. The text lives in docs/*.md, one file per topic,
+ * compiled in filename order — so the same source reads well in the repository
+ * and editing a paragraph does not mean editing PHP.
  *
- * the text lives in docs/*.md, one file per topic, compiled into a single page
- * in filename order. keeping it as Markdown means the same source reads well in
- * the repository and on GitHub, and editing a paragraph does not mean editing
- * PHP.
- *
- * one placeholder is filled in before rendering, so the page states what is true
- * of *this* install rather than what is true in general:
+ * One placeholder is filled in before rendering, so the page states what is true
+ * of *this* install:
  *
  *   %%timber_status%%   whether the Twig functions are registered here
  *
- * the same compiled text is served two ways. normally it is a screen inside the
- * React app, which is where the reader already is — the sidebar stays, and
- * nothing about reading the docs means leaving the builder. when the bundle has
- * not been built there is no app to put it in, so the standalone page below
- * renders it server-side instead: that is exactly the state whose way out the
- * documentation describes, so it must not depend on the thing that is missing.
+ * Normally this is a screen inside the React app. When the bundle has not been
+ * built there is no app to put it in, so the standalone page below renders it
+ * server-side — that is exactly the state whose way out the documentation
+ * describes, so it must not depend on the thing that is missing.
  */
 class Docs
 {
@@ -36,6 +31,18 @@ class Docs
     public const SOURCE_DIR = 'docs';
 
     /**
+     * the compiled sections, for the rest of this request.
+     *
+     * @var array|null
+     */
+    private static $sections = null;
+
+    /**
+     * @var \League\CommonMark\GithubFlavoredMarkdownConverter|null
+     */
+    private static $converter = null;
+
+    /**
      * hooks the submenu page.
      */
     public function __construct()
@@ -44,13 +51,9 @@ class Docs
     }
 
     /**
-     * registers the fallback page, when there is a reason to have one.
-     *
-     * normally there is not: the docs are a screen in the app, reached from the
-     * app's own sidebar, and a second entry in wp-admin's menu would only be a
-     * different way into the same text. without a bundle there is no app to
-     * hold it, so the page below is registered instead — that is exactly the
-     * state whose way out the documentation describes.
+     * Registers the fallback page, only when there is no bundle to hold the
+     * in-app screen — a second wp-admin menu entry would otherwise be a different
+     * way into the same text.
      *
      * @return void
      */
@@ -71,14 +74,12 @@ class Docs
     }
 
     /**
-     * what the compiled documentation is allowed to contain.
+     * What the compiled documentation is allowed to contain.
      *
-     * `post` covers everything Markdown produces — headings, lists, tables,
-     * code blocks, links. What it does not reliably carry is `id` and `class`
-     * on every one of them, and this page depends on both: the headings carry
-     * the anchors its contents list links to, and the classes are what the
-     * stylesheet below is written against. Stripped, the page still renders and
-     * every link in the sidebar goes nowhere.
+     * `post` covers everything Markdown produces, but does not reliably carry
+     * `id` and `class` on all of them — and this page depends on both: headings
+     * carry the anchors the contents list links to, and the classes are what the
+     * stylesheet is written against.
      *
      * @return array
      */
@@ -89,18 +90,18 @@ class Docs
         foreach ($allowed as $tag => $attributes) {
             $allowed[$tag]['id'] = true;
             $allowed[$tag]['class'] = true;
+            // the tabbed code sample carries its label in an attribute. named
+            // rather than relying on kses passing `data-*` through, which it
+            // does only for tags already carrying one in the allow-list
+            $allowed[$tag]['data-label'] = true;
         }
 
         return $allowed;
     }
 
     /**
-     * the documentation as the app consumes it: one entry per source file, in
-     * the order the directory names, each already rendered to HTML.
-     *
-     * the split is by file rather than by heading because a file is the unit
-     * the docs are written in — a new topic is a new file, and the contents
-     * list picks it up without anything here being edited.
+     * The documentation as the app consumes it: one entry per source file, in the
+     * order the directory names, each already rendered to HTML.
      *
      * @return array
      */
@@ -113,15 +114,77 @@ class Docs
     }
 
     /**
-     * every source file as {id, title, html, headings}.
-     *
-     * the leading heading of a file is lifted out of its body: the app renders
-     * it as the section's own title, and leaving it in the HTML would print it
-     * twice.
+     * Every source file as {id, title, html, headings}. The leading heading is
+     * lifted out of the body — the app renders it as the section's own title, and
+     * leaving it in would print it twice.
      *
      * @return array
      */
     public static function sections()
+    {
+        $cached = self::cached();
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $sections = self::compile();
+
+        set_transient(self::cacheKey(), $sections, WEEK_IN_SECONDS);
+        self::$sections = $sections;
+
+        return $sections;
+    }
+
+    /**
+     * the compiled sections, if this request or this install already has them.
+     *
+     * @return array|null
+     */
+    private static function cached()
+    {
+        if (self::$sections !== null) {
+            return self::$sections;
+        }
+
+        $stored = get_transient(self::cacheKey());
+
+        if (is_array($stored)) {
+            self::$sections = $stored;
+
+            return $stored;
+        }
+
+        return null;
+    }
+
+    /**
+     * what the compiled output depends on.
+     *
+     * The version alone would be wrong twice: it never changes while somebody
+     * is writing documentation, and it says nothing about a file another plugin
+     * added through `schemapress/docs/files`. Hashing the paths and their
+     * modification times covers both, and an edit simply lands on a new key.
+     *
+     * @return string
+     */
+    private static function cacheKey()
+    {
+        $stamps = [];
+
+        foreach (self::files() as $path) {
+            $stamps[] = $path . ':' . (string) filemtime($path);
+        }
+
+        return 'schemapress_docs_' . md5(SCHEMAPRESS_VERSION . '|' . implode('|', $stamps));
+    }
+
+    /**
+     * reads and renders every source file.
+     *
+     * @return array
+     */
+    private static function compile()
     {
         $sections = [];
 
@@ -161,7 +224,11 @@ class Docs
                 'group' => $group,
                 'description' => $description,
                 'headings' => self::headings($html),
-                'html' => $html,
+                // the app renders this with dangerouslySetInnerHTML, so it gets
+                // the same allow-list render() applies. today the input is this
+                // plugin's own Markdown — but `schemapress/docs/files` is a
+                // public filter, so what reaches here is not ours to promise
+                'html' => wp_kses($html, self::allowedHtml()),
             ];
         }
 
@@ -169,11 +236,9 @@ class Docs
     }
 
     /**
-     * the readable text of a fragment of HTML.
-     *
-     * tags off and entities back: a heading reaches the app as a string in a
-     * JSON payload, which is printed rather than parsed, so `&amp;` left in it
-     * shows up as `&amp;` on the screen.
+     * Tags off and entities back: a heading reaches the app as a string in JSON,
+     * which is printed rather than parsed, so `&amp;` left in it shows up as
+     * `&amp;` on the screen.
      *
      * @param string $html
      *
@@ -185,19 +250,15 @@ class Docs
     }
 
     /**
-     * a value a file declares about itself, on a line of its own:
+     * A value a file declares about itself, on a line of its own:
      *
      *   <!-- group: Content API -->
      *   <!-- description: The addresses, and what may be asked of them. -->
      *
-     * in the file rather than in a list here, so adding a topic stays a matter
-     * of adding a file — the same bargain the ordering makes with its numeric
-     * prefixes.
-     *
-     * the description is written rather than lifted from the prose. the first
-     * paragraph of a page is written to follow its heading, not to stand alone
-     * on a card somewhere else, and on a page that opens with a table or a
-     * callout there is no first paragraph to lift at all.
+     * In the file rather than a list here, so adding a topic stays a matter of
+     * adding a file. The description is written rather than lifted from the prose:
+     * a first paragraph is written to follow its heading, not to stand alone on a
+     * card, and a page opening with a table has none to lift.
      *
      * @param string $markdown
      * @param string $name
@@ -212,10 +273,8 @@ class Docs
     }
 
     /**
-     * the subheadings of one section, for the contents list.
-     *
-     * only ids anchors() added are matched, and it leaves code samples alone —
-     * so an <h3> inside a sample is not mistaken for a heading of the page.
+     * Only ids anchors() added are matched, and it leaves code samples alone, so
+     * an <h3> inside a sample is not mistaken for a heading of the page.
      *
      * @param string $html
      *
@@ -269,11 +328,6 @@ class Docs
             );
         }
 
-        // through wp_kses even though both sides are this plugin's own Markdown
-        // compiled by its own parser. nothing a user typed reaches here — but
-        // "it is our own content" is a property of today's code rather than a
-        // guarantee, and the allow-list costs one pass over a page that renders
-        // only when the admin bundle is missing
         $allowed = self::allowedHtml();
 
         printf(
@@ -290,10 +344,8 @@ class Docs
     // --- compilation ---------------------------------------------------------
 
     /**
-     * every Markdown source, in filename order.
-     *
-     * the numeric prefixes are what order the page, so a new topic is added by
-     * dropping a file in rather than by editing a list here.
+     * Every Markdown source, in filename order — the numeric prefixes are what
+     * order the page, so a new topic is added by dropping a file in.
      *
      * @return string[] absolute paths
      */
@@ -351,16 +403,11 @@ class Docs
     }
 
     /**
-     * renders Markdown to HTML.
-     *
      * HTML in the source is allowed rather than escaped: the sources are files
-     * this plugin ships, not anything a user submits, and the status callout is
-     * written as markup.
+     * this plugin ships, and the status callout is written as markup. The output
+     * still goes through wp_kses — see allowedHtml().
      *
-     * without a parser the raw Markdown is shown instead. that is a degraded
-     * page, not a broken one — Markdown is designed to be readable unrendered,
-     * and the same `composer install` that fixes it is required for the plugin
-     * to render at all.
+     * Without a parser the raw Markdown is shown instead: degraded, not broken.
      *
      * @param string $markdown
      *
@@ -388,13 +435,9 @@ class Docs
     }
 
     /**
-     * drops the newline a fenced block leaves at the end of its code.
-     *
      * CommonMark keeps the fence's final line break inside the <code>, and a
-     * <pre> renders it — so every sample sat on a blank line it did not ask
-     * for. the browser only ignores a newline immediately AFTER the opening
-     * tag, never one before the closing one, which is why this has to be
-     * removed rather than left to the renderer.
+     * <pre> renders it. The browser only ignores a newline immediately after the
+     * opening tag, never one before the closing one, so it has to be removed here.
      *
      * @param string $html
      *
@@ -412,23 +455,26 @@ class Docs
      */
     private static function converter()
     {
-        return new \League\CommonMark\GithubFlavoredMarkdownConverter([
-            'html_input' => 'allow',
-            'allow_unsafe_links' => false,
-        ]);
+        // memoized because a page with several callouts builds one of these per
+        // callout, and the environment it assembles is the expensive part
+        if (self::$converter === null) {
+            self::$converter = new \League\CommonMark\GithubFlavoredMarkdownConverter([
+                'html_input' => 'allow',
+                'allow_unsafe_links' => false,
+            ]);
+        }
+
+        return self::$converter;
     }
 
     /**
-     * the callout kinds a page may use, and the word each is labeled with.
-     *
-     * the syntax is Docusaurus's, which is what the documentation this reads
-     * like is written in:
+     * The callout kinds a page may use. The syntax is Docusaurus's:
      *
      *   :::note
      *   Something worth knowing.
      *   :::
      *
-     * @var array<string, string>
+     * @return array<string, string> kind => label
      */
     private static function callouts()
     {
@@ -442,25 +488,18 @@ class Docs
     }
 
     /**
-     * replaces every tab group with a placeholder holding its rendered panes.
-     *
-     * one operation, shown the way each surface spells it — the reader picks the
-     * one they are working in rather than reading past two that do not apply:
+     * Replaces every tab group with a placeholder holding its rendered panes —
+     * one operation shown the way each surface spells it:
      *
      *   :::tabs
      *   ```php PHP
      *   Content::collection('team_member')->get();
      *   ```
-     *   ```twig Twig
-     *   {% for p in sp_collection('team_member') %}
-     *   ```
      *   :::
      *
-     * the word after the language is the tab's label, and it is optional — the
-     * language's own display name is used when it is left off. the fences are
-     * read here rather than handed to the parser because CommonMark keeps only
-     * the first word of an info string, which is exactly the word that is not
-     * the label.
+     * The word after the language is the tab's optional label. The fences are read
+     * here rather than handed to the parser because CommonMark keeps only the
+     * first word of an info string — exactly the word that is not the label.
      *
      * @param string $markdown
      * @param array  $map placeholder => html, filled by reference
@@ -488,7 +527,7 @@ class Docs
     }
 
     /**
-     * the panes of one tab group.
+     * The panes of one tab group.
      *
      * @param string $body the markdown between the :::tabs fences
      *
@@ -521,7 +560,7 @@ class Docs
     }
 
     /**
-     * a language's display name, for a tab that did not name itself.
+     * A language's display name, for a tab that did not name itself.
      *
      * @param string $language
      *
@@ -544,7 +583,7 @@ class Docs
     }
 
     /**
-     * replaces every callout fence with a placeholder, rendering its contents.
+     * Replaces every callout fence with a placeholder, rendering its contents.
      *
      * @param string $markdown
      * @param array  $map placeholder => html, filled by reference
@@ -590,8 +629,8 @@ class Docs
     }
 
     /**
-     * gives every second- and third-level heading an id, so the contents list
-     * can link to it.
+     * Gives every second- and third-level heading an id, so the contents list can
+     * link to it.
      *
      * @param string $html
      *
@@ -632,10 +671,9 @@ class Docs
     }
 
     /**
-     * the sidebar, built from the compiled headings.
-     *
-     * topics come from the h2s and their subheadings nest under them, so the
-     * sidebar mirrors the shape of the docs directory without restating it.
+     * The sidebar, built from the compiled headings: topics from the h2s with
+     * their subheadings nested, so it mirrors the docs directory without
+     * restating it.
      *
      * @param string $html
      *
@@ -706,11 +744,8 @@ class Docs
     }
 
     /**
-     * marks the section currently in view in the sidebar.
-     *
-     * a link that does not track the page is a link you stop trusting, and on a
-     * page this long the reader otherwise loses their place. plain DOM, no
-     * dependency: this screen deliberately loads no bundle.
+     * Marks the section currently in view. Plain DOM, no dependency: this screen
+     * deliberately loads no bundle.
      *
      * @return void
      */
@@ -820,9 +855,7 @@ class Docs
     // --- presentation --------------------------------------------------------
 
     /**
-     * styles for this screen.
-     *
-     * inline because the page loads no bundle of its own — and must still read
+     * Inline because the page loads no bundle of its own — and must still read
      * correctly when the bundle is exactly what is broken.
      *
      * @return void

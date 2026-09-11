@@ -7,46 +7,36 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the three date shapes, parsed and written back in one canonical form.
+ * The three date shapes, parsed and written back in one canonical form.
  *
- * a stored date is WALL-CLOCK, not an instant. "the event starts at 19:00"
- * means seven in the evening wherever the event is, and converting that to UTC
- * on the way in means an editor who types 19:00 sees 14:00 when they come back.
- * so nothing here converts anything: what was typed is what is stored, and the
- * site's timezone is the one it is read in.
- *
- * that is a different thing from `publishedAt`, which IS an instant — the
- * moment somebody pressed publish — and is kept in UTC by WordPress.
- *
- * the canonical forms are ISO-8601 local time, chosen because they sort:
- * comparing two of these as strings gives the same answer as comparing them as
- * dates, which is the whole reason the index can be a CHAR column and a
- * `sort=starts_at` can work at all.
+ * A stored date is WALL-CLOCK, not an instant. "The event starts at 19:00" means
+ * seven in the evening wherever the event is, and converting that to UTC on the
+ * way in means an editor who types 19:00 sees 14:00 when they come back. So
+ * nothing here converts anything.
  *
  *   date      2026-09-08
  *   time      19:00:00
  *   datetime  2026-09-08T19:00:00
  *
- * parsing is deliberately strict rather than handing the string to DateTime,
- * which would accept "tomorrow", "+1 week" and "now" and store whatever they
- * meant at the moment of the save. a value that is not a timestamp is stored as
- * nothing, which is the rule `email` already follows — see FieldTypes.
+ * The forms are ISO-8601 local time because they sort: comparing two as strings
+ * gives the same answer as comparing them as dates, which is why the index can
+ * be a CHAR column and `sort=starts_at` works at all.
+ *
+ * Parsing is strict rather than handing the string to DateTime, which would
+ * accept "tomorrow", "+1 week" and "now" and store whatever they meant at the
+ * moment of the save.
  */
 class Dates
 {
     /**
-     * an INSTANT, as ISO-8601 in UTC.
+     * An INSTANT, as ISO-8601 in UTC — the exception to everything above.
      *
-     * the exception to everything above, and the reason it is worth stating:
-     * `publishedAt` and `updatedAt` record a moment — when somebody pressed
-     * publish, when the row last changed — rather than a plan. WordPress keeps
-     * those in UTC as "Y-m-d H:i:s", which is a real timestamp written in a
+     * `publishedAt` and `updatedAt` record a moment rather than a plan.
+     * WordPress keeps those as "Y-m-d H:i:s", which is a real timestamp in a
      * shape no client can read: `new Date("2026-09-08 09:35:00")` is an Invalid
-     * Date in Safari and local time everywhere else, so the same response tells
-     * two browsers different things.
+     * Date in Safari and local time everywhere else.
      *
-     * a stamp that already names its zone is passed through, so a row written
-     * before this existed and one written after both come out the same.
+     * A stamp that already names its zone is passed through.
      *
      * @param mixed $value
      *
@@ -73,13 +63,10 @@ class Dates
     }
 
     /**
-     * a unix timestamp as ISO-8601 in UTC.
+     * A unix timestamp as ISO-8601 in UTC.
      *
-     * WordPress records when a post was trashed as `_wp_trash_meta_time`, which
-     * is a unix timestamp rather than the "Y-m-d H:i:s" every other date on a
-     * post is written in — so iso() cannot read it, and a trash listing showing
-     * "how long is left" needs it in the same shape as every other instant the
-     * API reports.
+     * `_wp_trash_meta_time` is a unix timestamp rather than the "Y-m-d H:i:s"
+     * every other date on a post uses, so iso() cannot read it.
      *
      * @param mixed $value
      *
@@ -93,7 +80,7 @@ class Dates
     }
 
     /**
-     * accepts what `<input type="date">` sends.
+     * Accepts what `<input type="date">` sends.
      *
      * @param mixed $value
      *
@@ -108,13 +95,12 @@ class Dates
         }
 
         // checkdate, so 2026-02-31 is refused rather than rolled forward into
-        // March — a silently shifted date is worse than an empty one, because
-        // nothing about it looks wrong later
+        // March — a silently shifted date is worse than an empty one
         return checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1]) ? $value : '';
     }
 
     /**
-     * accepts what `<input type="time">` sends, with or without seconds.
+     * Accepts what `<input type="time">` sends, with or without seconds.
      *
      * @param mixed $value
      *
@@ -136,19 +122,18 @@ class Dates
             return '';
         }
 
-        // seconds are filled in rather than kept optional, so two stored times
-        // are always the same length and so always compare as strings
+        // filled in rather than optional, so two stored times are always the
+        // same length and so always compare as strings
         return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
     }
 
     /**
-     * accepts what `<input type="datetime-local">` sends, and a full ISO-8601
-     * string besides, so an API client can write one.
+     * Accepts what `<input type="datetime-local">` sends, and a full ISO-8601
+     * string besides.
      *
-     * a trailing Z or offset is READ and then dropped: the wall clock in front
-     * of it is the value, because that is what the field means. a client that
-     * sends 19:00+02:00 is saying seven in the evening, and seven in the
-     * evening is what is kept.
+     * A trailing Z or offset is read and then dropped: the wall clock in front
+     * of it is the value. A client that sends 19:00+02:00 is saying seven in the
+     * evening, and that is what is kept.
      *
      * @param mixed $value
      *

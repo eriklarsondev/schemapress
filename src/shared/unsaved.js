@@ -1,19 +1,16 @@
 /**
  * Work in progress that has not been stored yet.
  *
- * There are three ways to walk away from a half-filled form and they need
- * different machinery, so the fact that there IS unsaved work is kept in one
- * place and all three ask the same question of it:
+ * Three ways to walk away from a half-filled form need different machinery, so
+ * the fact that there IS unsaved work is kept in one place:
  *
  *   the Back link      an in-app confirm, because we own the click
  *   the sidebar        the same, from App, which owns navigation
- *   the tab or reload  the browser's own dialog, which cannot be styled and
- *                      cannot be skipped — beforeunload is the only hook, and
- *                      browsers deliberately ignore any message you give it
+ *   the tab or reload  beforeunload, whose dialog cannot be styled or skipped
  *
- * A module-level flag rather than context: the guard is read from event
- * handlers and from a window listener, neither of which is inside the React
- * tree, and there is only ever one entry being edited at a time.
+ * A module-level flag rather than context: the guard is read from event handlers
+ * and from a window listener, neither inside the React tree, and there is only
+ * ever one entry being edited at a time.
  */
 
 import { useEffect } from '@wordpress/element'
@@ -30,11 +27,9 @@ export function hasUnsaved() {
 }
 
 /**
- * Forgets the unsaved work, because it has just been stored or discarded.
- *
- * Called explicitly rather than left to the next render: a screen that saves
- * and then navigates does both in one go, and the flag has to be down before
- * the navigation asks about it.
+ * Called explicitly rather than left to the next render: a screen that saves and
+ * then navigates does both in one go, and the flag has to be down before the
+ * navigation asks about it.
  *
  * @return {void}
  */

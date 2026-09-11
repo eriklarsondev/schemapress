@@ -7,11 +7,9 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * registry of available field types.
- *
- * a type describes how a value is defaulted and sanitized, and whether it
- * holds child fields. everything else — how it is drawn — lives in the React
- * admin, keyed by the same type slug.
+ * Registry of available field types. A type describes how a value is defaulted
+ * and sanitized, and whether it holds child fields. How it is drawn lives in the
+ * React admin, keyed by the same type slug.
  */
 class FieldTypes
 {
@@ -277,7 +275,7 @@ class FieldTypes
     }
 
     /**
-     * a single type definition.
+     * A single type definition.
      *
      * @param string $type
      *
@@ -289,7 +287,7 @@ class FieldTypes
     }
 
     /**
-     * whether a type slug is registered.
+     * Whether a type slug is registered.
      *
      * @param string $type
      *
@@ -301,7 +299,7 @@ class FieldTypes
     }
 
     /**
-     * whether a type nests child fields (group, repeater).
+     * Whether a type nests child fields (group, repeater).
      *
      * @param string $type
      *
@@ -315,7 +313,7 @@ class FieldTypes
     }
 
     /**
-     * whether a type holds an ordered list of child rows.
+     * Whether a type holds an ordered list of child rows.
      *
      * @param string $type
      *
@@ -329,7 +327,7 @@ class FieldTypes
     }
 
     /**
-     * the empty value for a type.
+     * The empty value for a type.
      *
      * @param string $type
      *
@@ -345,19 +343,14 @@ class FieldTypes
     }
 
     /**
-     * how wide each built-in type's control STARTS on the entry form.
+     * How wide each built-in type's control starts on the entry form — a starting
+     * point, never a rule. The Layout tab sets any field to any width, and one
+     * somebody chose is kept exactly; this only answers for a field that has not
+     * been given one yet.
      *
-     * a starting point, never a rule — the Layout tab sets any field to any
-     * width, and a width somebody chose is kept exactly. this only answers for
-     * a field that has not been given one yet.
-     *
-     * everything used to start full width, which made every form a single tall
-     * column: a toggle stretched across the page with its switch at one end and
-     * nothing at the other, an image preview blown up to a banner. the widths
-     * follow what each control actually draws — a switch or a swatch needs a
-     * third, a line of text half, anything with inputs side by side or a
-     * document inside it the whole row — and match Strapi's defaults where the
-     * two have the same type.
+     * The widths follow what each control actually draws: a switch or a swatch
+     * needs a third, a line of text half, anything with inputs side by side or a
+     * document inside it the whole row.
      *
      * @var array<string, string>
      */
@@ -388,11 +381,9 @@ class FieldTypes
     ];
 
     /**
-     * the width a type's control starts at.
-     *
-     * a type registered through the schemapress/field_types filter can say its
-     * own with a `width` key; anything unrecognised starts full, which is the
-     * one width that can never be too narrow for what is in it.
+     * A type registered through the schemapress/field_types filter can say its own
+     * with a `width` key; anything unrecognised starts full, the one width that
+     * can never be too narrow for what is in it.
      *
      * @param string $type
      *
@@ -407,8 +398,8 @@ class FieldTypes
     }
 
     /**
-     * runs a value through its type's sanitizer. types that nest children have
-     * no scalar sanitizer — ContentSanitizer walks into them instead.
+     * Runs a value through its type's sanitizer. Types that nest children have no
+     * scalar sanitizer — ContentSanitizer walks into them instead.
      *
      * @param mixed $value
      * @param array $field

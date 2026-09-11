@@ -7,12 +7,9 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the admin transport.
- *
- * every screen in the builder talks to these routes and nothing else. they are
- * deliberately not the public delivery API — they are namespaced under /admin/
- * and gated on editing capabilities, because they return draft content and
- * accept schema changes.
+ * The admin transport. Namespaced under /admin/ and gated on editing
+ * capabilities, because these routes return draft content and accept schema
+ * changes — deliberately not the public delivery API.
  */
 class Rest
 {
@@ -32,7 +29,7 @@ class Rest
     }
 
     /**
-     * claims this namespace as one a read-only public API does not cover.
+     * Claims this namespace as one a read-only public API does not cover.
      *
      * @param string[] $exempt route prefixes
      *
@@ -209,12 +206,9 @@ class Rest
      */
     private function bulkRoutes()
     {
-        // NOT /entries/bulk. WordPress matches routes in registration order and
-        // returns the first whose pattern fits, so `bulk` would be read as an
-        // entry identifier by the route above — `[A-Za-z0-9-]+` matches it
-        // perfectly — and every bulk request would have tried to save an entry
-        // whose uuid was the word bulk. its own segment cannot be mistaken for
-        // one
+        // Not /entries/bulk: WordPress matches routes in registration order, so
+        // `bulk` would be read as an entry identifier by the route above —
+        // `[A-Za-z0-9-]+` matches it perfectly
         register_rest_route(self::NAMESPACE, '/types/(?P<id>\d+)/bulk', [
             [
                 'methods' => 'POST',
@@ -257,18 +251,13 @@ class Rest
     // --- settings ------------------------------------------------------------
 
     /**
-     * stores the site's master switch and every collection's own pair.
+     * Stores the site's master switch and every collection's own pair.
      *
-     * one route, because the Settings screen is one form and saving half of it
-     * is not a state anybody asked for — turning the API off while a collection
-     * on the same screen was being opened should not be two requests that can
-     * land in either order.
+     * One route, because the Settings screen is one form: turning the API off
+     * while a collection on the same screen is being opened should not be two
+     * requests that can land in either order.
      *
-     * the collection pairs are the same setting each collection's own dialog
-     * writes, stored in the same place. nothing is shared between them; what
-     * this adds is doing it in one sitting.
-     *
-     * the body is { restApi: bool, collections: { "<type id>": { list, single } } }.
+     * The body is { restApi: bool, collections: { "<type id>": { list, single } } }.
      *
      * @param \WP_REST_Request $request
      *
@@ -288,12 +277,8 @@ class Rest
         foreach ($collections as $id => $publicApi) {
             $id = absint($id);
 
-            // checked per collection rather than once for the route, because
-            // that is the bar the collection's own dialog sets and this writes
-            // the same setting. a body naming something that is not a
-            // collection, or one this user may not edit, is skipped rather than
-            // trusted — the route says they may edit collections, not that
-            // every id they sent is one of them
+            // per collection rather than once for the route: it says they may
+            // edit collections, not that every id they sent is one
             if (get_post_type($id) !== Schema::POST_TYPE || !current_user_can('edit_post', $id)) {
                 continue;
             }
@@ -365,7 +350,7 @@ class Rest
     }
 
     /**
-     * one component, with its fields.
+     * One component, with its fields.
      *
      * @param \WP_REST_Request $request
      *
@@ -383,7 +368,7 @@ class Rest
     }
 
     /**
-     * creates a component.
+     * Creates a component.
      *
      * @param \WP_REST_Request $request
      *
@@ -419,14 +404,12 @@ class Rest
     }
 
     /**
-     * renames a component or replaces its fields.
+     * Renames a component or replaces its fields.
      *
-     * the same conflict check a collection's definition gets, for the same
-     * reason: this route takes the WHOLE field list, so two people with the
-     * component open in two tabs meant the second save deleted whatever the
-     * first had added. a component is imported by copy, so the loss is not
-     * confined to the component — every collection that imports it afterwards
-     * gets the version that survived.
+     * Conflict-checked like a collection's definition: this route takes the whole
+     * field list, so without it a second save deletes whatever the first added.
+     * A component is imported by copy, so the loss is not confined to it — every
+     * collection importing it afterwards gets the version that survived.
      *
      * @param \WP_REST_Request $request
      *
@@ -469,11 +452,8 @@ class Rest
     }
 
     /**
-     * deletes a component.
-     *
-     * Collections that imported it keep their copy of the fields, because
-     * importing copies rather than references — deleting the original cannot
-     * take content down with it.
+     * Collections that imported it keep their copy of the fields, so deleting the
+     * original cannot take content down with it.
      *
      * @param \WP_REST_Request $request
      *
@@ -501,7 +481,7 @@ class Rest
     }
 
     /**
-     * one content type, with its definition.
+     * One content type, with its definition.
      *
      * @param \WP_REST_Request $request
      *
@@ -513,7 +493,7 @@ class Rest
     }
 
     /**
-     * creates a content type.
+     * Creates a content type.
      *
      * @param \WP_REST_Request $request
      *
@@ -552,7 +532,7 @@ class Rest
     }
 
     /**
-     * renames a type or replaces its fields.
+     * Renames a type or replaces its fields.
      *
      * @param \WP_REST_Request $request
      *
@@ -596,21 +576,13 @@ class Rest
     }
 
     /**
-     * refuses a schema save built on a definition that has since moved.
+     * Refuses a schema save built on a definition that has since moved — the same
+     * rule entries get, see Entries::conflict.
      *
-     * the same rule entries get — see Entries::conflict — for the same reason,
-     * and here the loss is larger: this route takes the WHOLE field list, so two
-     * builders with the collection open in two tabs meant the second save
-     * silently deleted whatever the first had added.
-     *
-     * the schema post's modified stamp is the version, because saving a
-     * definition moves it — see SchemaRepository::saveDefinition, which is where
-     * that had to be made true. as with an entry it is optional, so a script
-     * that has always posted a definition still can.
-     *
-     * a component is the same shape and gets the same check — see
-     * updateComponent, which is why the key naming the field-replacing half of
-     * the body is a parameter rather than the literal `definition`.
+     * The schema post's modified stamp is the version, because saving a definition
+     * moves it (SchemaRepository::saveDefinition). Optional, so a script that has
+     * always posted a definition still can. A component is the same shape, which
+     * is why the body key is a parameter rather than the literal `definition`.
      *
      * @param integer $id
      * @param array   $body
@@ -652,14 +624,12 @@ class Rest
     }
 
     /**
-     * deletes a type. its entries go with it, which is why this asks.
+     * Deletes a type. Its entries go with it, which is why this asks.
      *
-     * a collection small enough to erase inside the request is; anything larger
-     * is queued, because reading every entry of a large collection to delete
-     * them one at a time is precisely the request that does not finish. the
-     * definition is deleted by the last chunk rather than here, so an
-     * interrupted purge leaves the collection behind to be finished from rather
-     * than a post type full of orphans nothing can name.
+     * A large collection is queued rather than erased inline. The definition is
+     * deleted by the last chunk rather than here, so an interrupted purge leaves
+     * the collection behind to be finished from rather than a post type full of
+     * orphans nothing can name.
      *
      * @param \WP_REST_Request $request
      *
@@ -703,7 +673,7 @@ class Rest
     // --- entries -------------------------------------------------------------
 
     /**
-     * a page of a collection's entries.
+     * A page of a collection's entries.
      *
      * @param \WP_REST_Request $request
      *
@@ -739,7 +709,7 @@ class Rest
     }
 
     /**
-     * one entry.
+     * One entry, with the definition it was saved against.
      *
      * @param \WP_REST_Request $request
      *
@@ -762,7 +732,7 @@ class Rest
     }
 
     /**
-     * creates an entry.
+     * Creates an entry.
      *
      * @param \WP_REST_Request $request
      *
@@ -774,7 +744,7 @@ class Rest
     }
 
     /**
-     * updates an entry.
+     * Saves an entry, and optionally publishes it.
      *
      * @param \WP_REST_Request $request
      *
@@ -786,7 +756,7 @@ class Rest
     }
 
     /**
-     * publishes, unpublishes, discards the draft, or copies the entry.
+     * Publishes, unpublishes, discards the draft, or copies the entry.
      *
      * @param \WP_REST_Request $request
      *
@@ -824,7 +794,7 @@ class Rest
     // --- the trash -----------------------------------------------------------
 
     /**
-     * a page of a collection's trashed entries.
+     * A page of a collection's trashed entries.
      *
      * @param \WP_REST_Request $request
      *
@@ -839,7 +809,7 @@ class Rest
     }
 
     /**
-     * brings an entry back from the trash.
+     * Brings an entry back from the trash.
      *
      * @param \WP_REST_Request $request
      *
@@ -861,7 +831,7 @@ class Rest
     }
 
     /**
-     * erases one trashed entry.
+     * Erases one trashed entry, permanently.
      *
      * @param \WP_REST_Request $request
      *
@@ -875,7 +845,7 @@ class Rest
     }
 
     /**
-     * erases everything in a collection's trash.
+     * Erases everything in a collection's trash.
      *
      * @param \WP_REST_Request $request
      *
@@ -889,12 +859,9 @@ class Rest
     // --- several at once -----------------------------------------------------
 
     /**
-     * one action applied to a list of entries.
-     *
-     * the result is per entry rather than one verdict for the request. a bulk
-     * publish of forty entries where one has a required field empty should
-     * publish the thirty-nine and say which one it could not — reporting the
-     * whole thing as a failure would be both untrue and unhelpful.
+     * One action applied to a list of entries, reporting per entry rather than one
+     * verdict: a bulk publish of forty where one has a required field empty should
+     * publish the thirty-nine and say which one it could not.
      *
      * @param \WP_REST_Request $request
      *
@@ -963,7 +930,7 @@ class Rest
     // --- portability ---------------------------------------------------------
 
     /**
-     * collections as a portable document.
+     * Collections as a portable document.
      *
      * @param \WP_REST_Request $request
      *
@@ -991,7 +958,7 @@ class Rest
     }
 
     /**
-     * restores collections from an exported document.
+     * Restores collections from an exported document.
      *
      * @param \WP_REST_Request $request
      *
@@ -1029,7 +996,7 @@ class Rest
     }
 
     /**
-     * trashes an entry.
+     * Trashes rather than erases — the trash is where a delete lands.
      *
      * @param \WP_REST_Request $request
      *
@@ -1043,7 +1010,7 @@ class Rest
     }
 
     /**
-     * shared write path for create and update.
+     * Shared write path for create and update.
      *
      * @param integer      $type_id
      * @param integer|null $entry_id
@@ -1076,7 +1043,7 @@ class Rest
     // --- support -------------------------------------------------------------
 
     /**
-     * the response shape every type-returning route uses.
+     * The response shape every type-returning route uses.
      *
      * @param integer $id
      *
@@ -1114,11 +1081,8 @@ class Rest
     }
 
     /**
-     * whether the current user may change the shape of content.
-     *
-     * a higher bar than editing entries, and deliberately — see
-     * class-capabilities.php. everything gated on this either restructures
-     * stored content or decides what the site publishes.
+     * A higher bar than editing entries: everything gated on this either
+     * restructures stored content or decides what the site publishes.
      *
      * @return boolean
      */
@@ -1128,7 +1092,7 @@ class Rest
     }
 
     /**
-     * whether the current user may change a specific collection's shape.
+     * Whether the current user may change a collection's shape.
      *
      * @param \WP_REST_Request $request
      *
@@ -1141,7 +1105,7 @@ class Rest
     }
 
     /**
-     * whether the current user may change a specific component's shape.
+     * Whether the current user may change a component's shape.
      *
      * @param \WP_REST_Request $request
      *
@@ -1154,12 +1118,9 @@ class Rest
     }
 
     /**
-     * whether the current user may edit a specific content type's entries.
-     *
-     * this used to be `edit_post` on the SCHEMA post, which mapped to the page
-     * capabilities and so meant "may this person edit content at all" — the same
-     * answer for every collection on the site. a collection may now name the
-     * roles that own it, and this is where that is enforced.
+     * Where a collection's own `editRoles` is enforced. `edit_post` on the schema
+     * post would only answer "may this person edit content at all" — the same
+     * answer for every collection on the site.
      *
      * @param \WP_REST_Request $request
      *
@@ -1173,7 +1134,7 @@ class Rest
     }
 
     /**
-     * whether the current user may edit a specific component.
+     * Whether the current user may edit a specific component.
      *
      * @param \WP_REST_Request $request
      *

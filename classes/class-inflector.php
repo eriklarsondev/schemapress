@@ -9,16 +9,13 @@ if (!defined('ABSPATH')) {
 /**
  * English singular/plural forms.
  *
- * a collection is named for one of the things in it — Team Member, not Team
- * Members — because every other name follows from that: the machine key, the
- * post type, the "New Team Member" button. The plural is derived rather than
- * asked for, and only ever used where a plural genuinely reads better: the
- * sidebar, a listing heading, and later a REST route.
+ * A collection is named for one of the things in it — Team Member, not Team
+ * Members — because every other name follows from that. The plural is derived
+ * rather than asked for.
  *
- * the rules are ordered, most specific first, the way Rails' inflector does it.
- * they are not complete English — nothing short of a dictionary is — but they
- * cover the shapes content types actually get named, and anything they get
- * wrong is a label, not data.
+ * The rules are ordered most specific first, the way Rails' inflector does it.
+ * They are not complete English, but they cover the shapes content types get
+ * named, and anything they get wrong is a label, not data.
  */
 class Inflector
 {
@@ -98,7 +95,7 @@ class Inflector
     ];
 
     /**
-     * the plural of a word.
+     * The plural of a word.
      *
      * @param string $word
      *
@@ -133,7 +130,7 @@ class Inflector
     }
 
     /**
-     * the singular of a word.
+     * The singular of a word.
      *
      * @param string $word
      *
@@ -169,11 +166,9 @@ class Inflector
     }
 
     /**
-     * whether a word already reads as a plural.
-     *
-     * used to spot "Team Members" typed where "Team Member" was meant, so the
-     * interface can say so rather than silently naming the post type
-     * `spc_team_members` and every button "New Team Members".
+     * Spots "Team Members" typed where "Team Member" was meant, so the interface
+     * can say so rather than naming the post type `spc_team_members` and every
+     * button "New Team Members".
      *
      * @param string $word
      *
@@ -201,7 +196,7 @@ class Inflector
     }
 
     /**
-     * whether a word has no separate plural.
+     * Whether a word has no separate plural.
      *
      * @param string $word
      *
@@ -213,10 +208,8 @@ class Inflector
     }
 
     /**
-     * applies a form to the last word of a phrase, leaving the rest alone.
-     *
-     * "Team Member" pluralizes on "Member"; "News Article" on "Article". Only
-     * the head noun changes, which is what makes multi-word names work.
+     * "Team Member" pluralizes on "Member"; "News Article" on "Article". Only the
+     * head noun changes, which is what makes multi-word names work.
      *
      * @param string   $phrase
      * @param callable $transform
@@ -240,7 +233,7 @@ class Inflector
     }
 
     /**
-     * carries the casing of the original onto a replacement word.
+     * Carries the casing of the original onto a replacement word.
      *
      * @param string $replacement
      * @param string $original

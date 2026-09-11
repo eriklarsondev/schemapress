@@ -7,21 +7,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * resolves and enqueues the compiled admin bundles.
+ * Resolves and enqueues the compiled admin bundles.
  *
- * builds come from @wordpress/scripts, which emits a sibling .asset.php for
- * each entry declaring its WordPress script dependencies and a content hash.
- * reading that file is what lets the React apps share WordPress's own React
- * and @wordpress/components rather than bundling duplicates.
+ * @wordpress/scripts emits a sibling .asset.php for each entry declaring its
+ * WordPress script dependencies and a content hash. Reading it is what lets the
+ * React apps share WordPress's own React rather than bundling duplicates.
  */
 class Assets
 {
     public const BUILD_DIR = 'build';
 
     /**
-     * whether an entry has been built.
-     *
-     * screens ask before deciding what to offer: an in-app route is only worth
+     * Screens ask before deciding what to offer: an in-app route is only worth
      * linking to if the bundle that renders it exists.
      *
      * @param string $entry
@@ -34,7 +31,7 @@ class Assets
     }
 
     /**
-     * enqueues a built entry and its declared dependencies.
+     * Enqueues a built entry and its declared dependencies.
      *
      * @param string $entry handle-safe entry name, e.g. 'schema-builder'
      * @param array  $data  bootstrapped into window.SchemaPress
@@ -59,13 +56,11 @@ class Assets
         wp_enqueue_script(
             $handle,
             SCHEMAPRESS_URL . self::BUILD_DIR . '/' . $entry . '.js',
-            // `editor` on top of what the build declared, and it has to be a
-            // DEPENDENCY rather than merely enqueued alongside. RichTextControl
-            // reads `wp.editor.initialize` once, as it first renders, and both
-            // scripts sit in the footer — so without an ordering between them
-            // whether the editor exists by the time React looks is a matter of
-            // which file the browser finished first. Declaring it makes the
-            // answer always yes instead of usually.
+            // a dependency rather than merely enqueued alongside:
+            // RichTextControl reads `wp.editor.initialize` as it first renders,
+            // and both scripts sit in the footer, so without an ordering between
+            // them whether the editor exists yet is a matter of which file the
+            // browser finished first
             array_merge($asset['dependencies'], ['editor']),
             $asset['version'],
             true
@@ -76,19 +71,9 @@ class Assets
         // the media modal is used by the image and file field types
         wp_enqueue_media();
 
-        // TinyMCE and Quicktags, for the Rich Text field.
-        //
-        // WITHOUT THIS THERE IS NO EDITOR. `wp.editor.initialize()` is the
-        // documented way to raise an editor on a textarea the page created
-        // itself, and it exists only once this has run — it is what loads
-        // TinyMCE, Quicktags and the `wp.editor` API around them.
-        //
-        // It was never called. RichTextControl checks for the API and falls
-        // back to a plain textarea when it is absent, which is the right way
-        // for it to fail — and meant the fallback was ALL anybody ever saw. The
-        // toolbar, the media button and the formatting menu were configured,
-        // committed, and unreachable: the check that was meant to catch a rare
-        // environment was catching every single load.
+        // what loads TinyMCE, Quicktags and the `wp.editor` API the Rich Text
+        // field initializes against. Without it RichTextControl silently falls
+        // back to a plain textarea
         wp_enqueue_editor();
 
         wp_add_inline_script(
@@ -104,13 +89,10 @@ class Assets
     }
 
     /**
-     * enqueues the compiled stylesheets.
-     *
-     * both entries import the same stylesheet, so webpack hoists it into one
-     * shared chunk named after whichever entry it was attributed to. rather
-     * than hard-coding that name, every extracted sheet in the build directory
-     * is enqueued — the RTL variants are skipped and registered as alternates
-     * instead, so WordPress swaps them in on RTL locales.
+     * Every extracted sheet in the build directory, rather than a hard-coded
+     * name: webpack hoists the shared stylesheet into a chunk named after
+     * whichever entry it was attributed to. RTL variants are registered as
+     * alternates so WordPress swaps them in on RTL locales.
      *
      * @param string $version
      *
@@ -136,8 +118,7 @@ class Assets
             $handle = 'schemapress-' . $file;
 
             // no dependency on wp-components: the app ships its own UI layer,
-            // and pulling core's component styles in only adds rules that
-            // compete with it
+            // and core's component styles only add rules that compete with it
             wp_enqueue_style(
                 $handle,
                 SCHEMAPRESS_URL . self::BUILD_DIR . '/' . $file . '.css',
@@ -152,7 +133,7 @@ class Assets
     }
 
     /**
-     * shows an admin notice once when the bundles have not been built.
+     * Shows an admin notice once when the bundles have not been built.
      *
      * @return void
      */
@@ -176,19 +157,17 @@ class Assets
     }
 
     /**
-     * the REST context every admin app needs.
+     * The REST root and nonce every admin app needs.
      *
      * @return array
      */
     public static function restContext()
     {
         return [
-            // relative, not absolute. rest_url() answers with the host stored
-            // in site options, and a local install is often reached at another
-            // one — a port, a tunnel, a proxy. an absolute URL then makes every
-            // call cross-origin, which turns each one into a preflight the
-            // browser blocks. the builder only ever talks to the site serving
-            // it, so a path is both correct and immune to the difference
+            // relative, not absolute: rest_url() answers with the host stored in
+            // site options, and a local install is often reached at another one —
+            // a port, a tunnel, a proxy — which would make every call
+            // cross-origin. The builder only ever talks to the site serving it
             'root' => wp_make_link_relative(esc_url_raw(rest_url(Rest::NAMESPACE))),
             'nonce' => wp_create_nonce('wp_rest'),
         ];

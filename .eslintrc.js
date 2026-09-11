@@ -27,6 +27,10 @@
 module.exports = {
   root: true,
 
+  // here rather than in a .eslintignore, which ESLint reads but which is one
+  // more file in a root that has enough of them
+  ignorePatterns: ['node_modules/', 'vendor/', 'build/'],
+
   env: {
     browser: true,
     es2022: true,

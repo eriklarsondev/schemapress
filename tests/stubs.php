@@ -289,6 +289,19 @@ function update_option($name, $value)
     return true;
 }
 
+// false when the row already exists, which is the whole reason anything calls
+// this instead of update_option — see the upgrade lock.
+function add_option($name, $value = '', $deprecated = '', $autoload = true)
+{
+    if (array_key_exists($name, $GLOBALS['wp_options'])) {
+        return false;
+    }
+
+    $GLOBALS['wp_options'][$name] = $value;
+
+    return true;
+}
+
 function delete_option($name)
 {
     unset($GLOBALS['wp_options'][$name]);
@@ -1039,6 +1052,15 @@ class WP_Query
 
 function wp_count_posts($type)
 {
+    // WordPress returns a bare stdClass for a post type that is not registered,
+    // so every status reads as absent rather than as zero. The stub said zero,
+    // which hid a real bug: ContentType::all() counted entries while its own
+    // registerAll() was still mid-registration, and cached nothing for all of
+    // them — `wp schemapress list` reported every collection empty.
+    if (!post_type_exists($type)) {
+        return new stdClass();
+    }
+
     $counts = ['publish' => 0, 'draft' => 0];
 
     foreach ($GLOBALS['wp_posts'] as $post) {

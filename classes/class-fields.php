@@ -7,25 +7,17 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * read-only accessor over a value bag paired with its field definitions.
+ * Read-only accessor over a value bag paired with its field definitions — what
+ * templates actually touch. It always answers, so markup never needs isset()
+ * guards: a key the schema does not declare returns the supplied default.
  *
- * this is what templates actually touch. it always answers — a key the schema
- * does not declare returns the supplied default rather than a notice — so
- * markup never needs isset() guards around content access.
- *
- * values are resolved, not stored: an image is the attachment array, not its
- * id. that is what lets `{{ hero.image.url }}` work in Twig without the
- * template knowing anything about how the value was persisted.
- *
- * field keys are readable as properties, which is the form Twig reaches for
- * first:
+ * Values are resolved, not stored, which is what lets `{{ hero.image.url }}` work
+ * without the template knowing how the value was persisted.
  *
  *   {{ hero.heading }}          {# same as hero.get('heading') #}
- *   {{ hero.image.url }}
  *
- * a key that collides with one of this class's own methods — `type`, `layout`,
- * `rows` — resolves to the method, so `{{ section.type }}` is always the
- * section type. reach a field of that name with `get('type')`.
+ * A key colliding with one of this class's own methods — `type`, `layout`,
+ * `rows` — resolves to the method. Reach a field of that name with `get('type')`.
  */
 class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
 {
@@ -40,6 +32,8 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     protected $fields;
 
     /**
+     * Pairs a value bag with the definitions describing it.
+     *
      * @param array $values
      * @param array $fields
      */
@@ -50,7 +44,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * reads a value by dot path, descending through group fields.
+     * Reads a value by dot path, descending through group fields.
      *
      *   $section->get('heading')
      *   $section->get('cta.link.url')
@@ -85,7 +79,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * whether a path holds a non-empty value.
+     * Whether a path holds a non-empty value.
      *
      * @param string $path
      *
@@ -99,15 +93,9 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * repeater rows at a path, as iterable Fields instances.
-     *
-     *   foreach ($section->rows('cards') as $card) {
-     *     echo $card->get('title');
-     *   }
-     *
-     * a row arrives as { id, data } once resolved and { id, values } when it
-     * came straight from storage. both are accepted so the same accessor works
-     * either side of resolution.
+     * Repeater rows at a path, as iterable Fields instances. A row arrives as
+     * { id, data } once resolved and { id, values } straight from storage; both
+     * are accepted so the same accessor works either side of resolution.
      *
      * @param string $path
      *
@@ -144,7 +132,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * a nested group at a path, as a Fields instance.
+     * A nested group at a path, as a Fields instance.
      *
      * @param string $path
      *
@@ -162,7 +150,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * resolves the field definition at a dot path.
+     * Resolves the field definition at a dot path.
      *
      * @param string $path
      *
@@ -220,7 +208,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     // --- property access -----------------------------------------------------
 
     /**
-     * reads a field as a property, which is the form Twig tries first.
+     * Reads a field as a property, which is the form Twig tries first.
      *
      * @param string $key
      *
@@ -232,12 +220,9 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * whether a field is readable as a property.
-     *
-     * a key naming one of this class's own methods is deliberately reported as
+     * A key naming one of this class's own methods is deliberately reported as
      * unset, so `{{ section.type }}` reaches type() rather than a field that
-     * happens to be called `type`. such a field is still readable through
-     * get('type').
+     * happens to be called `type`. Such a field is still readable via get().
      *
      * @param string $key
      *
@@ -251,6 +236,8 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     // --- ArrayAccess ---------------------------------------------------------
 
     /**
+     * Whether a field is readable by array access.
+     *
      * @param mixed $offset
      *
      * @return boolean
@@ -262,6 +249,8 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
+     * Reads a field by array access.
+     *
      * @param mixed $offset
      *
      * @return mixed
@@ -273,7 +262,7 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
-     * content is read-only at render time.
+     * Content is read-only at render time.
      *
      * @param mixed $offset
      * @param mixed $value
@@ -286,6 +275,8 @@ class Fields implements \ArrayAccess, \IteratorAggregate, \Countable
     }
 
     /**
+     * Content is read-only at render time.
+     *
      * @param mixed $offset
      *
      * @return void

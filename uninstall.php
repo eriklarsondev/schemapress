@@ -3,25 +3,16 @@
 /**
  * What happens when somebody deletes the plugin.
  *
- * Until this file existed, the answer was "nothing", and nothing is the worst
- * of the available answers. Every collection, every entry, every index row and
- * both options stayed in the database forever — and unreachably, because the
- * post types that name them are registered by a plugin that is no longer there.
- * A site that tried SchemaPress for an afternoon in 2024 was still carrying it.
+ * The default is to keep everything. Deleting a plugin is often how somebody
+ * reinstalls it, moves it, or clears a broken update — none of which is a
+ * decision to destroy the content. This only erases when the site has said so,
+ * in Settings, in advance.
  *
- * THE DEFAULT IS STILL TO KEEP EVERYTHING, and that is not a contradiction.
- * Deleting a plugin is often how somebody reinstalls it, moves it, or clears a
- * broken update — none of which is a decision to destroy the content. So this
- * only erases when the site has said so, in Settings, in advance. What changed
- * is that keeping the data is now a choice somebody made rather than an
- * oversight, and that there is finally a way to say the other thing.
- *
- * WHY IT IS ALL DIRECT SQL. Uninstall runs with the plugin unloaded: no
+ * It is all direct SQL because uninstall runs with the plugin unloaded: no
  * autoloader, no post types registered, no classes. wp_delete_post() on a post
- * whose type is unregistered still works but fires no hooks anything is
- * listening to, and would be one query per post per meta row across what might
- * be a hundred thousand rows. The plugin's own prefixes are specific enough to
- * match on directly, which is both correct and finishes.
+ * whose type is unregistered still works but fires no hooks anything listens to,
+ * and would be one query per post per meta row across what might be a hundred
+ * thousand rows.
  *
  * @package SchemaPress
  */
@@ -48,6 +39,19 @@ function schemapress_uninstall()
     delete_option('schemapress_jobs_lock');
     delete_option('schemapress_upgrade_lock');
     wp_clear_scheduled_hook('schemapress/run_jobs');
+
+    // So do the caches. The compiled documentation is keyed on the plugin
+    // version and the source files' modification times, so there is no single
+    // name to delete — and every one of them is derived from files that are
+    // about to stop existing.
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see the note at the top of this file; a wildcard over transient names has no options API equivalent.
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+            $wpdb->esc_like('_transient_schemapress_') . '%',
+            $wpdb->esc_like('_transient_timeout_schemapress_') . '%'
+        )
+    );
 
     if (empty($settings['deleteDataOnUninstall'])) {
         return;
@@ -96,9 +100,9 @@ function schemapress_uninstall()
 /**
  * Deletes every post of the given types, and the meta hanging off them.
  *
- * In batches, because this is the one place in the plugin guaranteed to be
- * looking at the largest the data ever got, and a DELETE with a subquery over a
- * hundred thousand rows is how an uninstall becomes a white screen.
+ * In batches: this is the one place guaranteed to be looking at the largest the
+ * data ever got, and a DELETE with a subquery over a hundred thousand rows is how
+ * an uninstall becomes a white screen.
  *
  * @param string[] $post_types
  *
@@ -167,15 +171,12 @@ function schemapress_uninstall_capabilities()
 }
 
 /**
- * Erases the plugin's data everywhere it was stored.
+ * Erases the plugin's data everywhere it was stored. A multisite delete runs the
+ * uninstaller once per site, because each has its own tables, its own collections
+ * and its own answer to whether it wanted them kept.
  *
- * A multisite delete runs the uninstaller once per site, because each site has
- * its own tables, its own collections and its own answer to whether it wanted
- * them kept.
- *
- * In a function rather than at the top level, because a variable written at the
- * top level of a PHP file IS a global — so the loop below used to declare
- * `$sites` and `$site_id` into a scope shared with the whole of WordPress.
+ * In a function rather than at the top level, where a variable would be a global
+ * shared with the whole of WordPress.
  *
  * @return void
  */

@@ -86,7 +86,7 @@ is not committed; the release zip carries its own, built with `--no-dev`.
 ```bash
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
-npm test                  # both suites (537 assertions, no framework)
+npm test                  # both suites (543 assertions, no framework)
 npm run format            # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check      # report without writing; this is what CI runs
 npm run lint:js           # ESLint over the admin
@@ -95,7 +95,7 @@ npm run pot               # regenerate languages/schemapress.pot
 npm run package           # build the zip the plugin directory serves
 ```
 
-`lint:php` runs `phpcs.xml.dist` — deliberately not the full WordPress standard, but the
+`lint:php` runs `.config/phpcs.xml` — deliberately not the full WordPress standard, but the
 subset a directory review blocks on: escaping, sanitizing, nonces, capabilities, prepared
 SQL, prefixes, and the PHP versions the header promises. What it leaves out, and why, is
 written at the top of that file. It comes with `composer install`; nothing global is
@@ -105,9 +105,15 @@ needed.
 staging copy, and refuses to build at all if the plugin header, `SCHEMAPRESS_VERSION`
 and the readme's `Stable tag` disagree.
 
-CI runs four jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review checks;
-lint and formatting; and a check that the committed `build/` matches `src/` — the plugin
-ships built, so a change to the admin has to be rebuilt and committed with it.
+CI runs five jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review checks;
+[Plugin Check](https://wordpress.org/plugins/plugin-check/), which is the directory's own
+review tool; lint and formatting; and a check that the committed `build/` matches `src/` —
+the plugin ships built, so a change to the admin has to be rebuilt and committed with it.
+
+Releases are tag-triggered. `git tag v0.3.0 && git push --tags` runs the suite, rebuilds,
+packages, publishes to wordpress.org and attaches the zip to a GitHub release. Edits to
+`readme.txt` or `assets/` on `main` update the directory listing without a release, since
+wordpress.org versions those separately from the code.
 
 ## How it fits together
 
@@ -151,17 +157,36 @@ The admin is React (`src/admin`), sharing field controls with the front-of-house
 
 ## Conventions
 
-**Comments say why, not what.** The code says what it does. A comment earns its place by
-recording the thing that is not visible — the bug that made a rule necessary, the option
-that was rejected, the browser that misbehaves. Several in here name a specific failure;
-that is deliberate, so nobody re-introduces it.
+**Every class, method and property carries a docblock.** Standard PHPDoc: a one-line
+summary, then `@param` for each argument and `@return`. Keep the summary a plain
+description of what the thing does — "Limits how many entries come back", not an essay.
+
+```php
+/**
+ * Orders the results.
+ *
+ * @param string $field     a collection field, or title, date or modified
+ * @param string $direction asc or desc
+ *
+ * @return Collection
+ */
+```
+
+**Prose comments are for what the code cannot say.** Above and beyond the docblock, a
+comment earns its place only by recording something not visible from the lines around it —
+the constraint that forced a rule, the browser that misbehaves, the obvious approach that
+does not work. A few name a specific failure so nobody re-introduces it.
+
+What to avoid is narration: a comment that walks through code already reading plainly, or
+recounts a bug that is fixed. That is changelog, and it belongs in `CHANGELOG.md`.
 
 **Class files** are `classes/class-{kebab-name}.php`, autoloaded from the namespaced class
 name. No Composer classmap to regenerate.
 
-**Formatting.** The JS is 2-space, single quotes, no semicolons. There is no Prettier or
-ESLint config in the repo, and running either with default settings will reformat whole
-files — please don't. Match the file you are editing.
+**Formatting is configured, not conventional.** The `prettier` key in `package.json` for
+JavaScript and CSS — 2-space, single quotes, no semicolons, 100 columns — and
+`.config/php-cs-fixer.php` for PHP (PSR-12). `npm run format` applies both, and a
+pre-commit hook applies them to staged files. Don't hand-format against the grain of either.
 
 **Color and contrast.** Every token in `src/shared/style.css` is measured, and the comments
 record the ratio and why it was chosen. If you change one, measure it. Body text clears
@@ -174,8 +199,8 @@ the sidebar. Add a file and it appears — there is no list to update.
 
 ## Contributing
 
-The full guide is in **[CONTRIBUTING.md](CONTRIBUTING.md)** — setting up, the two
-formatters, why `vendor/` and `build/` are committed, and what CI checks. The short
+The full guide is in **[CONTRIBUTING.md](.github/CONTRIBUTING.md)** — setting up, the two
+formatters, why `build/` is committed and `vendor/` is not, and what CI checks. The short
 version:
 
 1. Branch off `main`.
@@ -189,15 +214,9 @@ version:
 
 **Formatting is automatic.** A pre-commit hook runs Prettier over JavaScript and CSS and
 PHP-CS-Fixer over PHP, and refuses a commit whose PHP does not parse. `npm run format`
-does the same by hand. The configuration carries its own reasoning: `.prettierrc` for the
-choice of 2-space, single-quote, no-semicolon, 100 columns over the WordPress house style,
-and `.php-cs-fixer.dist.php` for PSR-12. Neither is `phpcs`, which is a separate
-security-focused ruleset described at the top of `phpcs.xml.dist`.
-
-**One thing to know before your first commit.** `composer install` installs PHP-CS-Fixer
-into a `vendor/` that is committed, so six files under `vendor/composer/` will show as
-modified for as long as you have dev dependencies installed. That is expected; the hook
-and CI both stop them reaching a release. CONTRIBUTING.md explains the arrangement.
+does the same by hand. Prettier's settings are the `prettier` key in `package.json`;
+PHP-CS-Fixer's are `.config/php-cs-fixer.php` (PSR-12). Neither is `phpcs`, which is a
+separate security-focused ruleset described at the top of `.config/phpcs.xml`.
 
 Security vulnerabilities go through
 [private reporting](https://github.com/eriklarsondev/schemapress/security/advisories/new),

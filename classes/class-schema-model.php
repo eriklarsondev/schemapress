@@ -7,9 +7,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * pure transformations over a content type's definition.
- *
- * a definition is the shape of one collection's entries:
+ * Pure transformations over a content type's definition — the shape of one
+ * collection's entries:
  *
  *   [
  *     'version'  => 1,
@@ -17,17 +16,17 @@ if (!defined('ABSPATH')) {
  *     'fields'   => [ [ 'key' => 'name', 'type' => 'text', ... ] ],
  *   ]
  *
- * this class touches no WordPress state beyond the sanitizers, so it is safe to
- * unit test in isolation.
+ * Touches no WordPress state beyond the sanitizers, so it unit tests in
+ * isolation.
  */
 class SchemaModel
 {
     public const VERSION = 1;
 
     /**
-     * coerces an arbitrary decoded payload into a valid definition. unknown
-     * keys are dropped, missing keys are defaulted, and duplicate keys within
-     * the same level are suffixed so lookups stay unambiguous.
+     * Coerces an arbitrary decoded payload into a valid definition. Unknown keys
+     * are dropped, missing keys defaulted, and duplicates within a level suffixed
+     * so lookups stay unambiguous.
      *
      * @param mixed $definition
      *
@@ -54,19 +53,15 @@ class SchemaModel
     }
 
     /**
-     * coerces a collection's settings.
+     * Coerces a collection's settings.
      *
-     * draftAndPublish: whether an entry has a working copy separate from what
-     * the site is serving. some collections want that — a page of copy someone
-     * drafts over a week — and some are a list of facts where an extra step
-     * before anything appears is only friction. it defaults to on, because
-     * turning it off is the destructive direction: a collection that had
-     * drafts and stops having them publishes them all.
+     * draftAndPublish defaults to on, because turning it off is the destructive
+     * direction: a collection that had drafts and stops having them publishes
+     * them all.
      *
-     * listColumns: which fields the entries table shows, in order. null means
-     * nobody has chosen, and the table picks the first few — which is what
-     * makes a field added later appear on its own. an empty ARRAY is a real
-     * choice and means no field columns at all, so the two are kept distinct.
+     * listColumns is null when nobody has chosen, and the table picks the first
+     * few — which is what makes a field added later appear on its own. An empty
+     * array is a real choice meaning no field columns, so the two stay distinct.
      *
      * @param mixed $settings
      * @param array $fields   the normalized field list
@@ -103,13 +98,10 @@ class SchemaModel
     }
 
     /**
-     * coerces a list of role slugs.
-     *
-     * the roles are NOT checked against the ones this site has. an export from
-     * a site with a `finance` role, imported somewhere that has not created it
-     * yet, should keep the restriction rather than silently drop it and open the
-     * collection to everybody — a role that does not exist matches no user,
-     * which fails closed.
+     * Coerces a list of role slugs. Not checked against the roles this site has:
+     * an import from a site with a `finance` role should keep the restriction
+     * rather than drop it and open the collection to everybody. A role that does
+     * not exist matches no user, which fails closed.
      *
      * @param mixed $roles
      *
@@ -135,16 +127,12 @@ class SchemaModel
     }
 
     /**
-     * which shapes of read a collection publishes to the content API.
+     * Which shapes of read a collection publishes. Listing and fetching one entry
+     * give away different amounts, so they are separate answers: a collection can
+     * be readable by id without being walkable end to end.
      *
-     * listing a collection and fetching one entry of it give away different
-     * amounts, so they are separate answers: a collection can be readable by id
-     * — for a client that already holds a reference to one — without being
-     * walkable from end to end.
-     *
-     * a BARE BOOLEAN is what this setting was before it was a pair, when one
-     * switch covered both routes. true meant both and still does, so a
-     * collection stored under the old shape keeps answering exactly as it did.
+     * A bare boolean is the old single-switch shape; true means both, so a
+     * collection stored under it keeps answering exactly as it did.
      *
      * @param mixed $publicApi
      *
@@ -165,11 +153,8 @@ class SchemaModel
     }
 
     /**
-     * field types that can name an entry.
-     *
-     * a name is something you can read in a list and put in a heading, so it
-     * has to be a single line of text. an image cannot name anything, a
-     * repeater is many things, and rich text is a document rather than a name.
+     * Field types that can name an entry: a name goes in a heading, so it has to
+     * be a single line of text.
      *
      * @var string[]
      */
@@ -182,17 +167,14 @@ class SchemaModel
     ];
 
     /**
-     * the field a collection uses to name its entries.
+     * The field a collection uses to name its entries.
      *
-     * empty means none, which is not a gap to be filled in: a collection of
-     * settings or of link rows has no name for a single one of them, and
-     * inventing one is what this exists to stop. WordPress still needs a title
-     * for its own row and still derives one — see Entries::deriveTitle — but
-     * nothing about that reaches the API.
+     * Empty means none, which is not a gap to be filled in: a collection of
+     * settings has no name for a single one of them. WordPress still derives a
+     * title for its own row (Entries::deriveTitle), but that never reaches the API.
      *
-     * a field key that no longer exists, or one whose type cannot be a name,
-     * resolves to none. deleting the field a collection was named by should
-     * leave it unnamed rather than pointing at nothing.
+     * A key that no longer exists, or whose type cannot be a name, resolves to
+     * none rather than pointing at nothing.
      *
      * @param mixed $key
      * @param array $fields
@@ -215,25 +197,20 @@ class SchemaModel
     }
 
     /**
-     * field types a readable slug can be built from.
-     *
-     * narrower than TITLE_TYPES, and narrower for a reason: an email address
-     * slugifies to `ada-example-com` and a phone number to a run of digits.
-     * both are perfectly good names for an entry and neither is an address
-     * anybody would want to read in a URL.
+     * Narrower than TITLE_TYPES: an email slugifies to `ada-example-com` and a
+     * phone number to a run of digits. Both name an entry perfectly well and
+     * neither is an address anybody wants to read in a URL.
      *
      * @var string[]
      */
     public const SLUG_TYPES = ['text', 'textarea', 'select', 'number', 'date', 'datetime'];
 
     /**
-     * the field an entry's slug is built from, or '' for the uuid.
+     * The field an entry's slug is built from, or '' for the uuid.
      *
-     * EMPTY IS A REAL ANSWER. an entry always has a slug — where no field is
-     * chosen it is the uuid, which is unique by construction and needs nothing
-     * filled in to exist. that is the right slug for a collection whose entries
-     * have no name, and it is what a deleted or retyped field falls back to
-     * rather than leaving entries unaddressable.
+     * Empty is a real answer: the uuid is unique by construction and needs nothing
+     * filled in to exist, which is the right slug for a collection whose entries
+     * have no name and the fallback for a deleted field.
      *
      * @param mixed $key
      * @param array $fields
@@ -249,13 +226,9 @@ class SchemaModel
     }
 
     /**
-     * the slug field a collection gets when nobody has chosen one.
-     *
-     * the first UNIQUE field wins, because a field the collection already
-     * refuses duplicates in is the one that produces slugs which do not collide
-     * — which is the whole job. failing that, the first field that could carry a
-     * name, in the order they were defined: the first field of a collection is
-     * almost always the thing it is called.
+     * The first unique field wins, because one the collection already refuses
+     * duplicates in produces slugs that do not collide. Failing that, the first
+     * field that could carry a name — which is almost always what it is called.
      *
      * @param array $fields
      *
@@ -283,7 +256,7 @@ class SchemaModel
     }
 
     /**
-     * coerces a chosen column list to keys that exist, in the order given.
+     * Coerces a chosen column list to keys that exist, in the order given.
      *
      * @param mixed $columns
      * @param array $fields
@@ -311,7 +284,7 @@ class SchemaModel
     }
 
     /**
-     * normalizes a list of field definitions, recursing into types that nest.
+     * Normalizes a list of field definitions, recursing into types that nest.
      *
      * @param array $fields
      * @param array $used
@@ -343,7 +316,7 @@ class SchemaModel
     }
 
     /**
-     * builds a single normalized field, recursing for group/repeater children.
+     * Builds a single normalized field, recursing for group/repeater children.
      *
      * @param array  $field
      * @param string $key
@@ -378,8 +351,8 @@ class SchemaModel
     }
 
     /**
-     * whitelists the type-specific config bag. anything not recognized for the
-     * type is discarded so stored definitions cannot accumulate junk.
+     * Whitelists the type-specific config bag, so stored definitions cannot
+     * accumulate junk.
      *
      * @param array  $field
      * @param string $type
@@ -387,11 +360,10 @@ class SchemaModel
      * @return array
      */
     /**
-     * clamps a leading offset so the control still fits on its row.
-     *
-     * an offset that pushed a field past the twelfth column would wrap it to a
-     * row of its own with the gap still in front of it, which is neither what
-     * was asked for nor recoverable from the screen.
+     * Clamps a leading offset so the control still fits on its row. One pushing a
+     * field past the twelfth column wraps it to a row of its own with the gap
+     * still in front of it — not what was asked for, and not recoverable from the
+     * screen.
      *
      * @param mixed  $offset
      * @param string $width
@@ -409,6 +381,8 @@ class SchemaModel
     }
 
     /**
+     * Whitelists a field's type-specific config bag.
+     *
      * @param array  $field
      * @param string $type
      *
@@ -418,15 +392,10 @@ class SchemaModel
     {
         $config = isset($field['config']) && is_array($field['config']) ? $field['config'] : [];
 
-        // how wide the control sits on the entry form, and when it appears at
-        // all. both describe the admin's own screen rather than the delivered
-        // content, which is the only reason a presentation value is allowed to
-        // live in a definition
-        // a width somebody chose is kept — FULL INCLUDED, which is why it is in
-        // the list: it used to be the fallback rather than a value, and that
-        // was harmless only while every type fell back to it. a field with no
-        // width yet starts at its type's own, see FieldTypes::WIDTHS. every
-        // field already stored has an explicit width, so none of them move
+        // Width and visibility describe the admin's own screen rather than the
+        // delivered content, which is the only reason a presentation value lives
+        // in a definition. A width somebody chose is kept, `full` included; a
+        // field with no width yet starts at its type's own — see FieldTypes::WIDTHS
         $width = in_array($config['width'] ?? '', ['third', 'half', 'two-thirds', 'full'], true)
             ? $config['width']
             : FieldTypes::defaultWidth($type);
@@ -523,16 +492,14 @@ class SchemaModel
     }
 
     /**
-     * coerces a field's visibility condition.
+     * Coerces a field's visibility condition.
      *
-     * a condition names a SIBLING field — one at the same level, so a condition
-     * inside a repeater row reads that row's own values. anything else would
-     * need a path language, and "show the phone field once someone ticked
-     * Contactable" is the case that actually comes up.
+     * A condition names a sibling field, so one inside a repeater row reads that
+     * row's own values. Anything else would need a path language, and "show the
+     * phone field once someone ticked Contactable" is the case that comes up.
      *
-     * an empty field name means no condition, which is the normal state, so it
-     * is what a malformed value falls back to: a field that fails to parse its
-     * condition stays visible rather than disappearing.
+     * A malformed value falls back to no condition, so a field that fails to parse
+     * one stays visible rather than disappearing.
      *
      * @param mixed $condition
      *
@@ -553,7 +520,7 @@ class SchemaModel
     }
 
     /**
-     * slugifies a candidate key and guarantees uniqueness among its siblings.
+     * Slugifies a candidate key and guarantees uniqueness among its siblings.
      *
      * @param string $candidate
      * @param array  $used       by reference
@@ -583,7 +550,7 @@ class SchemaModel
     }
 
     /**
-     * turns a snake_case key into a readable label.
+     * Turns a snake_case key into a readable label.
      *
      * @param string $key
      *
@@ -595,7 +562,7 @@ class SchemaModel
     }
 
     /**
-     * finds a field definition by key within a flat field list.
+     * Finds a field definition by key within a flat field list.
      *
      * @param array  $fields
      * @param string $key

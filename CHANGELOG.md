@@ -16,8 +16,40 @@ a minor bump may still change behavior, and the notes say when it does.
   one. `npm run format` does the same by hand, and CI checks it.
 - `CONTRIBUTING.md`, a `LICENSE` file with the GPL-2.0 text, and GitHub issue and pull
   request templates.
+- **Tag-triggered releases.** `.github/workflows/release.yml` runs the suite, verifies the
+  tag matches the plugin header, rebuilds, packages and publishes to wordpress.org, then
+  attaches the zip to a GitHub release. Edits to `readme.txt` or `assets/` on `main` update
+  the directory listing on their own, since wordpress.org versions those separately from
+  the code. Inert until `SVN_USERNAME` and `SVN_PASSWORD` are set.
+- **Plugin Check in CI.** The directory's own review tool, which catches what a phpcs
+  ruleset cannot express — readme parsing, header fields, trademark and naming rules.
+- **The compiled documentation is cached.** `Docs::forClient()` read and CommonMark-parsed
+  all 22 Markdown files on every admin page load, and built a fresh converter per callout.
+  Now memoized per request and held in a transient keyed on the plugin version and the
+  sources' modification times, so an edit still lands immediately.
+
 ### Changed
 
+- **Tooling configuration moved out of the root**, which had grown to 27 visible entries.
+  `phpcs.xml.dist` and `.php-cs-fixer.dist.php` are now `.config/phpcs.xml` and
+  `.config/php-cs-fixer.php`; `.eslintignore` folded into `.eslintrc.js`, `.prettierrc`
+  into `package.json`, and `CONTRIBUTING.md` into `.github/`. The formatter cache writes to
+  `.cache/`. Build configuration stays in the root, because it ships with `src/` and has to
+  stay where the build looks for it.
+- **Comments rewritten to carry reasoning rather than narration.** 2,262 comment lines came
+  out of `classes/`, `src/` and the tooling config and 1,352 went back — a net 910 fewer.
+  What went is prose that recounted a bug already fixed, or walked through code that reads
+  plainly on its own; `CHANGELOG.md` is where the first kind belongs. What came back is the
+  docblock coverage below, plus the notes that record something the code cannot say.
+- **Standard PHPDoc on every class, method and property.** A one-line summary, then
+  `@param` for each argument and `@return`, verified across `classes/`, `includes/` and
+  `uninstall.php`. That check turned up tag drift nobody had noticed: `Entries::promote()`,
+  `Entries::deriveTitle()` and three methods in `Query` had gained parameters their
+  docblocks never documented, `Query::parsePagination()` documented one that no longer
+  existed, and `Docs::callouts()` carried a `@var` where a `@return` belonged.
+- `readme.txt` no longer carries a `== Screenshots ==` section, because the images do not
+  exist yet and a caption without one renders as a numbered blank. The captions are kept in
+  `assets/README.md` for when they land.
 - **Timber is no longer a dependency.** It was in `require`, but the plugin never needed
   it: `Timber::available()` is a `class_exists` check and the Documentation screen has
   always had a branch for its absence. Shipping a copy also put a second Timber on the
@@ -32,17 +64,56 @@ a minor bump may still change behavior, and the notes say when it does.
   script and a CI job purely to stop a dev install reaching a release. Both are gone.
   Installing from a git clone now needs `composer install`.
 - **PHP_CodeSniffer and the WordPress standards as dev dependencies**, so `npm run
-  lint:php` runs `phpcs.xml.dist` without anything installed globally. The ruleset had
+  lint:php` runs `.config/phpcs.xml` without anything installed globally. The ruleset had
   never actually been executed; on its first run it reported no violations.
 - **A working ESLint setup.** The `@wordpress/eslint-plugin` preset could not load in
   this tree — it pulls a TypeScript toolchain to lint a codebase with no TypeScript in
   it, and the versions no longer line up. `.eslintrc.js` keeps the parts worth having:
   rules-of-hooks, unused and undefined bindings, and `eslint-config-prettier` last.
-- CI gained two jobs: the wordpress.org review checks, and lint alongside the existing
-  formatting check.
+- **CI runs five jobs**, up from two: the suite on PHP 8.2, 8.3 and 8.4; the
+  wordpress.org review checks; Plugin Check; lint and formatting; and a check that the
+  committed `build/` still matches `src/`.
+
+### Removed
+
+- **Four unused public members.** None is referenced anywhere in the plugin, its tests or
+  its documentation, but all four were `public`, so a theme could in principle have
+  reached them: `Schema::META_TEMPLATES` (left over from the page-template era),
+  `Capabilities::revoke()` (duplicated inline by `uninstall.php`, which runs with the
+  plugin unloaded and cannot call the class), `Settings::deletesData()` (`uninstall.php`
+  reads the option directly for the same reason) and `Admin::SCHEMA_CAPABILITY` (an alias
+  of `Capabilities::MANAGE`).
 
 ### Fixed
 
+- **Every collection reported zero entries.** `ContentType::all()` counted entries eagerly,
+  but `registerAll()` reaches it on `init` *before* it has registered the post types — and
+  `wp_count_posts()` answers with an empty object for a post type that does not exist yet.
+  The zeros were then cached for the whole request. `wp schemapress list` showed every
+  collection empty. Counts now wait until the post types are visible, behind a re-entrancy
+  guard because counting reads back through `all()`. The test stub had modelled
+  `wp_count_posts()` as returning zeros rather than nothing, which is why the suite never
+  caught it; it is faithful now, and three assertions cover the case.
+- **The release zip shipped untracked local files.** `bin/package.php` walked the working
+  directory and filtered it through `.distignore`, which is a denylist — so anything nobody
+  had thought to name went into the release. A local `.claude/settings.local.json` did, and
+  a `.env` would have. The file list now comes from `git ls-files`, so an untracked file
+  cannot ship whether or not it is named; `.distignore` is a second filter, and untracked
+  files that were skipped are reported rather than silently dropped.
+- **`readme.txt` claimed to bundle Timber and Twig.** It has not since Timber moved to
+  `require-dev`; the package carries league/commonmark and its dependencies. The stated
+  reason for the PHP 8.2 floor was stale in the same way.
+- **The upgrade lock could leak and was not atomic.** The version is recorded before the
+  backfill runs, so a run that died left `schemapress_upgrade_lock` behind forever — the
+  next request returned early on the version check and never reached the delete. Released
+  in a `finally` now, and taken with `add_option` so two requests arriving together cannot
+  both read "no lock" and proceed.
+- **`Docs::sections()` did not run through `wp_kses`.** The server-rendered page did; the
+  path the React app renders with `dangerouslySetInnerHTML` did not. The input is this
+  plugin's own Markdown, but `schemapress/docs/files` is a public filter.
+- `README.md` contradicted itself and the repository: it said there was no Prettier or
+  ESLint config while describing both twelve lines later, and still described `vendor/` as
+  committed.
 - **`composer.lock` could not be installed on PHP 8.2**, the version the plugin header
   promises. The dev dependencies were resolved on 8.5, which locked `symfony/console` 8.1
   and `sebastian/diff` 9 — both needing `>=8.4`. `config.platform.php` is now pinned to

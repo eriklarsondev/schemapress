@@ -7,21 +7,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * one entry of a collection.
+ * One entry of a collection: a value bag with identity.
  *
- * a value bag with identity. field values are read as properties, which is the
- * form Twig reaches for first:
+ * Field values are read as properties, which is the form Twig reaches for
+ * first, and arrive resolved — an image is its attachment array, a link is its
+ * url and label — so a template never handles an id.
  *
  *   {{ person.name }}
  *   {{ person.photo.url }}
- *   {{ person.title }}
  *
- * values arrive resolved — an image is its attachment array, a link is its url
- * and label — so a template never handles an id.
- *
- * a field key that collides with one of this class's own methods (`id`,
- * `title`, `slug`, `state`, `rows`) resolves to the method, so `{{ entry.id }}`
- * is always the entry's id. Reach a field of that name with `get('id')`.
+ * A field key colliding with one of this class's own methods (`id`, `title`,
+ * `slug`, `state`, `rows`) resolves to the method. Reach a field of that name
+ * with `get('id')`.
  */
 class Entry extends Fields
 {
@@ -31,6 +28,8 @@ class Entry extends Fields
     private $entry;
 
     /**
+     * Wraps a stored entry and the definition it was saved against.
+     *
      * @param array $entry  the shape Entries returns
      * @param array $fields the collection's field definitions
      */
@@ -42,11 +41,8 @@ class Entry extends Fields
     }
 
     /**
-     * the entry's identifier.
-     *
-     * a uuid, not a number — see Entries::META_UID for why. templates that put
-     * this in a url or a data attribute get something stable that says nothing
-     * about the database behind it.
+     * A uuid, not a number — see Entries::META_UID. Templates that put this in a
+     * url get something stable that says nothing about the database behind it.
      *
      * @return string
      */
@@ -56,7 +52,7 @@ class Entry extends Fields
     }
 
     /**
-     * the entry's title.
+     * The entry's title.
      *
      * @return string
      */
@@ -66,7 +62,7 @@ class Entry extends Fields
     }
 
     /**
-     * the entry's slug.
+     * The entry's slug.
      *
      * @return string
      */
@@ -76,11 +72,9 @@ class Entry extends Fields
     }
 
     /**
-     * where this entry stands: published, modified or draft.
-     *
-     * a template reading a collection normally only ever sees `published`,
-     * because the delivery API serves the published view. the other two are
-     * visible to code that asked for the draft view on purpose.
+     * Published, modified or draft. A template normally only ever sees
+     * `published`; the other two are visible to code that asked for the draft
+     * view on purpose.
      *
      * @return string
      */
@@ -90,7 +84,7 @@ class Entry extends Fields
     }
 
     /**
-     * whether the entry is live on the site.
+     * Whether the entry is live on the site.
      *
      * @return boolean
      */
@@ -100,7 +94,7 @@ class Entry extends Fields
     }
 
     /**
-     * whether the entry has saved edits that have not been published.
+     * Whether the entry has saved edits that have not been published.
      *
      * @return boolean
      */
@@ -110,7 +104,7 @@ class Entry extends Fields
     }
 
     /**
-     * when the entry last changed, GMT.
+     * When the entry last changed, GMT.
      *
      * @return string
      */

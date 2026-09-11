@@ -29,12 +29,10 @@ function request(path, { method = 'GET', data } = {}) {
   }).catch((error) => {
     const failure = new Error(error?.message || 'Request failed')
 
-    // the message is what a screen shows, and for most failures it is all a
-    // screen needs. a few have to be TOLD APART rather than only read out — a
-    // 409 offers to reload, a validation error can mark up the offending
-    // controls — and throwing a bare Error discarded everything but the
-    // sentence. carried on the Error rather than thrown separately, so every
-    // existing `.catch((failure) => setError(failure.message))` is unaffected
+    // a few failures have to be told apart rather than only read out — a 409
+    // offers to reload, a validation error marks up the offending controls.
+    // Carried on the Error rather than thrown separately, so an existing
+    // `.catch((failure) => setError(failure.message))` is unaffected
     failure.code = error?.code || ''
     failure.data = error?.data || {}
 

@@ -7,17 +7,11 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * a query against one collection.
+ * A query against one collection, built by Content::collection().
  *
- * built by Content::collection() and read by a template:
- *
- *   {% for person in sp_collection('team_members') %}
- *     {{ person.name }}
- *   {% endfor %}
- *
- * it is iterable and countable, so Twig and foreach both treat it as the list
- * it represents. the query runs once, on first read, and is remembered — a
- * template that counts a collection and then loops it makes one query.
+ * Iterable and countable, so Twig and foreach both treat it as the list it
+ * represents. The query runs once, on first read, and is remembered — a template
+ * that counts a collection and then loops it makes one query.
  */
 class Collection implements \IteratorAggregate, \Countable
 {
@@ -32,9 +26,8 @@ class Collection implements \IteratorAggregate, \Countable
     private $args = [];
 
     /**
-     * filters and sort, in the shape Query understands. the same structures the
-     * REST endpoints build from a query string, so a template and an HTTP
-     * client asking the same question ask it the same way.
+     * Filters and sort, in the shape Query understands — the same structures the
+     * REST endpoints build from a query string.
      *
      * @var array
      */
@@ -51,6 +44,8 @@ class Collection implements \IteratorAggregate, \Countable
     private $total = null;
 
     /**
+     * Builds a query against one collection.
+     *
      * @param integer $type_id 0 for a collection that does not exist
      */
     public function __construct($type_id)
@@ -59,7 +54,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * limits how many entries come back.
+     * Limits how many entries come back.
      *
      * @param integer $count
      *
@@ -71,7 +66,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * which page of results to read.
+     * Chooses which page of results to read.
      *
      * @param integer $page
      *
@@ -83,9 +78,9 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * orders the results.
+     * Orders the results.
      *
-     * @param string $field one of title, date, modified
+     * @param string $field     a collection field, or title, date or modified
      * @param string $direction asc or desc
      *
      * @return Collection
@@ -103,13 +98,8 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * orders by any indexable field.
-     *
-     *   ->sort('name')            // ascending
-     *   ->sort('joined', 'desc')
-     *
-     * a field that cannot be indexed — a repeater, a group, rich text — is
-     * ignored rather than obeyed: see class-index.php for which those are.
+     * Orders by any indexable field. One that cannot be indexed — a repeater, a
+     * group, rich text — is ignored rather than obeyed; see class-index.php.
      *
      * @param string $field
      * @param string $direction asc or desc
@@ -128,16 +118,14 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * filters by a field's value.
+     * Filters by a field's value.
      *
-     *   ->where('role', 'Engineer')            // equals
+     *   ->where('role', 'Engineer')
      *   ->where('age', '>=', 30)
      *   ->where('role', '$in', ['Design', 'Eng'])
      *
-     * the operators are Strapi's — `$eq`, `$ne`, `$lt`, `$lte`, `$gt`, `$gte`,
-     * `$in`, `$notIn`, `$contains`, `$startsWith`, `$endsWith`, `$null`,
-     * `$notNull`, `$between` — and the plain comparisons are accepted as
-     * aliases, because `>=` is what a PHP author reaches for first.
+     * The operators are Strapi's; the plain comparisons are aliases, because
+     * `>=` is what a PHP author reaches for first.
      *
      * @param string $field
      * @param mixed  $operator the operator, or the value when only two given
@@ -159,11 +147,8 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * a whole filter tree at once, in Strapi's shape.
-     *
-     * for the queries `where()` cannot spell — anything using `$and` or `$or`:
-     *
-     *   ->filter(['$or' => [['role' => ['$eq' => 'Design']], ['lead' => ['$eq' => true]]]])
+     * A whole filter tree at once, for the queries `where()` cannot spell —
+     * anything using `$and` or `$or`.
      *
      * @param array $filters
      *
@@ -177,7 +162,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * normalizes an operator to the `$`-prefixed form Query speaks.
+     * Normalizes an operator to the `$`-prefixed form Query speaks.
      *
      * @param string $operator
      *
@@ -205,7 +190,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * filters by a search term.
+     * Filters by a search term.
      *
      * @param string $term
      *
@@ -217,7 +202,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * the entries.
+     * Runs the query and returns the entries.
      *
      * @return Entry[]
      */
@@ -229,7 +214,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * the first entry, or null.
+     * The first entry, or null when there are none.
      *
      * @return Entry|null
      */
@@ -241,7 +226,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * one entry by id, or null when it does not belong to this collection.
+     * One entry, or null when it does not belong to this collection.
      *
      * @param string $id the entry's uuid
      *
@@ -259,7 +244,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * how many entries the collection holds in total, ignoring paging.
+     * How many entries the collection holds in total, ignoring paging.
      *
      * @return integer
      */
@@ -271,7 +256,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * whether the collection has any entries.
+     * Whether the collection has any entries.
      *
      * @return boolean
      */
@@ -281,7 +266,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * the field definitions entries of this collection are built from.
+     * The field definitions entries of this collection are built from.
      *
      * @return array
      */
@@ -299,6 +284,8 @@ class Collection implements \IteratorAggregate, \Countable
     // --- iteration -----------------------------------------------------------
 
     /**
+     * Iterates the entries, so a template can foreach the collection.
+     *
      * @return \ArrayIterator
      */
     #[\ReturnTypeWillChange]
@@ -308,7 +295,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * how many entries this query returned.
+     * How many entries this query returned.
      *
      * @return integer
      */
@@ -321,12 +308,12 @@ class Collection implements \IteratorAggregate, \Countable
     // --- internals -----------------------------------------------------------
 
     /**
-     * a copy of this query with extra arguments.
-     *
-     * queries are immutable so that a collection held in a variable can be
-     * read more than once without one read reshaping the next.
+     * A copy of this query with extra arguments. Queries are immutable so a
+     * collection held in a variable can be read more than once without one read
+     * reshaping the next.
      *
      * @param array $args
+     * @param array $spec
      *
      * @return Collection
      */
@@ -340,7 +327,7 @@ class Collection implements \IteratorAggregate, \Countable
     }
 
     /**
-     * runs the query once.
+     * Runs the query once, remembering the result.
      *
      * @return void
      */

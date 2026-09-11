@@ -7,26 +7,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Strapi's query grammar, translated to WP_Query.
- *
- * one parser, three surfaces. the REST endpoints hand it `$_GET`, and
- * Collection::where() and ::sort() build the same structures by hand, so a
- * filter means the same thing in a Twig template as it does over HTTP:
+ * Strapi's query grammar, translated to WP_Query. One parser, three surfaces:
+ * the REST endpoints hand it `$_GET`, and Collection::where() and ::sort() build
+ * the same structures by hand.
  *
  *   ?role=Engineer&sort=name&limit=50
  *   SchemaPress::collection('team_member')->where('role', 'Engineer')->sort('name')
  *
- * every parameter is a flat name=value pair. an operator is a suffix on the
- * name — `?headcount_gte=10` — and Strapi's bracket form is accepted too, for a
- * client that already speaks it.
+ * Filters run against the Index, not the stored JSON — see class-index.php.
  *
- * filters run against the Index, not the stored JSON — see class-index.php for
- * why there are two copies of every value.
- *
- * a filter naming a field that does not exist, or one that cannot be indexed,
- * is dropped rather than obeyed or fataled. the alternative is a query that
- * silently matches everything, which is the wrong way for an access-controlled
- * list to fail.
+ * A filter naming a field that does not exist, or one that cannot be indexed, is
+ * dropped rather than obeyed. The alternative is a query that silently matches
+ * everything, which is the wrong way for an access-controlled list to fail.
  */
 class Query
 {
@@ -43,9 +35,9 @@ class Query
     /**
      * Strapi's operators, and the SQL comparison each becomes.
      *
-     * $contains and $containsi are both LIKE: MySQL compares with the column's
-     * collation, and WordPress's is case-insensitive, so the two are the same
-     * here. both are accepted so a query written against Strapi still runs.
+     * $contains and $containsi are both LIKE: WordPress's collation is
+     * case-insensitive, so the two are the same here. Both are accepted so a
+     * query written against Strapi still runs.
      *
      * @var array<string, string>
      */
@@ -83,7 +75,7 @@ class Query
     ];
 
     /**
-     * reads a request's parameters into a query spec.
+     * Reads a request's parameters into a query spec.
      *
      * @param array $params $_GET, or anything shaped like it
      *
@@ -104,22 +96,16 @@ class Query
     }
 
     /**
-     * parameters that are not the query's own vocabulary, read as filters.
-     *
-     * `filters[role][$eq]=Engineer` is faithful to Strapi and a mouthful, and
-     * most filtering is one field equalling one value. so a bare parameter is
-     * that:
+     * Parameters outside the query's own vocabulary, read as filters — because
+     * most filtering is one field equalling one value:
      *
      *   ?role=Engineer                    filters[role][$eq]=Engineer
      *   ?role[]=Design&role[]=Eng         filters[role][$in][…]
      *   ?headcount[$gte]=10               filters[headcount][$gte]=10
      *
-     * the long form still works and still wins, so a client written against
-     * Strapi is unaffected — this only shortens the common case.
-     *
-     * a parameter naming something that is not a field is dropped downstream,
-     * where every other unusable filter is dropped, so an unrelated query
-     * string — a cache-buster, an analytics tag — cannot filter anything.
+     * The long form still wins, so a client written against Strapi is unaffected.
+     * A parameter naming something that is not a field is dropped downstream, so
+     * a cache-buster or an analytics tag cannot filter anything.
      *
      * @param array $params
      *
@@ -159,7 +145,7 @@ class Query
     }
 
     /**
-     * whether every key of an array is an operator.
+     * Whether every key of an array is an operator.
      *
      * @param array $value
      *
@@ -228,12 +214,11 @@ class Query
     }
 
     /**
-     * `pagination[page]` + `[pageSize]`, or `pagination[start]` + `[limit]`.
+     * `pagination[page]` + `[pageSize]`, or `pagination[start]` + `[limit]` —
+     * both of Strapi's styles, so a client that counts in offsets does not have
+     * to convert to pages.
      *
-     * both of Strapi's styles, because both are in wide use and a client that
-     * counts in offsets should not have to convert to pages to talk to this.
-     *
-     * @param mixed $pagination
+     * @param array $params the request's parameters
      *
      * @return array
      */
@@ -276,7 +261,7 @@ class Query
     }
 
     /**
-     * clamps a requested size.
+     * Clamps a requested size.
      *
      * @param mixed $size
      *
@@ -288,7 +273,7 @@ class Query
     }
 
     /**
-     * turns a spec into WP_Query arguments.
+     * Turns a spec into WP_Query arguments.
      *
      * @param array   $spec   from parse(), or built by Collection
      * @param array   $fields the collection's field definitions
@@ -325,11 +310,12 @@ class Query
     // --- filters -------------------------------------------------------------
 
     /**
-     * a filter tree as a meta_query.
+     * A filter tree as a meta_query.
      *
-     * @param array $filters
-     * @param array $indexable
-     * @param string $relation AND or OR
+     * @param array   $filters
+     * @param array    $indexable
+     * @param string   $relation  AND or OR
+     * @param boolean  $draft     read the draft index rather than the published one
      *
      * @return array empty when nothing survived
      */
@@ -379,8 +365,8 @@ class Query
     }
 
     /**
-     * merges a list of filter objects into one, so `$or: [{a}, {b}]` reads as
-     * a single set of clauses joined by OR.
+     * Merges a list of filter objects into one, so `$or: [{a}, {b}]` reads as a
+     * single set of clauses joined by OR.
      *
      * @param array $list
      *
@@ -402,12 +388,13 @@ class Query
     }
 
     /**
-     * one meta_query clause.
+     * One meta_query clause.
      *
-     * @param string $key
-     * @param array  $field
-     * @param string $operator
-     * @param mixed  $operand
+     * @param string  $key
+     * @param array   $field
+     * @param string  $operator
+     * @param mixed   $operand
+     * @param boolean $draft    read the draft index rather than the published one
      *
      * @return array|null null when the operator is not one we have
      */
@@ -466,14 +453,12 @@ class Query
     }
 
     /**
-     * the value side of a clause.
+     * The value side of a clause.
      *
-     * the anchored operators are REGEXP rather than LIKE, and they have to be:
-     * WP_Meta_Query takes any LIKE value, runs esc_like() over it and wraps the
-     * result in %…% of its own. a trailing % added here does not survive that —
-     * it comes out escaped, as a literal per-cent sign — so `$startsWith` could
-     * only ever have matched a name ending in one. `$contains` is left as LIKE
-     * precisely because that wrapping is what contains means.
+     * The anchored operators are REGEXP rather than LIKE, and have to be:
+     * WP_Meta_Query runs esc_like() over any LIKE value and wraps it in %…% of
+     * its own, so a trailing % added here comes out as a literal per-cent sign.
+     * `$contains` stays LIKE precisely because that wrapping is what it means.
      *
      * @param string $operator
      * @param mixed  $operand
@@ -496,7 +481,7 @@ class Query
     }
 
     /**
-     * a literal string, safe to drop into a REGEXP.
+     * A literal string, safe to drop into a REGEXP.
      *
      * @param string $value
      *
@@ -520,10 +505,8 @@ class Query
     }
 
     /**
-     * whether a query-string flag means yes.
-     *
-     * `$null=false` arrives as the string "false", which PHP would otherwise
-     * read as true and invert the filter.
+     * `$null=false` arrives as the string "false", which PHP would otherwise read
+     * as true and invert the filter.
      *
      * @param mixed $value
      *
@@ -537,14 +520,13 @@ class Query
     // --- ordering and paging -------------------------------------------------
 
     /**
-     * sort clauses as WP_Query ordering.
+     * Sort clauses as WP_Query ordering. WP_Query takes one meta key to order by,
+     * so the first field-based clause wins and any after it are dropped; reserved
+     * keys live on the post row and combine freely.
      *
-     * WP_Query takes one meta key to order by, so the first field-based clause
-     * wins and any after it are dropped. reserved keys live on the post row and
-     * can be combined freely.
-     *
-     * @param array $sort
-     * @param array $indexable
+     * @param array   $sort
+     * @param array   $indexable
+     * @param boolean $draft     order by the draft index rather than the published one
      *
      * @return array
      */
@@ -588,7 +570,7 @@ class Query
     }
 
     /**
-     * pagination as WP_Query arguments.
+     * Pagination as WP_Query arguments.
      *
      * @param array $pagination
      *
@@ -610,7 +592,7 @@ class Query
     }
 
     /**
-     * the meta block a list response carries, in Strapi's shape.
+     * The meta block a list response carries, in Strapi's shape.
      *
      * @param array   $pagination
      * @param integer $total

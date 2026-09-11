@@ -18,12 +18,9 @@ import { widthOf } from '../layout'
 import Prism from '../prism'
 
 /**
- * A few colors worth one click.
- *
- * Not a palette the site defines — that would be a setting, and a setting whose
- * value is a list of hex codes is a stylesheet in the wrong place. These are
- * only a starting point for somebody who wants "a red" and does not have the
- * code to hand.
+ * A starting point for somebody who wants "a red" and does not have the code to
+ * hand. Not a palette the site defines — a setting whose value is a list of hex
+ * codes is a stylesheet in the wrong place.
  */
 const SWATCHES = [
   '#111827',
@@ -37,12 +34,9 @@ const SWATCHES = [
 ]
 
 /**
- * Whether a string is a hex color.
- *
- * Mirrors sanitize_hex_color() on the server, which is what actually decides:
- * a value that fails there is stored as nothing, so the control has to refuse
- * the same things or somebody types a color name and watches it disappear on
- * save with no explanation.
+ * Mirrors sanitize_hex_color() on the server, which is what actually decides: a
+ * value that fails there is stored as nothing, so the control has to refuse the
+ * same things or a color name disappears on save with no explanation.
  *
  * @param {string} value
  * @return {boolean} True when it is one.
@@ -169,22 +163,15 @@ export function ColorField({ field, value, onChange }) {
 /**
  * A JSON payload, edited as text and stored as data.
  *
- * The value round-trips through the parser: what is stored is decoded data
- * rather than the string somebody typed, which is what lets it come back out of
- * the API as JSON rather than as JSON inside a string. So the control holds the
- * text while it is being typed — half-written JSON does not parse — and commits
- * only what does.
+ * What is stored is decoded data rather than the string somebody typed, which is
+ * what lets it come back out of the API as JSON rather than JSON inside a string.
+ * So the control holds the text while it is being typed and commits only what
+ * parses.
  *
- * IT IS ALWAYS EXPANDED. Anything arriving from outside is written out one
- * value to a line, and so is anything pasted in or left behind on blur — the
- * two ways a minified blob gets in here. Reformatting was a button somebody had
- * to know to press, which meant the usual state of the field was a single
- * unreadable line and the way out of it was not visible from inside it.
- *
- * Not on every keystroke, though, and that is the one place it must not happen:
- * re-indenting what somebody is halfway through typing moves the caret out from
- * under them. A paste is not typing and a blur is not either, so both are safe
- * moments to tidy, and between them there is no way to leave it minified.
+ * It is always expanded — on arrival, on paste, and on blur. Never on a
+ * keystroke: re-indenting what somebody is halfway through typing moves the caret
+ * out from under them. A paste is not typing and neither is a blur, so both are
+ * safe moments to tidy, and between them there is no way to leave it minified.
  *
  * @param {Object} props
  * @return {JSX.Element} The control.
@@ -286,19 +273,16 @@ export function JsonField({ field, value, onChange }) {
 }
 
 /**
- * The editor itself: a textarea nobody can see, over the same text highlighted.
+ * A transparent textarea over the same text highlighted.
  *
- * The alternative was a real editor component. This is a JSON blob in a form
- * field, and CodeMirror is two hundred kilobytes and a second editing model to
- * keep in step with this one — where the browser already has a perfectly good
- * one that does undo, selection, spellcheck, accessibility and every keyboard
- * convention correctly. So the textarea stays and only its color is borrowed:
- * transparent glyphs, a visible caret, and Prism's output painted underneath in
- * exactly the same place.
+ * CodeMirror would be two hundred kilobytes and a second editing model to keep in
+ * step with this one, where the browser already has one that does undo,
+ * selection, spellcheck, accessibility and every keyboard convention correctly.
+ * So only the color is borrowed: transparent glyphs, a visible caret, Prism's
+ * output painted underneath in the same place.
  *
- * The highlighted copy is the layer in the flow, so the editor is as tall as
- * its content and never scrolls inside itself — which is the other half of
- * "show me all of it". `rows` is a floor rather than a size.
+ * The highlighted copy is the layer in the flow, so the editor is as tall as its
+ * content and never scrolls inside itself. `rows` is a floor, not a size.
  *
  * @param {Object} props
  * @return {JSX.Element} The editor.
@@ -516,14 +500,10 @@ function JsonNode({ name, value }) {
 }
 
 /**
- * The parsed value, as a tree.
- *
- * IT RENDERS `value`, NOT THE TEXT, and that is the whole design. `value` is
- * the last thing that parsed — the control never commits text that does not —
- * so while somebody is halfway through typing a new key the preview goes on
- * showing the last version that meant something, rather than blanking on every
- * keystroke that leaves a brace unbalanced. Which is the only way a preview of
- * a thing being typed is any use at all.
+ * The parsed value as a tree — `value`, not the text. `value` is the last thing
+ * that parsed, so while somebody is halfway through typing a new key the preview
+ * goes on showing the last version that meant something rather than blanking on
+ * every keystroke that leaves a brace unbalanced.
  *
  * @param {Object} props
  * @return {JSX.Element} The pane.
@@ -595,21 +575,16 @@ function inString(before) {
 }
 
 /**
- * Whether a quote typed here would open an object KEY rather than a value.
+ * Whether a quote typed here would open an object key rather than a value.
  *
- * The distinction is the whole difficulty. `"` inside an object starts a key and
- * wants `: ""` after it; the identical keystroke inside an array starts a value
- * and must not get a colon, because `["a": ""]` is not JSON at all. Nothing
- * about the character says which, so the surrounding structure has to.
+ * `"` inside an object starts a key and wants `: ""` after it; the identical
+ * keystroke inside an array starts a value and must not get a colon, because
+ * `["a": ""]` is not JSON. Nothing about the character says which, so the
+ * surrounding structure has to — which means a full scan from the top rather than
+ * reading the current line the way inString() does.
  *
- * Which means a full scan from the top rather than reading the current line the
- * way inString() does. A line knows whether a quote is open on it; it cannot
- * know whether the container two levels up is `{` or `[`, and that is exactly
- * what is being asked.
- *
- * A key can start where a key can start: directly inside `{`, or after the comma
- * that ended the last pair. Anywhere else a quote is part of something already
- * under way.
+ * A key can start directly inside `{`, or after the comma that ended the last
+ * pair. Anywhere else a quote is part of something already under way.
  *
  * @param {string} before the text before the caret
  * @return {boolean} True where a key would begin.
@@ -653,11 +628,10 @@ function opensKey(before) {
 /**
  * Replaces a range of a textarea's text, keeping the browser's undo history.
  *
- * Through execCommand rather than by setting the value, because setting the
- * value wipes the undo stack: a completed bracket would be the one thing Cmd+Z
- * could not take back. execCommand is deprecated in name and still the only
- * way to insert text into a field as though it had been typed; where it is
- * unavailable, the value is set directly and only undo is lost.
+ * Setting the value directly wipes the undo stack, which would make a completed
+ * bracket the one thing Cmd+Z could not take back. execCommand is deprecated in
+ * name and still the only way to insert text as though it had been typed; where
+ * it is unavailable the value is set directly and only undo is lost.
  *
  * @param {HTMLTextAreaElement} el
  * @param {number}   from
@@ -720,16 +694,11 @@ function complete(event, commit) {
     }
   }
 
-  // a quote where a KEY begins writes the whole empty pair, not just its own
-  // partner: `"": ""`, caret between the first two. The rest of a property is
-  // four characters that are the same every time — the closing quote, the
-  // colon, the space, and a pair of quotes for the value — and typing them is
-  // the part of writing JSON by hand that is purely mechanical.
-  //
-  // A pair rather than a bare `": "` because the value is a string more often
-  // than it is anything else, and the quotes are trivial to type over when it
-  // is not. Only where a key can start — see opensKey, which is what keeps this
-  // out of arrays.
+  // a quote where a key begins writes the whole empty pair — `"": ""`, caret
+  // between the first two — because the rest of a property is four characters
+  // that are the same every time. A pair rather than a bare `": "` because the
+  // value is a string more often than not, and the quotes are trivial to type
+  // over when it is not. Only where a key can start; see opensKey.
   if (key === '"' && !selected && opensKey(before)) {
     event.preventDefault()
     replace(el, start, end, '"": ""', commit)

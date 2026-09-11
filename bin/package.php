@@ -3,20 +3,14 @@
 /**
  * Builds the zip the plugin directory serves.
  *
- * The repository is not the plugin. `.distignore` says which is which; this
- * copies what is left into a staging directory named after the slug — a plugin
- * zip has to unpack into a folder called `schemapress`, whatever the checkout
- * is called — and zips that.
+ * The file list comes from `git ls-files` and is then filtered through
+ * .distignore. Sourcing it from git is what makes an untracked file unable to
+ * ship: the previous version walked the working directory, so anything nobody
+ * had thought to name in .distignore went into the release — a local
+ * .claude/settings.local.json did, and a .env would have.
  *
- * IT REBUILDS vendor/ WITHOUT DEV DEPENDENCIES. The working tree's vendor/ is
- * whatever the last `composer install` left, and the one thing that must never
- * ship is somebody's linter. Rebuilding into the staging copy means the package
- * is correct regardless of the state of the tree it was built from, which is
- * the only version of this that survives being run in a hurry.
- *
- * It refuses to build a package whose declared versions disagree, because a
- * `Stable tag` that does not match the plugin header is the single most common
- * reason a directory release serves the wrong thing.
+ * vendor/ is rebuilt with --no-dev into the staging copy, so the package is
+ * correct regardless of what the working tree's vendor/ happens to hold.
  *
  * Run: npm run package
  *
@@ -59,7 +53,35 @@ function schemapress_run($command, $cwd)
     }
 }
 
+/**
+ * Runs a command and splits its NUL-separated output.
+ *
+ * shell_exec rather than exec: exec() splits on newlines and drops them, which
+ * would corrupt a path containing one. It returns null for empty output as well
+ * as for failure, so the two are not distinguishable here — the caller checks
+ * this is a git checkout first, which is the failure worth catching.
+ *
+ * @param string $command
+ * @param string $cwd
+ *
+ * @return string[]
+ */
+function schemapress_lines($command, $cwd)
+{
+    $raw = (string) shell_exec('cd ' . escapeshellarg($cwd) . ' && ' . $command);
+
+    return array_values(array_filter(
+        explode("\0", $raw),
+        function ($line) {
+            return $line !== '';
+        }
+    ));
+}
+
 // --- the versions have to agree ---------------------------------------------
+//
+// A Stable tag that disagrees with the plugin header is the most common reason
+// a directory release serves the wrong thing.
 
 $header = file_get_contents($root . '/' . $slug . '.php');
 $readme = file_get_contents($root . '/readme.txt');
@@ -80,10 +102,8 @@ if (($stable[1] ?? '') !== $version) {
     );
 }
 
-// package.json ships — .distignore keeps the lockfile out but not this, because
-// src/ goes with it and the build has to stay reproducible from what is in the
-// zip. So it is a fourth place a version can drift, and the only one nothing
-// was watching.
+// package.json ships, because src/ does and the build has to stay reproducible
+// from what is in the zip
 $manifest = json_decode((string) file_get_contents($root . '/package.json'), true);
 
 if (($manifest['version'] ?? '') !== $version) {
@@ -105,15 +125,8 @@ $ignored = array_values(array_filter(array_map(
  * Whether a path is excluded by .distignore.
  *
  * Matched on any whole path segment, so `tests` excludes `tests/` wherever it
- * appears rather than only at the root — the same reading `wp dist-archive`
- * gives it.
- *
- * A pattern may also be a glob, and one of them has to be. The first version of
- * this compared segments for equality, which cannot express "any zip in the
- * root" — so the second run of this script found the first run's zip sitting in
- * the plugin directory and packaged it INSIDE the new one. The zip doubled in
- * size and nothing said why, because a plugin containing a copy of itself is
- * still a perfectly valid plugin.
+ * appears — the same reading `wp dist-archive` gives it. A pattern may also be
+ * a glob.
  *
  * @param string $relative
  * @param array  $ignored
@@ -139,6 +152,28 @@ function schemapress_ignored($relative, array $ignored)
     return false;
 }
 
+// --- the file list -----------------------------------------------------------
+
+exec('cd ' . escapeshellarg($root) . ' && git rev-parse --is-inside-work-tree 2>/dev/null', $probe, $inRepo);
+
+if ($inRepo !== 0) {
+    schemapress_fail(
+        'Not a git checkout. The file list comes from `git ls-files`, so this '
+            . 'cannot build a package from an exported tree.'
+    );
+}
+
+$tracked = schemapress_lines('git ls-files -z', $root);
+
+// Reported rather than refused: a contributor who forgot to `git add` a new
+// source file should see it named, not discover it missing from a release.
+$untracked = array_filter(
+    schemapress_lines('git ls-files -z --others --exclude-standard', $root),
+    function ($path) use ($ignored) {
+        return !schemapress_ignored($path, $ignored);
+    }
+);
+
 // --- stage ------------------------------------------------------------------
 
 $build = sys_get_temp_dir() . '/schemapress-package-' . getmypid();
@@ -147,48 +182,28 @@ $stage = $build . '/' . $slug;
 schemapress_run('rm -rf ' . escapeshellarg($build), $root);
 mkdir($stage, 0755, true);
 
-$copied = 0;
-
-$files = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::SELF_FIRST
-);
-
-foreach ($files as $file) {
-    $relative = substr($file->getPathname(), strlen($root) + 1);
-
-    if (schemapress_ignored($relative, $ignored)) {
+foreach ($tracked as $relative) {
+    if (schemapress_ignored($relative, $ignored) || !is_file($root . '/' . $relative)) {
         continue;
     }
 
-    if ($file->isDir()) {
-        if (!is_dir($stage . '/' . $relative)) {
-            mkdir($stage . '/' . $relative, 0755, true);
-        }
+    $directory = dirname($stage . '/' . $relative);
 
-        continue;
+    if (!is_dir($directory)) {
+        mkdir($directory, 0755, true);
     }
 
-    copy($file->getPathname(), $stage . '/' . $relative);
-    $copied++;
+    copy($root . '/' . $relative, $stage . '/' . $relative);
 }
 
 // --- vendor, without the tooling --------------------------------------------
-
-// composer.json and composer.lock are in .distignore, so the copy above skipped
-// them — correctly, since neither belongs in the package. But the rebuild below
-// needs them, and for a long time it was guarded by `file_exists($stage .
-// '/composer.json')`, which the copy had just guaranteed to be false. The whole
-// --no-dev rebuild silently never ran, and the zip shipped whatever vendor/ the
-// tree happened to hold.
 //
-// That was invisible while there were no dev dependencies to ship. Adding
-// php-cs-fixer to require-dev turned it into a release carrying a code
-// formatter and 32 other packages. So they are staged deliberately here, used,
-// and deleted again below.
-foreach (['composer.json', 'composer.lock'] as $manifest) {
-    if (file_exists($root . '/' . $manifest)) {
-        copy($root . '/' . $manifest, $stage . '/' . $manifest);
+// The manifests are staged deliberately: .distignore excludes them from the
+// package, but the rebuild below needs them. They are deleted again afterwards.
+
+foreach (['composer.json', 'composer.lock'] as $file) {
+    if (file_exists($root . '/' . $file)) {
+        copy($root . '/' . $file, $stage . '/' . $file);
     }
 }
 
@@ -199,7 +214,6 @@ if (file_exists($stage . '/composer.json')) {
         $stage
     );
 
-    // the manifest was only here to rebuild vendor/; it is not part of the plugin
     unlink($stage . '/composer.json');
 
     if (file_exists($stage . '/composer.lock')) {
@@ -216,10 +230,6 @@ if (file_exists($target)) {
     unlink($target);
 }
 
-// $copied counted what came out of the working tree. The vendor rebuild then
-// replaced vendor/ wholesale, so it stopped describing the package the moment
-// that rebuild started actually running — it reported 2,090 files for a zip
-// holding 1,073. Count what is really in the stage instead.
 $packaged = 0;
 
 $staged = new RecursiveIteratorIterator(
@@ -236,11 +246,21 @@ schemapress_run('zip -rq ' . escapeshellarg($target) . ' ' . escapeshellarg($slu
 schemapress_run('rm -rf ' . escapeshellarg($build), $root);
 
 printf(
-    "\n  %s\n  %d files, %s\n\n",
+    "\n  %s\n  %d files, %s\n",
     $name,
     $packaged,
-    size_format(filesize($target))
+    schemapress_size(filesize($target))
 );
+
+if ($untracked) {
+    printf(
+        "\n  %d untracked file(s) were NOT packaged:\n%s\n",
+        count($untracked),
+        '    ' . implode("\n    ", $untracked)
+    );
+}
+
+echo "\n";
 
 /**
  * Bytes as something readable, since WordPress is not loaded here.
@@ -249,7 +269,7 @@ printf(
  *
  * @return string
  */
-function size_format($bytes)
+function schemapress_size($bytes)
 {
     return $bytes > 1048576
         ? round($bytes / 1048576, 1) . 'MB'

@@ -17,9 +17,8 @@ jobs:
       # a failure on 8.2 should not hide whether 8.4 is also broken
       fail-fast: false
       matrix:
-        # 8.2 is the floor the plugin header declares, because Timber 2 needs
-        # it. the newest stable is the ceiling, so a deprecation lands here
-        # rather than on somebody's site
+        # 8.2 is the floor the plugin header declares; the newest stable is the
+        # ceiling, so a deprecation lands here rather than on somebody's site
         php: ['8.2', '8.3', '8.4']
 
     steps:
@@ -46,7 +45,7 @@ jobs:
     name: wordpress.org review checks
     runs-on: ubuntu-latest
 
-    # phpcs.xml.dist is not the full WordPress standard — it is the subset a
+    # .config/phpcs.xml is not the full WordPress standard — it is the subset a
     # directory review blocks on: escaping, sanitising, nonces, capabilities,
     # prepared SQL, prefixes, and the PHP versions the header promises. The
     # reasoning for what is left out is at the top of that file.
@@ -62,6 +61,33 @@ jobs:
       - run: composer install
 
       - run: composer lint
+
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+
+    # The directory's OWN review tool, which is a different and stricter thing
+    # from phpcs above: it parses readme.txt, checks the header fields, and
+    # applies the trademark and naming rules no ruleset expresses. It is what
+    # the review team runs, so it should not be the submission that runs it
+    # first.
+    #
+    # build/ is committed, but vendor/ is not — and a missing autoloader reads
+    # to the checker as a broken plugin, so composer install has to come first.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - run: composer install --no-dev
+
+      - uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './'
 
   static:
     name: Lint and format

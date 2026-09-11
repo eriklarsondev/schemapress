@@ -28,8 +28,8 @@
     }
   },
   "scripts": {
-    "format": "php-cs-fixer fix",
-    "format:check": "php-cs-fixer fix --dry-run --diff",
-    "lint": "phpcs --standard=phpcs.xml.dist"
+    "format": "php-cs-fixer fix --config=.config/php-cs-fixer.php",
+    "format:check": "php-cs-fixer fix --config=.config/php-cs-fixer.php --dry-run --diff",
+    "lint": "phpcs --standard=.config/phpcs.xml"
   }
 }

@@ -7,24 +7,16 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * entries: the rows of a collection type.
- *
- * one entry is one post of the collection's own post type. it holds TWO copies
- * of its values, and the distinction between them is the whole point:
+ * The rows of a collection type. One entry is one post of the collection's own
+ * post type, holding two copies of its values:
  *
  *   published  what the front end is serving right now
  *   draft      what someone is working on
  *
- * saving writes the draft. the published copy does not move until you publish,
- * so editing a live entry never takes it off the site half-finished — the draft
- * branches off the published version and how far it has diverged is countable:
- * "3 changes ahead of published".
- *
- * publishing fast-forwards: the draft becomes the published copy and the count
- * resets. discarding does the opposite, throwing the branch away.
- *
- * a never-published entry has only a draft, and the front end cannot see it at
- * all.
+ * Saving writes the draft; the published copy does not move until you publish,
+ * so editing a live entry never takes it off the site half-finished. Publishing
+ * fast-forwards and discarding throws the branch away. A never-published entry
+ * has only a draft, and the front end cannot see it at all.
  */
 class Entries
 {
@@ -49,22 +41,15 @@ class Entries
     public const META_PUBLISHED_AT = '_schemapress_published_at';
 
     /**
-     * the draft's name, while it differs from the published one.
-     *
-     * the post row's title belongs to the published copy, so an entry with
-     * unpublished edits needs somewhere else to keep what it is currently
-     * called. absent means the two agree.
+     * The draft's name, while it differs from the published one. The post row's
+     * title belongs to the published copy; absent means the two agree.
      */
     public const META_DRAFT_TITLE = '_schemapress_draft_title';
 
     /**
-     * the entry's public identifier.
-     *
-     * a generated uuid rather than the post id, because the post id is a row
-     * number: it leaks how many entries exist and in what order they were made,
-     * it is guessable, and it ties every url and every API response to this
-     * particular database. the post id stays, internally, as the primary key it
-     * is — nothing outside this class needs to know it.
+     * A generated uuid rather than the post id, which is a row number: it leaks
+     * how many entries exist and in what order, it is guessable, and it ties
+     * every URL to this particular database.
      */
     public const META_UID = '_schemapress_uid';
 
@@ -72,7 +57,7 @@ class Entries
      * the field key a collection uses to name its entries, when it declares one.
      */
     /**
-     * the field a collection names its entries by, or '' when it names none.
+     * The field a collection names its entries by, or '' when it names none.
      *
      * @param integer $type_id
      *
@@ -86,10 +71,7 @@ class Entries
     }
 
     /**
-     * how many entries a listing returns when nothing says otherwise.
-     *
-     * ten, because a page you can see all of at once is a page you can compare
-     * across — and because the pager below it then means something.
+     * How many entries a listing returns when nothing says otherwise.
      */
     public const PER_PAGE = 10;
 
@@ -100,7 +82,7 @@ class Entries
     public const DRAFT = 'draft';
 
     /**
-     * a page of entries.
+     * A page of entries.
      *
      * @param integer $type_id
      * @param array   $args    page, perPage, search, orderby, order, view
@@ -162,12 +144,11 @@ class Entries
     }
 
     /**
-     * how many entries a collection holds, counting drafts.
+     * How many entries a collection holds, counting drafts.
      *
      * @param integer $type_id
-     * @param boolean $trashed whether to count what is in the trash too, which
-     *                         is what work walking every row has to size itself
-     *                         against even though nobody is looking at it
+     * @param boolean $trashed count the trash too — what work walking every row
+     *                         has to size itself against
      *
      * @return integer
      */
@@ -186,7 +167,7 @@ class Entries
     }
 
     /**
-     * one entry.
+     * One entry, in its delivered shape.
      *
      * @param integer $type_id
      * @param integer $entry_id
@@ -214,7 +195,7 @@ class Entries
     }
 
     /**
-     * saves the draft, and optionally publishes it.
+     * Saves the draft, and optionally publishes it.
      *
      * @param integer      $type_id
      * @param integer|null $entry_id null creates
@@ -284,12 +265,9 @@ class Entries
             'post_status' => $publish || $live ? 'publish' : 'draft',
         ];
 
-        // post_title is the PUBLISHED name. it has to be, because it is the
-        // column WordPress searches and the only copy of the name that is not
-        // in this plugin's own meta — so writing the draft's name into it would
-        // put unpublished text on the live site under a heading nobody chose.
-        // a draft-only save of a live entry therefore leaves it alone, and the
-        // draft's own name is kept beside it until it is published
+        // post_title is the published name: it is the column WordPress searches,
+        // so writing the draft's name into it would put unpublished text on the
+        // live site. A draft-only save of a live entry leaves it alone
         if (!$live) {
             $post['post_title'] = $title;
             // the searchable text goes where the name goes, and for the same
@@ -334,10 +312,8 @@ class Entries
         }
 
         /**
-         * fires after an entry's draft is written.
-         *
-         * every save reaches this, published or not — a listener wanting only
-         * what went live wants schemapress/entry_published instead.
+         * Fires after an entry's draft is written — every save, published or
+         * not. For only what went live, use schemapress/entry_published.
          *
          * @param integer $id      the entry's post id
          * @param array   $values  what was stored
@@ -354,7 +330,7 @@ class Entries
     }
 
     /**
-     * moves the published copy up to the draft.
+     * Moves the published copy up to the draft.
      *
      * @param integer $type_id
      * @param integer $entry_id
@@ -389,7 +365,7 @@ class Entries
     }
 
     /**
-     * takes an entry off the front end, keeping its work.
+     * Takes an entry off the front end, keeping its work.
      *
      * @param integer $type_id
      * @param integer $entry_id
@@ -434,10 +410,8 @@ class Entries
         update_post_meta($post->ID, self::META_AHEAD, 0);
 
         /**
-         * fires when an entry comes off the front end, its work kept.
-         *
-         * the pair to entry_published: anything that was built from this entry
-         * being live has to come down.
+         * The pair to entry_published: anything built from this entry being live
+         * has to come down.
          *
          * @param integer $id      the entry's post id
          * @param integer $type_id the collection
@@ -448,7 +422,7 @@ class Entries
     }
 
     /**
-     * throws the draft away, returning to what is published.
+     * Throws the draft away, returning to what is published.
      *
      * @param integer $type_id
      * @param integer $entry_id
@@ -468,11 +442,8 @@ class Entries
 
         self::write($post->ID, self::META_DRAFT, $values);
 
-        // the draft index is derived from the draft, so throwing the draft away
-        // has to throw its index away too. without this the builder's own
-        // listing went on filtering and sorting a discarded entry by values
-        // nothing was storing any more — an entry reverted from "Designer" back
-        // to "Engineer" stayed under Designer in the table until its next save
+        // the draft index is derived from the draft, so it goes too — otherwise
+        // the builder's listing keeps filtering by values nothing stores
         Index::write($post->ID, ContentSanitizer::values($values, $definition['fields']), $definition['fields'], true);
 
         update_post_meta($post->ID, self::META_AHEAD, 0);
@@ -481,8 +452,7 @@ class Entries
         delete_post_meta($post->ID, self::META_DRAFT_TITLE);
 
         /**
-         * fires when a draft is thrown away and the entry returns to what is
-         * published.
+         * Fires when a draft is thrown away.
          *
          * @param integer $id      the entry's post id
          * @param integer $type_id the collection
@@ -493,7 +463,7 @@ class Entries
     }
 
     /**
-     * trashes an entry.
+     * Moves an entry to the trash.
      *
      * @param integer $type_id
      * @param integer $entry_id
@@ -519,10 +489,8 @@ class Entries
         Index::clear($post->ID);
 
         /**
-         * fires after an entry is trashed.
-         *
-         * trashed, not erased: the post and its meta are still there, so a
-         * listener that needs to know what the entry held can still read it.
+         * Trashed, not erased: the post and its meta are still there, so a
+         * listener can still read what the entry held.
          *
          * @param integer $id      the entry's post id
          * @param integer $type_id the collection
@@ -533,14 +501,11 @@ class Entries
     }
 
     /**
-     * a page of a collection's trashed entries.
+     * A page of a collection's trashed entries.
      *
-     * this listing is the reason the trash is a trash rather than a delay before
-     * deletion. entries are posts, so trashing one has always been reversible —
-     * but the collection's post type has no admin screen of its own, by design,
-     * so there was nowhere in WordPress that a trashed entry could be seen or
-     * restored from. it sat there until WordPress emptied the trash on its own
-     * schedule, and the Delete button was a one-way door wearing a soft label.
+     * This listing is what makes the trash a trash rather than a delay before
+     * deletion: the collection's post type has no admin screen of its own, so
+     * without it there is nowhere a trashed entry can be seen or restored from.
      *
      * @param integer $type_id
      * @param array   $args    page, perPage
@@ -593,21 +558,14 @@ class Entries
     }
 
     /**
-     * brings an entry back from the trash, in the state it was in.
+     * Brings an entry back from the trash, in the state it was in.
      *
-     * WordPress DOES NOT DO THIS BY DEFAULT. since 5.6, wp_untrash_post()
-     * restores every post to `draft` whatever it was before, on the theory that
-     * something coming back from the trash should be looked at before it goes
-     * live again. that is a reasonable rule for a blog post and the wrong one
-     * here: restoring a live entry as a draft leaves it holding its published
-     * values and its publishedAt while claiming to be unpublished — a state
-     * nothing else in this class can produce, and one the builder would show
-     * as "Draft" over content the site had been serving an hour ago.
-     *
-     * so for this one call, and this one post, the previous status wins.
-     * WordPress passes it to the filter precisely so a caller can choose it.
-     * scoped rather than hooked globally, because a site that relies on the
-     * draft rule for its own posts should keep it.
+     * Since 5.6 wp_untrash_post() restores every post to `draft` whatever it was
+     * before. That is the wrong rule here: a restored live entry would hold its
+     * published values and publishedAt while claiming to be unpublished — a state
+     * nothing else in this class can produce. So for this one call the previous
+     * status wins, scoped rather than hooked globally so a site relying on the
+     * draft rule for its own posts keeps it.
      *
      * @param integer $type_id
      * @param string  $entry_id
@@ -653,10 +611,7 @@ class Entries
     }
 
     /**
-     * erases a trashed entry and everything it held.
-     *
-     * only from the trash. a permanent delete reachable from the listing would
-     * be the same one-way door with an extra dialog on it — this way the entry
+     * Erases a trashed entry and everything it held — only from the trash, so it
      * has already been somewhere recoverable first.
      *
      * @param integer $type_id
@@ -675,11 +630,7 @@ class Entries
         $id = $post->ID;
 
         /**
-         * fires immediately before an entry is erased.
-         *
-         * the last moment its values can be read, which is what separates this
-         * from entry_deleted: that one fires on the way to the trash and can
-         * still go and look.
+         * The last moment an entry's values can be read.
          *
          * @param integer $id      the entry's post id
          * @param integer $type_id the collection
@@ -690,7 +641,7 @@ class Entries
     }
 
     /**
-     * empties a collection's trash.
+     * Empties a collection's trash.
      *
      * @param integer $type_id
      *
@@ -733,16 +684,11 @@ class Entries
                 }
             }
 
-            // THE LOOP HAS NO CURSOR, and cannot have one: it reads the front of
-            // the trash and deletes what it read, so the next pass sees what is
-            // left. that only terminates while something is actually being
-            // deleted — and wp_delete_post can refuse, because `pre_delete_post`
-            // lets any other plugin on the site veto one. a page that survives
-            // its own deletion is read again, vetoed again, forever, and the
-            // request hangs rather than failing.
-            //
-            // so a pass that erased nothing stops. what is left is still in the
-            // trash, which is the honest outcome — the count says how many went
+            // The loop has no cursor: it reads the front of the trash and
+            // deletes what it read. That only terminates while something is
+            // actually being deleted, and wp_delete_post can refuse —
+            // `pre_delete_post` lets any other plugin veto one, which would spin
+            // forever. So a pass that erased nothing stops.
             if (!$went) {
                 return $erased;
             }
@@ -750,12 +696,9 @@ class Entries
     }
 
     /**
-     * copies an entry, values and all.
-     *
-     * the copy is always a draft, whatever the original was. duplicating a live
-     * entry to get a starting point should not put the half-edited result of
-     * that on the site the moment it is created, and a collection that keeps no
-     * drafts is the case where that would otherwise happen silently.
+     * Copies an entry, values and all. The copy is always a draft, whatever the
+     * original was — duplicating a live entry to get a starting point should not
+     * put the result on the site the moment it is created.
      *
      * @param integer $type_id
      * @param string  $entry_id
@@ -807,12 +750,11 @@ class Entries
     }
 
     /**
-     * finds a trashed entry by its identifier.
+     * Finds a trashed entry by its identifier.
      *
-     * resolve() deliberately does not see the trash — an entry in it is not
-     * something the reading API should answer with, and the slug WordPress
-     * gives a trashed post is not the entry's own. so the trash is looked in
-     * only where the caller has said that is what it means.
+     * resolve() deliberately does not see the trash, and the slug WordPress gives
+     * a trashed post is not the entry's own — so the trash is looked in only
+     * where the caller has said that is what it means.
      *
      * @param integer $type_id
      * @param string  $ref
@@ -840,22 +782,14 @@ class Entries
     }
 
     /**
-     * refuses a save built on a version of the entry that has since moved.
+     * Refuses a save built on a version of the entry that has since moved.
      *
-     * two people editing the same entry was a silent data loss: both loaded it,
-     * both saved, and the second save replaced the first with values that had
-     * never seen it. nothing anywhere said so — not to the person whose work
-     * went, and not to the person who overwrote it.
+     * The client sends back the `modified` it was given when it loaded the entry;
+     * if the entry has moved since, that is somebody else's save.
      *
-     * so a save may state which version it was made against, and one made
-     * against a version that is no longer current is refused rather than
-     * applied. the client sends back the `modified` it was given when it loaded
-     * the entry; if the entry has moved since, that is somebody else's save.
-     *
-     * IT IS OPTIONAL, and has to be. a save with no stated version is the
-     * behavior every existing caller has — an importer, a migration, a script
-     * — and turning those into failures would be a worse bug than the one this
-     * fixes. the admin always sends it.
+     * Optional, and has to be: a save with no stated version is what every script
+     * and importer does, and failing those would be worse than the loss this
+     * prevents. The admin always sends it.
      *
      * @param \WP_Post|null $existing
      * @param array         $data
@@ -889,11 +823,8 @@ class Entries
     // --- identity ------------------------------------------------------------
 
     /**
-     * an entry's public identifier, minted on first use and stable after.
-     *
-     * minting lazily rather than only on create means entries saved before this
-     * existed get one the first time they are read, instead of needing a
-     * migration that could half-run.
+     * An entry's public identifier, minted on first use and stable after, so
+     * entries predating it need no migration that could half-run.
      *
      * @param integer $post_id
      *
@@ -916,11 +847,8 @@ class Entries
     }
 
     /**
-     * an entry's identifier as stored, without minting one.
-     *
-     * the read-side accessor, so that delivering an entry is a read. uid()
-     * mints, which is right when an entry is being created and wrong on the
-     * path a public GET takes — see class-upgrade.php.
+     * The read-side accessor, so delivering an entry is a read. uid() mints,
+     * which is wrong on the path a public GET takes — see class-upgrade.php.
      *
      * @param integer $post_id
      *
@@ -934,8 +862,7 @@ class Entries
     }
 
     /**
-     * gives every entry of a collection an identifier, for the ones that
-     * predate having any.
+     * Gives every entry of a collection an identifier.
      *
      * @param integer $type_id
      *
@@ -971,9 +898,7 @@ class Entries
     }
 
     /**
-     * mints identifiers for a specific list of entries.
-     *
-     * the unit of work a queued backfill advances by.
+     * The unit of work a queued backfill advances by.
      *
      * @param integer[] $ids
      *
@@ -996,30 +921,16 @@ class Entries
     }
 
     /**
-     * finds the post behind a reference.
+     * Finds the post behind a reference: a uid or a slug, and nothing else.
      *
-     * a uid, and NOTHING else.
+     * Never a post id. Accepting one let the content API answer
+     * /api/team-members/5, so any published entry could be fetched by counting —
+     * exactly the enumeration the uid exists to prevent.
      *
-     * this used to take a post id as well, for internal callers that already
-     * hold one. what it also did was let the content API answer
-     * /api/team-members/5, so any published entry could be fetched by counting
-     * 1, 2, 3 — precisely the enumeration the uid exists to prevent,
-     * reintroduced by the convenience of accepting both.
-     *
-     * there is exactly one internal caller that holds a post id, and it is
-     * save(), which converts to a uid itself. one conversion at one call site
-     * is a smaller thing than a reader that cannot tell a public reference from
-     * a private one.
-     *
-     * A SLUG WORKS TOO, and is the point of having one: a front end routing
-     * /team/ada-lovelace has the slug and not the uuid, and would otherwise
-     * have to list the whole collection to translate between them. a slug is a
-     * public identifier in a way a post id never was — it is chosen, it is not
-     * sequential, and it says nothing about how many entries exist.
-     *
-     * the uuid is tried first, because it is the identifier the API reports and
-     * so the one most references are. a collection whose slugs ARE uuids
-     * matches on the first lookup either way.
+     * A slug works because a front end routing /team/ada-lovelace has the slug
+     * and not the uuid. It is a public identifier in a way a post id is not: it
+     * is chosen, it is not sequential, and it says nothing about how many entries
+     * exist. The uuid is tried first, being the identifier the API reports.
      *
      * @param integer $type_id
      * @param mixed   $ref
@@ -1067,7 +978,7 @@ class Entries
     // --- internals -----------------------------------------------------------
 
     /**
-     * whether this collection keeps a draft separate from what it publishes.
+     * Whether this collection keeps a draft separate from what it publishes.
      *
      * @param integer $type_id
      *
@@ -1081,15 +992,11 @@ class Entries
     }
 
     /**
-     * updates how far the draft has run ahead of the published copy.
+     * Updates how far the draft has run ahead of the published copy.
      *
-     * the count is of CHANGES, not of saves. pressing save twice on the same
-     * text is one change, and pressing it once on text identical to what is
-     * published is not a change at all — an entry that reads exactly like the
+     * The count is of changes, not of saves: an entry that reads exactly like the
      * live one is not ahead of it, whatever the counter previously said.
-     *
-     * that last case is the one that matters in practice: publishing and then
-     * saving would otherwise report "1 change ahead of published" about an
+     * Otherwise publishing and then saving reports "1 change ahead" about an
      * entry that is character-for-character what the site is serving.
      *
      * @param integer $id
@@ -1117,7 +1024,7 @@ class Entries
     }
 
     /**
-     * one stored value bag, normalized against the current field list.
+     * One stored value bag, normalized against the current field list.
      *
      * @param integer $id
      * @param string  $key
@@ -1131,16 +1038,16 @@ class Entries
     }
 
     /**
-     * copies values into the published slot and resets the divergence count.
+     * Copies values into the published slot and resets the divergence count.
      *
-     * the post row's title moves here and nowhere else, because that is what
-     * makes it mean "the published name" — which is what the front end reads
-     * and what WordPress search matches.
+     * The post row's title moves here and nowhere else, which is what makes it
+     * mean "the published name".
      *
      * @param integer $type_id
      * @param integer $id
      * @param array   $values
      * @param string  $title   the name being published, already derived
+     * @param array   $fields  the collection's field definitions, for the index
      *
      * @return void
      */
@@ -1165,12 +1072,9 @@ class Entries
         delete_post_meta($id, self::META_DRAFT_TITLE);
 
         /**
-         * fires when an entry's values become what the site is serving.
-         *
-         * this is the one to hang a cache purge or a rebuild on: it fires
-         * whether publishing happened through the publish action or through a
-         * save on a collection that keeps no drafts, and it fires only when
-         * something actually moved onto the front end.
+         * The one to hang a cache purge on: it fires whether publishing happened
+         * through the publish action or a save on a collection that keeps no
+         * drafts, and only when something actually moved onto the front end.
          *
          * @param integer $id      the entry's post id
          * @param array   $values  what is now live
@@ -1180,7 +1084,7 @@ class Entries
     }
 
     /**
-     * coerces a view name.
+     * Coerces a view name to published or draft.
      *
      * @param string $view
      *
@@ -1192,7 +1096,7 @@ class Entries
     }
 
     /**
-     * how far the draft is ahead of the published copy.
+     * How far the draft is ahead of the published copy.
      *
      * @param integer $id
      *
@@ -1204,7 +1108,7 @@ class Entries
     }
 
     /**
-     * stores one value bag.
+     * Stores one value bag.
      *
      * @param integer $id
      * @param string  $key
@@ -1218,7 +1122,7 @@ class Entries
     }
 
     /**
-     * reads one stored value bag.
+     * Reads one stored value bag.
      *
      * @param integer $id
      * @param string  $key
@@ -1234,7 +1138,7 @@ class Entries
     }
 
     /**
-     * the delivered shape of one entry.
+     * The delivered shape of one entry.
      *
      * @param \WP_Post $post
      * @param array    $definition
@@ -1291,22 +1195,17 @@ class Entries
     }
 
     /**
-     * writes the entry's address, when it does not already have the right one.
+     * Writes the entry's address, when it does not already have the right one.
      *
      * WordPress uniquifies a supplied post_name, so two entries called the same
-     * thing become `ada-lovelace` and `ada-lovelace-2`. that suffix is why the
-     * comparison is a prefix rather than an equality: an entry whose address
-     * already begins with what it should be has the right address, and testing
-     * for equality would rewrite it on every save forever.
+     * thing become `ada-lovelace` and `ada-lovelace-2`. That suffix is why the
+     * comparison is a prefix rather than an equality — testing for equality would
+     * rewrite the slug on every save forever.
      *
-     * A PUBLISHED SLUG IS FROZEN, UNLESS IT IS STILL THE UUID. The freeze is
-     * there so renaming somebody does not move a URL out from under whoever
-     * linked to it — but that reasoning only holds for an address a person
-     * could have chosen to link to. Nobody hand-writes /team/878258fb-b89c-…,
-     * and treating one as though they had meant that a collection which took
-     * up a slug field AFTER its entries were published could never adopt it:
-     * the setting changed, every entry kept its uuid, and nothing anywhere
-     * said why. Giving an entry its first real address is not a rename.
+     * A published slug is frozen so renaming somebody does not move a URL out
+     * from under whoever linked to it. Unless it is still the uuid: nobody
+     * hand-writes /team/878258fb-b89c-…, so giving an entry its first real
+     * address is not a rename.
      *
      * @param integer $id
      * @param array   $values
@@ -1338,10 +1237,8 @@ class Entries
     }
 
     /**
-     * whether a slug is still the uuid — an address nobody chose.
-     *
-     * a prefix rather than an equality for the same reason as everywhere else
-     * here: WordPress may have hung a `-2` off it.
+     * Whether a slug is still the uuid — an address nobody chose. A prefix,
+     * because WordPress may have hung a `-2` off it.
      *
      * @param string $slug
      * @param string $uid
@@ -1354,15 +1251,9 @@ class Entries
     }
 
     /**
-     * gives every entry of a collection the address its slug field now implies.
-     *
-     * What a collection changing its slug field means for the entries it
-     * already has. Only the ones still on a uuid are touched — see reslug — so
-     * this cannot rewrite an address somebody has published, however many times
-     * it runs.
-     *
-     * Queued on a large collection, for the reason everything else that walks
-     * every entry is: see class-batch.php.
+     * Gives every entry the address its slug field now implies. Only the ones
+     * still on a uuid are touched, so this cannot rewrite an address somebody has
+     * published. Queued on a large collection — see class-batch.php.
      *
      * @param integer $type_id
      *
@@ -1398,9 +1289,7 @@ class Entries
     }
 
     /**
-     * re-addresses a specific list of entries.
-     *
-     * the unit of work a queued sweep advances by.
+     * The unit of work a queued sweep advances by.
      *
      * @param integer   $type_id
      * @param integer[] $ids
@@ -1443,12 +1332,9 @@ class Entries
     }
 
     /**
-     * the address an entry should have.
-     *
-     * built from the field the collection nominated, or from the uuid when it
-     * nominated none — see SchemaModel::normalizeSlugField. an entry always has
-     * one, because a slug that can be missing is a routing bug waiting for the
-     * first entry somebody leaves half filled in.
+     * The address an entry should have: from the field the collection nominated,
+     * or from the uuid when it nominated none. An entry always has one, because a
+     * slug that can be missing is a routing bug.
      *
      * @param array  $values
      * @param array  $definition
@@ -1480,21 +1366,13 @@ class Entries
     }
 
     /**
-     * everything about an entry that somebody might search for, as plain text.
+     * Everything about an entry somebody might search for, as plain text,
+     * mirrored into post_content — for the same reason the index mirrors
+     * filterable values into meta rows: WordPress searches post_title and
+     * post_content, and an entry's values are a JSON blob in meta.
      *
-     * WordPress searches post_title and post_content. an entry's values are a
-     * JSON blob in meta, which neither of those is, so search matched the
-     * derived title and nothing else — and a collection that names its entries
-     * by no field is a list of "Untitled" rows that could not be searched at
-     * all.
-     *
-     * so the searchable text is mirrored into post_content, for the same reason
-     * the index mirrors filterable values into meta rows: the record stays the
-     * blob, and this is a derived copy in the shape the database can reach.
-     *
-     * only the types a person would type a word from. a number, a date and a
-     * toggle are matched by filtering rather than by searching, and an
-     * attachment id is not something anybody searches for.
+     * Only the types a person would type a word from. Numbers, dates and toggles
+     * are matched by filtering, and nobody searches for an attachment id.
      *
      * @param array $values
      * @param array $fields
@@ -1549,11 +1427,12 @@ class Entries
     }
 
     /**
-     * names an entry from the first text it carries.
+     * Names an entry from the first text it carries.
      *
      * @param array  $values
      * @param array  $fields
      * @param string $given a title the caller supplied, which wins
+     * @param string $named the field the collection titles entries by, or ''
      *
      * @return string
      */
@@ -1576,11 +1455,9 @@ class Entries
             }
         }
 
-        // nothing declared, so one is invented for WordPress's benefit. it is
-        // the first text a reader would recognize, trimmed to a heading's
-        // length — and it is deliberately NOT in the API response, because
-        // which field it lands on is an accident of field order rather than
-        // anything the schema said. see Api::shape()
+        // nothing declared, so one is invented for WordPress's benefit. Not in
+        // the API response, because which field it lands on is an accident of
+        // field order rather than anything the schema said — see Api::shape()
         foreach ($fields as $field) {
             if (!in_array($field['type'], ['text', 'textarea'], true)) {
                 continue;

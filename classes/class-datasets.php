@@ -7,21 +7,14 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * lists nobody should have to type.
+ * Lists nobody should have to type. A country list typed by hand is missing three
+ * countries and stores "USA" where the next collection stores "United States".
  *
- * A select can take its choices from one of these instead of a hand-written
- * list. That is not only convenience: a country list typed by hand is a country
- * list that is missing three countries, spells one of them differently from the
- * next collection, and stores "USA" where its neighbor stores "United States".
+ * A field stores only which dataset it uses, never a copy, so a correction here
+ * reaches every field that pointed at it.
  *
- * A field stores only which dataset it uses, never a copy of it. The options
- * are resolved when they are read, so a correction here reaches every field
- * that pointed at it — which is the whole reason for naming a list rather than
- * pasting one.
- *
- * Values are the stable codes, not the labels: ISO 3166-1 alpha-2 for
- * countries, USPS abbreviations for states. What is stored survives a label
- * being reworded, and is what an API or a shipping form actually wants.
+ * Values are the stable codes rather than the labels — ISO 3166-1 alpha-2, USPS
+ * abbreviations — so what is stored survives a label being reworded.
  */
 class Datasets
 {
@@ -82,11 +75,9 @@ class Datasets
         ];
 
         /**
-         * filters the datasets a select may draw its choices from.
-         *
-         * a site with its own closed vocabulary — departments, regions, product
-         * lines — registers it here and it becomes available to every select,
-         * with the same guarantee: stored once, corrected in one place.
+         * Filters the datasets a select may draw its choices from. A site with its
+         * own closed vocabulary registers it here and it becomes available to
+         * every select.
          *
          * @param array $sets slug => ['label' => string, 'options' => array]
          */
@@ -96,7 +87,7 @@ class Datasets
     }
 
     /**
-     * whether a slug names a dataset.
+     * Whether a slug names a dataset.
      *
      * @param string $slug
      *
@@ -108,7 +99,7 @@ class Datasets
     }
 
     /**
-     * one dataset's options, or an empty list.
+     * One dataset's options, or an empty list.
      *
      * @param string $slug
      *
@@ -120,9 +111,7 @@ class Datasets
     }
 
     /**
-     * the choices a select field offers, from whichever source it names.
-     *
-     * the one place that answers this, so the sanitizer, the resolver and the
+     * The one place that answers this, so the sanitizer, the resolver and the
      * admin cannot disagree about what a field allows.
      *
      * @param array $field
@@ -164,7 +153,7 @@ class Datasets
     }
 
     /**
-     * expands a compact "CODE|Label,CODE|Label" string.
+     * Expands a compact "CODE|Label,CODE|Label" string.
      *
      * @param string $packed
      *

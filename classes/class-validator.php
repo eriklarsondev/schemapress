@@ -7,35 +7,23 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the write-side gate that REFUSES, as opposed to the one that coerces.
+ * The write-side gate that refuses, as opposed to the one that coerces.
  *
- * ContentSanitizer makes a payload fit the definition's shape — dropping what
- * was not declared, defaulting what was missing, running every scalar through
- * its type. it cannot fail, by design: everything it is handed becomes
- * something storable.
+ * ContentSanitizer makes a payload fit the definition's shape and cannot fail by
+ * design. That leaves the rules where storing the value anyway is the wrong
+ * answer — a required field left empty, a name past the length the collection
+ * accepts, a second entry claiming an email the first already has.
  *
- * that leaves the rules where storing the value anyway is the wrong answer. a
- * required field left empty, a name longer than the collection said it would
- * accept, a second entry claiming an email address the first one already has —
- * none of those are coercible into something true, so they are refused and the
- * caller is told which field and why.
- *
- * these rules were enforced ONLY in the browser until now: the builder disabled
- * its Save button and nothing behind it checked, so any write that did not come
- * from that screen — the REST route called directly, an importer, a migration —
- * stored whatever it liked. this is the server-side half of the same rules.
- *
- * WHICH FIELDS ARE ASKED is the subtle part, and it is why the visibility rules
- * are duplicated here rather than assumed. a field hidden by its condition is
- * not being asked for, so it cannot be missing — blocking a save on something
- * the author cannot see is unanswerable. this mirrors src/shared/conditions.js
- * and src/shared/required.js clause for clause; the two have to agree, or the
+ * Which fields are asked is the subtle part, and why the visibility rules are
+ * duplicated here rather than assumed: a field hidden by its condition is not
+ * being asked for, so it cannot be missing. This mirrors src/shared/conditions.js
+ * and src/shared/required.js clause for clause — the two have to agree, or the
  * form lets you save what the server then rejects.
  */
 class Validator
 {
     /**
-     * every rule a value bag breaks.
+     * Every rule a value bag breaks.
      *
      * @param array $values  sanitized values, so this checks what would be stored
      * @param array $fields  the collection's field definitions
@@ -51,11 +39,9 @@ class Validator
     }
 
     /**
-     * problems as the error a REST route returns.
-     *
-     * the joined messages are the human sentence, because that is the only part
-     * most clients show; the list is repeated under `fields` so one that wants
-     * to mark up the offending controls can.
+     * Problems as the error a REST route returns. The joined messages are the
+     * human sentence most clients show; the list is repeated under `fields` so one
+     * that wants to mark up the offending controls can.
      *
      * @param array $problems
      *
@@ -71,7 +57,7 @@ class Validator
     }
 
     /**
-     * walks a field list, recursing into the types that nest.
+     * Walks a field list, recursing into the types that nest.
      *
      * @param array   $values
      * @param array   $fields
@@ -130,7 +116,7 @@ class Validator
     }
 
     /**
-     * the rules that apply to a filled-in scalar.
+     * The rules that apply to a filled-in scalar.
      *
      * @param mixed   $value
      * @param array   $field
@@ -191,11 +177,9 @@ class Validator
     }
 
     /**
-     * a repeater's own rule, and then every row's.
-     *
-     * uniqueness is not carried into a row. the index holds one value per field
-     * per entry, so there is nothing to ask the question against — see
-     * class-index.php on why a repeater cannot be indexed at all.
+     * A repeater's own rule, and then every row's. Uniqueness is not carried into
+     * a row: the index holds one value per field per entry, so there is nothing to
+     * ask the question against.
      *
      * @param mixed  $value
      * @param array  $field
@@ -231,12 +215,11 @@ class Validator
     }
 
     /**
-     * whether another entry of this collection already holds a value.
+     * Whether another entry of this collection already holds a value.
      *
-     * the DRAFT index is the one asked, because it is the one every entry has —
-     * the published index skips entries that have never gone live, and two
-     * drafts claiming the same slug is a collision waiting for the moment they
-     * are both published rather than a collision that has not happened.
+     * The draft index is asked, because it is the one every entry has. Two drafts
+     * claiming the same slug is a collision waiting for the moment they are both
+     * published, not one that has not happened.
      *
      * @param mixed $value
      * @param array $field
@@ -285,6 +268,8 @@ class Validator
     }
 
     /**
+     * One problem, in the shape the error reports.
+     *
      * @param string $key
      * @param string $label
      * @param string $message
@@ -299,9 +284,7 @@ class Validator
     // --- ported from the form ------------------------------------------------
 
     /**
-     * whether a value counts as unanswered.
-     *
-     * mirrors isBlank() in src/shared/required.js, including the two rules that
+     * Mirrors isBlank() in src/shared/required.js, including the two rules that
      * look odd written down: a boolean is never blank, because a toggle is
      * answered by being off as much as by being on; and zero is a number, not an
      * absence.
@@ -351,9 +334,8 @@ class Validator
     }
 
     /**
-     * the fields currently on screen, given their siblings' values.
-     *
-     * mirrors visibleFields() in src/shared/conditions.js.
+     * The fields currently on screen, given their siblings' values. Mirrors
+     * visibleFields() in src/shared/conditions.js.
      *
      * @param array $fields
      * @param array $values
@@ -374,10 +356,8 @@ class Validator
     }
 
     /**
-     * whether a field's condition is met.
-     *
-     * an unreadable condition shows the field, which is the same direction the
-     * form errs in: a control you can reason about beats one that vanished.
+     * An unreadable condition shows the field, the same direction the form errs
+     * in: a control you can reason about beats one that vanished.
      *
      * @param mixed $condition
      * @param array $values
@@ -411,10 +391,8 @@ class Validator
     }
 
     /**
-     * whether a value equals what a condition asked for, comparing as strings.
-     *
-     * a multi-select holds several values, and "equals Design" about one of
-     * those means it is among them.
+     * Compared as strings. A multi-select holds several values, and "equals
+     * Design" about one of those means it is among them.
      *
      * @param mixed $value
      * @param mixed $want
@@ -431,11 +409,9 @@ class Validator
     }
 
     /**
-     * whether a value counts as filled in, for a condition.
-     *
-     * mirrors isFilled() in src/shared/conditions.js. deliberately NOT the same
-     * question as blank(): an unticked toggle is not filled in — which is the
-     * case conditions are usually written against — but it is answered, so it
+     * Mirrors isFilled() in src/shared/conditions.js. Deliberately not the same
+     * question as blank(): an unticked toggle is not filled in — the case
+     * conditions are usually written against — but it is answered, so it
      * satisfies `required`.
      *
      * @param mixed $value

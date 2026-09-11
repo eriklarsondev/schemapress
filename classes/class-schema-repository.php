@@ -7,10 +7,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * reads and writes content type definitions.
- *
- * the only place that knows definitions are JSON in post meta. everything else
- * deals in arrays, so the storage medium can change without touching callers.
+ * Reads and writes content type definitions — the only place that knows they are
+ * JSON in post meta. Everything else deals in arrays.
  */
 class SchemaRepository
 {
@@ -20,9 +18,8 @@ class SchemaRepository
     private static $cache = [];
 
     /**
-     * loads a type's normalized definition. an unknown or malformed type
-     * yields an empty definition rather than an error, so read paths can stay
-     * branch-free.
+     * An unknown or malformed type yields an empty definition rather than an
+     * error, so read paths can stay branch-free.
      *
      * @param integer $type_id
      *
@@ -45,7 +42,7 @@ class SchemaRepository
     }
 
     /**
-     * normalizes and persists a definition, returning what was actually stored
+     * Normalizes and persists a definition, returning what was actually stored
      * so the caller can reconcile its own state.
      *
      * @param integer $type_id
@@ -76,16 +73,11 @@ class SchemaRepository
             wp_slash(wp_json_encode($normalized))
         );
 
-        // THE POST'S MODIFIED STAMP IS THE DEFINITION'S VERSION, and until this
-        // line nothing ever moved it. a definition is post META, and writing
-        // meta does not touch the post row — so the conflict check that reads
-        // that stamp (Rest::staleDefinition) compared a version that could only
-        // change when somebody renamed the collection. it was inert: two people
-        // with the same Schema tab open still overwrote each other silently,
-        // which is the exact loss it was written to stop.
-        //
-        // only when the definition actually MOVED. a save that stores what was
-        // already stored is not a version somebody else has to reload past
+        // The post's modified stamp is the definition's version, and writing
+        // meta does not touch the post row — so without this, Rest::staleDefinition
+        // compares a version that only moves when somebody renames the collection.
+        // Only when the definition actually changed: a save that stores what was
+        // already stored is not a version somebody else has to reload past.
         if ($moved) {
             wp_update_post(['ID' => $type_id]);
         }
@@ -93,7 +85,7 @@ class SchemaRepository
         self::$cache[$type_id] = $normalized;
 
         /**
-         * fires after a definition is stored.
+         * Fires after a definition is stored.
          *
          * @param integer $type_id
          * @param array   $normalized
@@ -114,13 +106,11 @@ class SchemaRepository
     }
 
     /**
-     * changes some of a type's settings, leaving its fields alone.
+     * Changes some of a type's settings, leaving its fields alone.
      *
-     * saveDefinition normalizes whatever it is handed, so a caller that only
-     * wanted to flip one switch and sent only that would have every field in
-     * the collection normalized out of existence. this reads the stored
-     * definition first and merges into it, which is the difference between
-     * editing a setting and replacing a schema.
+     * saveDefinition normalizes whatever it is handed, so a caller that sent
+     * only the one switch it wanted flipped would have every field normalized
+     * out of existence. This merges into the stored definition instead.
      *
      * @param integer $type_id
      * @param array   $settings the keys to change
@@ -136,7 +126,7 @@ class SchemaRepository
     }
 
     /**
-     * every content type post.
+     * Every content type post.
      *
      * @return \WP_Post[]
      */
@@ -153,7 +143,7 @@ class SchemaRepository
     }
 
     /**
-     * clears the in-request definition cache.
+     * Clears the in-request definition cache.
      *
      * @param integer|null $type_id
      *

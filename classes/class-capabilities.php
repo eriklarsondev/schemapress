@@ -7,48 +7,36 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the plugin's own capabilities.
- *
- * these used to be `edit_pages` and `manage_options` borrowed wholesale, and the
- * documentation's advice for widening the second one was to grant editors
- * `manage_options` — which hands over the entire site's settings, users and
- * plugins in order to let somebody add a field to a collection. borrowing a
- * capability means you cannot widen it without widening everything it also
- * governs, and you cannot narrow it at all.
- *
- * so there are two of this plugin's own, granted to roles on activation:
+ * The plugin's own capabilities.
  *
  *   schemapress_edit_content    fill entries in
  *   schemapress_manage_schema   decide what an entry IS, and what is published
  *
- * the split is Strapi's, for Strapi's reason — see class-admin.php. what is new
- * is that both are revocable: taking `schemapress_manage_schema` off an
- * administrator now leaves the rest of their administration intact.
+ * The split is Strapi's — filling in a Team Member and deciding what a Team
+ * Member is are different jobs at different blast radii. These used to be
+ * `edit_pages` and `manage_options` borrowed wholesale, which meant widening the
+ * second one handed over the entire site's settings, users and plugins in order
+ * to let somebody add a field.
  *
- * PER COLLECTION. a site with a Grants collection the finance team owns and a
- * News collection the comms team owns could not express that: one capability
- * covered every collection at once. a collection may now name the roles allowed
- * to edit its entries, and an empty list means "anyone who may edit content",
- * which is what every existing collection has.
+ * A collection may also name the roles allowed to edit its entries, so a Grants
+ * collection can belong to finance and a News collection to comms.
  */
 class Capabilities
 {
     /**
-     * what it takes to open the builder and work on entries.
+     * What it takes to open the builder and work on entries.
      */
     public const EDIT = 'schemapress_edit_content';
 
     /**
-     * what it takes to change the SHAPE of content, or what the site publishes.
+     * What it takes to change the SHAPE of content, or what the site publishes.
      */
     public const MANAGE = 'schemapress_manage_schema';
 
     /**
-     * which roles get which capability when the plugin is activated.
-     *
-     * administrators get both. editors get content but not schema, which is the
-     * division the two capabilities exist to draw — and the one a site gets by
-     * default rather than by reading the documentation.
+     * Which roles get which capability on activation. Editors get content but
+     * not schema, which is the division these exist to draw — and the one a site
+     * gets by default rather than by reading the documentation.
      *
      * @var array<string, string[]>
      */
@@ -58,23 +46,20 @@ class Capabilities
     ];
 
     /**
-     * hooks the capability filter.
+     * Hooks the capability filter.
      */
     public function __construct()
     {
-        // a site whose roles were stored before this version has neither
-        // capability, and would find the admin menu gone. rather than a
-        // migration that could half-run, an administrator is always allowed —
-        // the role that could grant itself the capability anyway
         add_filter('user_has_cap', [$this, 'grantToAdministrators'], 10, 4);
     }
 
     /**
-     * lets anyone who can manage the site manage schemas, capability row or not.
+     * Lets anyone who can manage the site manage schemas, capability row or not.
      *
-     * this is a floor, not a ceiling: it adds the plugin's capabilities to a
-     * user who already has `manage_options` and never removes them from anyone.
-     * a site that wants an administrator WITHOUT schema access removes
+     * A site whose roles were stored before these existed has neither, and would
+     * find the admin menu gone. This is a floor, not a ceiling: it adds to a
+     * user who already has `manage_options` and never removes from anyone. A
+     * site that wants an administrator without schema access removes
      * `manage_options` from them, which is the honest way to say it.
      *
      * @param array $allcaps
@@ -97,12 +82,10 @@ class Capabilities
     }
 
     /**
-     * writes the capabilities onto the site's roles.
+     * Writes the capabilities onto the site's roles.
      *
-     * called on activation and again from the upgrade routine, because a site
-     * that updated the files without deactivating never runs an activation hook
-     * — and would otherwise have the code for these capabilities and no role
-     * holding them.
+     * Called on activation and again from the upgrade routine, because a site
+     * that updated its files without deactivating never runs an activation hook.
      *
      * @return void
      */
@@ -122,24 +105,7 @@ class Capabilities
     }
 
     /**
-     * takes the capabilities back off every role.
-     *
-     * uninstall only, never deactivation: a deactivated plugin whose
-     * capabilities were revoked would come back with every role's grant lost,
-     * including ones the site had added by hand.
-     *
-     * @return void
-     */
-    public static function revoke()
-    {
-        foreach (wp_roles()->role_objects as $role) {
-            $role->remove_cap(self::EDIT);
-            $role->remove_cap(self::MANAGE);
-        }
-    }
-
-    /**
-     * whether the current user may use the builder at all.
+     * Whether the current user may use the builder at all.
      *
      * @return boolean
      */
@@ -149,7 +115,7 @@ class Capabilities
     }
 
     /**
-     * whether the current user may change the shape of content.
+     * Whether the current user may change the shape of content.
      *
      * @return boolean
      */
@@ -159,12 +125,12 @@ class Capabilities
     }
 
     /**
-     * whether the current user may edit the entries of one collection.
+     * Whether the current user may edit the entries of one collection.
      *
-     * a collection naming no roles is open to everyone who may edit content,
-     * which is what every collection was before this existed. naming some
-     * narrows it to those, plus anyone who may manage schemas — somebody who can
-     * delete the collection outright is not meaningfully kept out of its entries.
+     * A collection naming no roles is open to everyone who may edit content.
+     * Naming some narrows it to those, plus anyone who may manage schemas —
+     * somebody who can delete the collection outright is not meaningfully kept
+     * out of its entries.
      *
      * @param integer $type_id
      *
@@ -192,7 +158,7 @@ class Capabilities
     }
 
     /**
-     * the roles a collection restricts its entries to.
+     * The roles a collection restricts its entries to.
      *
      * @param integer $type_id
      *
@@ -208,7 +174,7 @@ class Capabilities
     }
 
     /**
-     * every role a collection could be restricted to, for the settings dialog.
+     * Every role a collection could be restricted to, for the settings dialog.
      *
      * @return array<array{value: string, label: string}>
      */

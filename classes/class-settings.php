@@ -7,35 +7,30 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the site's own settings, as opposed to a collection's.
+ * The site's own settings, as opposed to a collection's. One option row.
  *
- * one option row, because there is one site. a collection's settings live in
- * its definition and describe that collection; these describe the installation.
+ * The master switch governs the REST content API only. PHP and Twig are how a
+ * theme renders a page and are always available; switching them off would mean
+ * switching the site off. It is also not the admin transport under
+ * schemapress/admin/v1 — taking that down with it would leave no way to turn
+ * either back on.
  *
- * THE MASTER SWITCH. this plugin delivers content three ways — PHP, Twig and
- * the REST content API — and only the last of them leaves the server. the first
- * two are how a theme renders a page and are always available: switching them
- * off would mean switching the site off.
- *
- * so there is one switch, over the one surface where it means anything. off,
- * no collection answers over HTTP whatever its own settings say, and every
- * template on the site carries on exactly as before.
- *
- * IT IS NOT THE ADMIN TRANSPORT. the builder talks to WordPress over REST too,
- * under schemapress/admin/v1, and that is not what this governs — it is how the
- * screen holding this switch loads at all, and taking it down with the content
- * API would leave no way to turn either back on. see class-rest.php on why the
- * two namespaces are separate in the first place.
- *
- * ON BY DEFAULT, which sounds like the wrong direction for something that makes
- * content public until you notice it cannot publish anything by itself. the
- * opt-in is per collection and defaults to off; a master switch that also
- * defaulted to off would mean a collection whose own switch is ON quietly
- * serving nothing, with nothing on its screen explaining why.
+ * It is on by default, which sounds wrong for something that makes content
+ * public until you notice it cannot publish anything by itself: the opt-in is
+ * per collection and defaults to off. A master switch that also defaulted to off
+ * would mean a collection whose own switch is ON quietly serving nothing, with
+ * nothing on its screen explaining why.
  */
 class Settings
 {
     public const OPTION = 'schemapress_settings';
+
+    /**
+     * The longest a public API response may be cached, in seconds. A day: this
+     * is a shared cache directive, and an hour of an editor wondering why the
+     * site still shows the old text is the most it should be able to cost.
+     */
+    public const MAX_CACHE_AGE = 86400;
 
     /**
      * @var array|null
@@ -43,7 +38,7 @@ class Settings
     private static $cache = null;
 
     /**
-     * the site's settings, normalized.
+     * The site's settings, normalized.
      *
      * @return array
      */
@@ -57,17 +52,7 @@ class Settings
     }
 
     /**
-     * the longest a public API response may be cached, in seconds.
-     *
-     * the ceiling is a day. this is a shared cache directive — a CDN, a reverse
-     * proxy — and an hour of an editor wondering why the site still shows the
-     * old text is the most this setting should be able to cost somebody who
-     * turned it up without reading the note beside it.
-     */
-    public const MAX_CACHE_AGE = 86400;
-
-    /**
-     * whether the content API answers at all.
+     * Whether the content API answers at all.
      *
      * @return boolean
      */
@@ -77,7 +62,7 @@ class Settings
     }
 
     /**
-     * how long a public API response may be considered fresh.
+     * How long a public API response may be considered fresh.
      *
      * @return integer seconds; 0 means revalidate every time
      */
@@ -87,22 +72,11 @@ class Settings
     }
 
     /**
-     * whether deleting the plugin should take this plugin's content with it.
+     * Coerces an arbitrary payload into the settings shape.
      *
-     * @return boolean
-     */
-    public static function deletesData()
-    {
-        return !empty(self::all()['deleteDataOnUninstall']);
-    }
-
-    /**
-     * coerces an arbitrary payload into the settings shape.
-     *
-     * absent means default rather than off, so a settings row written by an
-     * older version — or no row at all, which is every site until someone
-     * visits this screen — reads as the default instead of as the API switched
-     * off.
+     * Absent means default rather than off, so a row written by an older version
+     * — or no row at all, which is every site until someone visits this screen —
+     * reads as the default instead of as the API switched off.
      *
      * @param mixed $settings
      *
@@ -116,26 +90,19 @@ class Settings
             'restApi' => array_key_exists('restApi', $settings)
                 ? (bool) $settings['restApi']
                 : true,
-            // how long a shared cache may hold a public API response. ZERO BY
-            // DEFAULT, which is not the same as uncacheable: every response
-            // carries an ETag either way, so a client that asks again gets a
-            // 304 and no body. that is the whole win with none of the staleness,
-            // and turning this up is a decision about a specific site's content
-            // rather than something to inflict on every install
+            // zero is not the same as uncacheable: every response carries an
+            // ETag either way, so a client that asks again gets a 304 and no
+            // body. That is the whole win with none of the staleness
             'apiCacheMaxAge' => min(
                 self::MAX_CACHE_AGE,
                 max(0, (int) ($settings['apiCacheMaxAge'] ?? 0))
             ),
-            // whether deleting the plugin erases its content. OFF, and the one
-            // setting in here whose default is not a judgement call: somebody
-            // deactivating a plugin to try something is not saying they want
-            // their collections gone, and there is no undo for guessing wrong
             'deleteDataOnUninstall' => !empty($settings['deleteDataOnUninstall']),
         ];
     }
 
     /**
-     * stores the settings and returns what was actually stored.
+     * Stores the settings and returns what was actually stored.
      *
      * @param mixed $settings
      *
@@ -149,7 +116,7 @@ class Settings
         self::$cache = $normalized;
 
         /**
-         * fires after the site's settings are stored.
+         * Fires after the site's settings are stored.
          *
          * @param array $normalized
          */
@@ -159,7 +126,7 @@ class Settings
     }
 
     /**
-     * clears the in-request cache.
+     * Clears the in-request cache.
      *
      * @return void
      */

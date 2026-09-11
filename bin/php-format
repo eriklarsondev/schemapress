@@ -10,10 +10,9 @@
 #    breaks only once a commit touches two PHP files — which is to say almost
 #    immediately, and with an error that says nothing about the cause.
 #
-# 2. Passing --config by hand would pin the hook to the .dist file and quietly
-#    ignore a local .php-cs-fixer.php override, which is the one thing that
-#    file exists to do. So the choice is made here, the same way the tool makes
-#    it: the local config if there is one, the committed default otherwise.
+# 2. The config lives in .config/, so it is never auto-discovered and has to be
+#    named. A local .config/php-cs-fixer.local.php wins if it exists, which is
+#    the override the tool's own .dist convention would have given us.
 #
 # --path-mode=intersection keeps the finder in the config authoritative — a
 # staged file the config excludes stays excluded rather than being pulled in
@@ -42,8 +41,8 @@ if [ ! -x "$fixer" ]; then
 	exit 0
 fi
 
-config=.php-cs-fixer.php
-[ -f "$config" ] || config=.php-cs-fixer.dist.php
+config=.config/php-cs-fixer.local.php
+[ -f "$config" ] || config=.config/php-cs-fixer.php
 
 exec "$fixer" fix \
 	--config="$config" \

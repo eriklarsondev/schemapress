@@ -16,7 +16,7 @@
         Run: composer lint
     </description>
 
-    <file>.</file>
+    <file>..</file>
 
     <!-- committed for distribution, not written here -->
     <exclude-pattern>/vendor/*</exclude-pattern>
@@ -28,6 +28,7 @@
          and every prefix rule in here is wrong about it -->
     <exclude-pattern>/tests/*</exclude-pattern>
     <exclude-pattern>/bin/*</exclude-pattern>
+    <exclude-pattern>/.config/*</exclude-pattern>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -63,7 +64,8 @@
         </properties>
     </rule>
 
-    <!-- 8.2 is the floor the plugin header declares, because Timber 2 needs it -->
+    <!-- 8.2 is the floor the plugin header declares; league/commonmark's own
+         dependencies are what set it -->
     <rule ref="PHPCompatibilityWP"/>
     <config name="testVersion" value="8.2-"/>
     <config name="minimum_wp_version" value="6.2"/>

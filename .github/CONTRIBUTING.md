@@ -43,7 +43,7 @@ Day to day:
 ```bash
 npm start              # watch build while working on the admin
 npm run build          # production build — commit build/ with your change
-npm test               # both suites, 537 assertions, no framework
+npm test               # both suites, 543 assertions, no framework
 npm run format         # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check   # report without writing — what CI runs
 npm run pot            # regenerate languages/schemapress.pot
@@ -108,16 +108,16 @@ be able to install. The pin makes that automatic.
 Two formatters, because there are two languages and no tool does both well. Both run
 automatically on commit; you should rarely need to think about them.
 
-**JavaScript and CSS: Prettier** (`.prettierrc`). Two-space indent, single quotes, no
+**JavaScript and CSS: Prettier** (the `prettier` key in `package.json`). Two-space indent, single quotes, no
 semicolons, 100 columns. That is deliberately *not* the WordPress house style — it is the
 style the admin was already written in, and 100 columns was chosen by measuring churn
 against the existing source (80 moved 1,984 lines, 120 moved 1,418, 100 moved 855).
 
-**PHP: PHP-CS-Fixer** (`.php-cs-fixer.dist.php`). PSR-12, again because that is what the
+**PHP: PHP-CS-Fixer** (`.config/php-cs-fixer.php`). PSR-12, again because that is what the
 codebase already was. Only non-risky fixers are enabled, so it cannot change behavior and
 is always safe to run over a dirty tree.
 
-Neither of these is `phpcs`. `phpcs.xml.dist` is a separate, security-focused ruleset —
+Neither of these is `phpcs`. `.config/phpcs.xml` is a separate, security-focused ruleset —
 escaping, sanitizing, nonces, capabilities, prepared SQL, the things a wordpress.org
 review blocks on. It deliberately excludes the WordPress *style* sniffs, and the reasoning
 is written at the top of that file. Run it with `npm run lint:php` or `composer lint`; it
@@ -225,7 +225,7 @@ CI must be green, and `main` requires it — every one of these is a required ch
 | Job | What it runs |
 | --- | --- |
 | `PHP 8.2` / `8.3` / `8.4` | `php -l` over every file, then the suite |
-| `wordpress.org review checks` | `phpcs.xml.dist` |
+| `wordpress.org review checks` | `.config/phpcs.xml` |
 | `Lint and format` | ESLint, Prettier, PHP-CS-Fixer |
 | `Build the admin` | rebuilds and checks `build/` still matches `src/` |
 

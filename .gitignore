@@ -47,7 +47,14 @@ schemapress.*.zip
 # --- local tooling ----------------------------------------------------------
 
 composer.phar
-.php-cs-fixer.cache
+
+# where the formatters and linters keep their caches, so they stop littering
+# the root with dotfiles nobody reads
+.cache/
+
+# a local override of .config/php-cs-fixer.php, for anyone who wants one
+.config/php-cs-fixer.local.php
+
 .phpunit.result.cache
 .phpunit.cache/
 

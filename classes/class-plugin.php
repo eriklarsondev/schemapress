@@ -7,11 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * boots the plugin's services.
- *
- * services are grouped by domain and instantiated in dependency order: the
- * field type registry must exist before any schema is parsed, and the schema
- * post type must be registered before bindings query it.
+ * Boots the plugin's services, in dependency order.
  */
 class Plugin
 {
@@ -26,7 +22,7 @@ class Plugin
     private $services = [];
 
     /**
-     * boots the plugin once. repeat calls return the existing instance.
+     * Repeat calls return the existing instance.
      *
      * @return Plugin
      */
@@ -41,7 +37,7 @@ class Plugin
     }
 
     /**
-     * retrieves a booted service by its short class name.
+     * A booted service, by its short class name.
      *
      * @param string $name
      *
@@ -55,8 +51,8 @@ class Plugin
     }
 
     /**
-     * instantiates each service in dependency order and keeps a reference so
-     * callers can reach them without re-instantiating hooks.
+     * Instantiates each service and keeps a reference, so callers can reach them
+     * without re-instantiating hooks.
      *
      * @return void
      */

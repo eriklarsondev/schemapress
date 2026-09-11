@@ -13,17 +13,9 @@
  * Requires PHP:      8.2
  * Requires at least: 6.2
  *
- * Requires PHP 8.2. That used to be Timber's floor, and Timber is no longer a
- * dependency — it is nette/utils, underneath league/commonmark, that declares
- * 8.2 today. The number is unchanged and so is the reason for the header:
- * WordPress checks it before activating, which is the only thing standing
- * between an older site and a fatal error inside the autoloader.
- *
- * THE VERSION IS IN TWO PLACES and has to be: WordPress reads the header with a
- * regular expression before any PHP runs, so it cannot be a constant, and the
- * plugin's own code cannot read the header without loading WordPress first. the
- * test suite asserts the two agree, which is the cheapest place to catch the one
- * that gets forgotten.
+ * The version is in two places and has to be: WordPress reads the header with a
+ * regular expression before any PHP runs, so it cannot be a constant. The test
+ * suite asserts the two agree.
  *
  * @package SchemaPress
  */
@@ -40,28 +32,16 @@ define('SCHEMAPRESS_PATH', plugin_dir_path(__FILE__));
 define('SCHEMAPRESS_URL', plugin_dir_url(__FILE__));
 
 /**
- * maps a class name in this namespace to its classes/class-*.php file.
- * SchemaPress\SchemaModel -> classes/class-schema-model.php
+ * Maps a class in this namespace to its file: SchemaPress\SchemaModel ->
+ * classes/class-schema-model.php
  *
  * @param string $class
  *
  * @return void
  */
 spl_autoload_register(function ($class) {
-    // the reading API is reachable by a bare name from a theme, which needs a
-    // global one. aliasing it here rather than at load time keeps the class
-    // unloaded until something asks for it.
-    //
-    // `SchemaPress` is the name to use and reads as what it is — a global class
-    // and a namespace can share a name, because a namespace is not an entity
-    // PHP resolves separately.
-    //
-    // `Content` ALSO ANSWERED HERE, and does not any more. It was the original
-    // name, kept so a template written against it would not break — but the
-    // global namespace is shared with every other plugin on the site, and
-    // `Content` is about as generic as a class name gets. Declaring it is a
-    // fatal error the moment anything else does, and this plugin cannot be the
-    // one that claims it.
+    // the reading API is reachable by a bare name from a theme. aliasing here
+    // rather than at load time keeps the class unloaded until something asks
     if ($class === 'SchemaPress') {
         class_alias(Content::class, $class);
 
@@ -81,28 +61,9 @@ spl_autoload_register(function ($class) {
     }
 });
 
-/**
- * loads Composer's autoloader when the plugin has its own vendor directory.
- *
- * THIS USED TO BE GUARDED ON `Timber\Timber` NOT EXISTING, on the reasoning
- * that a theme which had already loaded Timber did not need a second copy. The
- * reasoning was about Timber and the guard was over the whole autoloader —
- * which also carries league/commonmark, the Markdown parser the Documentation
- * screen is written against.
- *
- * So on any site where a theme loaded Timber first, this plugin skipped its own
- * autoloader entirely, CommonMark was never available, and the documentation
- * rendered as unparsed plain text under a notice advising the reader to run
- * `composer install` — advice that is wrong on a site installed from the plugin
- * directory, where there is no Composer and vendor/ is already right there.
- *
- * And it was worst on precisely the sites most likely to install this: a plugin
- * whose Twig functions need Timber is one a Timber site goes looking for.
- *
- * Composer's autoloader is additive. A class already declared is never asked
- * for again, so registering this one alongside another cannot replace what is
- * loaded; it only answers for what nothing else has.
- */
+// Unconditionally, even where a theme has already loaded one. Composer's
+// autoloader is additive — a class already declared is never asked for again —
+// so registering this alongside another cannot replace what is loaded.
 if (file_exists(SCHEMAPRESS_PATH . 'vendor/autoload.php')) {
     require_once SCHEMAPRESS_PATH . 'vendor/autoload.php';
 }
@@ -111,24 +72,16 @@ require_once SCHEMAPRESS_PATH . 'includes/helpers.php';
 
 add_action('plugins_loaded', [Plugin::class, 'boot']);
 
-// the command line, which only exists when there is one to register with. this
-// is not inside Plugin's service list because it is not a service: nothing on a
-// web request should pay for it, and WP-CLI is loaded long before this point
+// not in Plugin's service list: nothing on a web request should pay for it, and
+// WP-CLI is loaded long before this point
 add_action('plugins_loaded', [Cli::class, 'register']);
 
 /**
- * loads the translations.
+ * Loads the translations.
  *
- * on `init` rather than `plugins_loaded`, which is where WordPress 6.7 began
+ * On `init` rather than `plugins_loaded`, which is where WordPress 6.7 began
  * warning about it: a textdomain loaded before `init` cannot see a translation
- * a theme or another plugin registers on `init`, and just-in-time loading
- * handles the ordinary case anyway. this is here for the case it does not — a
- * plugin outside the wordpress.org directory, whose translations live in its own
- * `languages` directory rather than in wp-content/languages/plugins.
- *
- * this was missing entirely, which meant every `__()` in the plugin and the
- * wp_set_script_translations() call in class-assets.php were decorative: the
- * strings were marked up for translation and no translation could ever load.
+ * a theme or another plugin registers on `init`.
  *
  * @return void
  */
@@ -137,14 +90,11 @@ add_action('init', function () {
 });
 
 /**
- * prepares a fresh install.
+ * Prepares a fresh install.
  *
- * the rewrite flush is for the schema post type. the capability grant is what
- * makes the plugin usable at all: its capabilities are its own now rather than
- * borrowed from WordPress, so until a role holds one nobody can open the menu.
- *
- * an upgrade that never deactivates the plugin does not reach this, which is why
- * class-upgrade.php grants them again — see the note there.
+ * The capability grant is what makes the plugin usable at all: until a role
+ * holds one, nobody can open the menu. An upgrade that never deactivates does
+ * not reach this, which is why class-upgrade.php grants them again.
  *
  * @return void
  */
@@ -158,15 +108,12 @@ register_activation_hook(__FILE__, function () {
 });
 
 /**
- * puts the site back as it was, keeping every trace of the content.
+ * Puts the site back as it was, keeping every trace of the content.
  *
- * the queued jobs go, because a job is work this plugin was going to do and it
- * is not running any more — a cron event pointing at a hook nothing listens on
- * would sit in the schedule failing quietly. the capabilities STAY: a
- * deactivated plugin that stripped its capabilities from every role would come
- * back with the site's own grants lost, including ones added by hand. they are
- * removed on uninstall, which is the point at which somebody has said they are
- * finished with it.
+ * Queued jobs go, because a cron event pointing at a hook nothing listens on
+ * would sit in the schedule failing quietly. The capabilities stay until
+ * uninstall — revoking them on deactivation would lose the site's own grants,
+ * including ones added by hand.
  *
  * @return void
  */

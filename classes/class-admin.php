@@ -7,10 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the SchemaPress admin screen.
- *
- * the whole management interface — listing schemas, building section and field
- * trees, binding templates — is one React application mounted here. WordPress
+ * The SchemaPress admin screen: one React application mounted here. WordPress
  * supplies the chrome and the capability check; everything inside the page is
  * client-rendered and talks to the plugin's REST namespace.
  */
@@ -19,30 +16,9 @@ class Admin
     public const PAGE_SLUG = 'schemapress';
 
     /**
-     * what it takes to open the builder and work on content.
-     *
-     * these two were `edit_pages` and `manage_options` borrowed from WordPress.
-     * borrowing meant they could not be widened without widening everything else
-     * those capabilities govern, and could not be narrowed at all — so the
-     * documentation's advice for letting an editor build schemas was to grant
-     * them `manage_options`, which is the whole site. they are the plugin's own
-     * now; see class-capabilities.php.
+     * What it takes to open the builder and work on content.
      */
     public const CAPABILITY = Capabilities::EDIT;
-
-    /**
-     * what it takes to change the SHAPE of content, or what the site publishes.
-     *
-     * Strapi separates the Content-Type Builder from the Content Manager, and
-     * for a reason worth copying: filling in a Team Member and deciding what a
-     * Team Member IS are different jobs at different blast radii. renaming a
-     * field orphans every value stored under it; deleting a collection deletes
-     * every entry in it; turning on the content API publishes to the internet.
-     *
-     * one capability covered all of it here, so anyone who could write an entry
-     * could also restructure the data model and delete the lot.
-     */
-    public const SCHEMA_CAPABILITY = Capabilities::MANAGE;
 
     /**
      * the screen hook returned by add_menu_page, used to scope asset loading.
@@ -52,7 +28,7 @@ class Admin
     private $hook = null;
 
     /**
-     * hooks the menu page and its assets.
+     * Hooks the menu page and its assets.
      */
     public function __construct()
     {
@@ -61,7 +37,7 @@ class Admin
     }
 
     /**
-     * registers the top-level menu page.
+     * Registers the top-level menu page.
      *
      * @return void
      */
@@ -79,11 +55,8 @@ class Admin
     }
 
     /**
-     * renders the app's mount point.
-     *
-     * the loading state is server-rendered so the screen is never blank while
-     * the bundle parses, and it doubles as the visible failure state if the
-     * bundle is missing.
+     * The loading state is server-rendered so the screen is never blank while the
+     * bundle parses, and doubles as the visible failure state if it is missing.
      *
      * @return void
      */
@@ -99,7 +72,7 @@ class Admin
     }
 
     /**
-     * enqueues the admin bundle on this screen only.
+     * Enqueues the admin bundle on this screen only.
      *
      * @param string $hook
      *
@@ -117,32 +90,25 @@ class Admin
             'datasets' => Datasets::forClient(),
             'elements' => Elements::all(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
-            // the site's own settings, bootstrapped rather than fetched: a
-            // collection's settings dialog reads them to say when the API it is
-            // offering to publish to is switched off, and should not wait on a
-            // request to say so
+            // bootstrapped rather than fetched: a collection's settings dialog
+            // reads these to say when the API it offers to publish to is off,
+            // and should not wait on a request to say so
             'site' => Settings::all(),
-            // what this user may do beyond editing entries, so the screens can
-            // stop offering what the transport would refuse
             'can' => ['manageSchema' => Capabilities::canManage()],
-            // every role a collection can be restricted to, for its settings
-            // dialog. the site's own list, so a role added by another plugin is
-            // offered without this one knowing about it
+            // the site's own role list, so one added by another plugin is
+            // offered without this plugin knowing about it
             'roles' => Capabilities::roles(),
-            // long-running work already in flight when the screen loads, so a
-            // reindex started before a reload is still visible after it
+            // work already in flight, so a reindex started before a reload is
+            // still visible after it
             'jobs' => Batch::status(),
-            // the documentation is a screen in the app, so its text ships with
-            // the page rather than costing a request: it is a few files of
-            // Markdown this plugin ships, already compiled
             'docs' => Docs::forClient(),
             'version' => SCHEMAPRESS_VERSION,
         ]);
     }
 
     /**
-     * the field type registry reduced to what the builder's UI needs: enough
-     * to populate a type picker and to know which types nest.
+     * The field type registry reduced to what the builder's UI needs: enough to
+     * populate a type picker and to know which types nest.
      *
      * @return array
      */
@@ -151,8 +117,7 @@ class Admin
         $types = [];
 
         foreach (FieldTypes::all() as $slug => $definition) {
-            // an internal type is still valid to store — it just is not
-            // something you pick from a list
+            // still valid to store, just not something you pick from a list
             if (!empty($definition['internal'])) {
                 continue;
             }

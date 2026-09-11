@@ -23,9 +23,8 @@ export const fieldTypes = settings.fieldTypes || []
 export const elements = settings.elements || []
 
 /**
- * Ready-made option lists a select can draw from — countries, US states and so
- * on. Sent with the page because they are static, so a control can render
- * without a request and the picker can name them.
+ * Ready-made option lists a select can draw from. Sent with the page because they
+ * are static, so a control renders without a request.
  *
  * @type {Array<{slug: string, label: string, options: Array}>}
  */
@@ -34,14 +33,9 @@ export const datasets = settings.datasets || []
 /**
  * What this user may do beyond editing entries.
  *
- * `manageSchema` is the Content-Type Builder half of Strapi's split: defining
- * collections, changing their fields, deleting them, and deciding what the site
- * publishes. Filling entries in is the other half, and everyone who can open
- * this screen can do that.
- *
- * The screens read it to stop OFFERING what the transport would refuse. It is
- * not the check itself — every one of those routes checks for itself, and a
- * capability sent to the browser is a hint, not a gate.
+ * Screens read it to stop offering what the transport would refuse. It is not the
+ * check itself — every one of those routes checks for itself, and a capability
+ * sent to the browser is a hint, not a gate.
  *
  * @type {{manageSchema: boolean}}
  */
@@ -50,15 +44,9 @@ export const can = settings.can || {}
 /**
  * The site's own settings, as opposed to a collection's.
  *
- * Held here rather than threaded through props because two unrelated screens
- * read it: the Settings view edits it, and a collection's settings dialog reads
- * it to say when the API it is offering to publish to is switched off.
- * Prop-drilling it between those two would pass through three components with
- * no interest in it.
- *
- * Read when a screen opens rather than subscribed to — this is a fact about the
- * installation that changes on one screen a couple of times a year, and the
- * dialog that reads it is opened fresh each time.
+ * Held here rather than threaded through props: two unrelated screens read it,
+ * and prop-drilling between them would pass through three components with no
+ * interest in it. Read when a screen opens rather than subscribed to.
  */
 let siteSettings = normalize(settings.site)
 
@@ -88,9 +76,7 @@ export function site() {
 }
 
 /**
- * Every role a collection's entries can be restricted to.
- *
- * The site's own list rather than a fixed one, so a role added by another
+ * The site's own role list rather than a fixed one, so a role added by another
  * plugin is offered without this one knowing it exists.
  *
  * @type {Array<{value: string, label: string}>}
@@ -98,10 +84,8 @@ export function site() {
 export const roles = settings.roles || []
 
 /**
- * Long-running work that was already in flight when the page loaded.
- *
- * Bootstrapped so a reindex started before a reload is still visible after it,
- * rather than appearing to have vanished.
+ * Long-running work already in flight when the page loaded, so a reindex started
+ * before a reload is still visible after it.
  *
  * @type {Array<{id: string, job: string, typeId: number, done: number, total: number}>}
  */
@@ -119,10 +103,8 @@ export function setSite(next) {
 }
 
 /**
- * The choices a select field offers, from whichever source it names.
- *
- * Mirrors Datasets::forField on the server. Having one answer on each side is
- * what stops a control offering a value the sanitizer will then discard.
+ * Mirrors Datasets::forField on the server — one answer on each side is what
+ * stops a control offering a value the sanitizer will then discard.
  *
  * @param {Object} field
  * @return {Array} Options of {value, label}.

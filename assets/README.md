@@ -18,10 +18,10 @@ every time it updates.
 
 ## What is still needed
 
-None of these exist yet, and **the readme already promises the screenshots** —
-its `== Screenshots ==` section carries four captions. A caption with no image
-renders as a numbered blank on the plugin page, so either the files land here or
-that section comes out of `readme.txt`.
+None of these exist yet. **`readme.txt` has no `== Screenshots ==` section
+because of that** — a caption with no image renders as a numbered blank on the
+plugin page. The captions below are the ones it carried; put the section back
+when the files land.
 
 | File | Size | What it is |
 | --- | --- | --- |

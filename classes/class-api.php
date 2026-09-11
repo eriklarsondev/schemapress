@@ -7,43 +7,31 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * the content API.
- *
- * modeled on Strapi, down to the URLs and the parameter names, so a client
- * written against one reads against the other:
+ * The public content API, modeled on Strapi down to the URLs and the parameter
+ * names, so a client written against one reads against the other:
  *
  *   GET /wp-json/schemapress/api/team-members
  *   GET /wp-json/schemapress/api/team-members/9f2c…
  *
  *   ?filters[role][$eq]=Engineer
- *   ?filters[$or][0][role][$eq]=Design&filters[$or][1][lead][$eq]=1
  *   ?sort=name:asc&pagination[page]=2&pagination[pageSize]=50
  *
- * a list answers with `{ data: [...], meta: { pagination } }` and a single
- * entry with `{ data: {...}, meta: {} }`, which is the envelope a Strapi client
- * already unwraps.
+ * Separate from Rest on purpose. Rest is the builder's own transport and speaks
+ * the editor's shape, drafts included; this is readable without an account and
+ * only ever says what has been published. Keeping them apart means a change to
+ * the editor's transport cannot widen what the public can read.
  *
- * this is a separate class from Rest on purpose. Rest is the builder's own
- * transport — every route on it requires the capability to edit schemas, and it
- * speaks the editor's shape, values and drafts included. this speaks to the
- * outside world, is readable without an account, and only ever says what has
- * been published. keeping them apart means a change to the editor's transport
- * cannot widen what the public can read.
- *
- * nothing is exposed until a collection's Settings say so. see Public API in
- * SchemaModel::normalizeSettings — the default is off, which is the only safe
- * default for a switch that makes content world-readable.
+ * Nothing is exposed until a collection's Settings say so — the default is off.
  */
 class Api
 {
     /**
-     * `schemapress/api`, so a route reads /wp-json/schemapress/api/team-members
-     * — as close to Strapi's /api/team-members as a WordPress namespace gets.
+     * As close to Strapi's /api/team-members as a WordPress namespace gets.
      */
     public const NAMESPACE = 'schemapress/api';
 
     /**
-     * hooks the routes.
+     * Hooks the routes.
      */
     public function __construct()
     {
@@ -51,23 +39,17 @@ class Api
     }
 
     /**
-     * registers the two routes every collection answers on.
+     * Registers the two routes every collection answers on.
      *
-     * one pair of routes for all collections rather than a pair per collection:
-     * the collection is a path segment, so creating one does not mean
-     * re-registering anything, and a collection whose API is switched off is
-     * refused by the handler rather than by the route not existing.
+     * One pair for all collections rather than a pair per collection: the
+     * collection is a path segment, so creating one re-registers nothing.
      *
-     * THE MASTER SWITCH IS THE EXCEPTION. off, nothing here is registered at
-     * all, so `schemapress/api` is absent from the /wp-json/ index and every
-     * address under it answers WordPress's own rest_no_route 404. that is a
-     * stronger thing than a 403 from a handler: the namespace is gone rather
-     * than answering to say it will not help, so nothing advertises that this
-     * site has a content API or which collections it holds.
-     *
-     * the collection-level switches stay handler-side, and deliberately — those
-     * are per collection, and a route list that changed shape as collections
-     * were published would be a different API from one request to the next.
+     * The master switch is the exception. Off, nothing here is registered, so
+     * the namespace is absent from the /wp-json/ index entirely and every address
+     * under it answers rest_no_route — nothing advertises that this site has a
+     * content API or which collections it holds. The per-collection switches stay
+     * handler-side, since a route list that changed shape as collections were
+     * published would be a different API from one request to the next.
      *
      * @return void
      */
@@ -99,7 +81,7 @@ class Api
     }
 
     /**
-     * a page of entries.
+     * A page of entries.
      *
      * @param \WP_REST_Request $request
      *
@@ -131,7 +113,7 @@ class Api
     }
 
     /**
-     * one entry, by the uuid the rest of the API identifies it with.
+     * One entry, by the uuid the rest of the API identifies it with.
      *
      * @param \WP_REST_Request $request
      *
@@ -166,25 +148,17 @@ class Api
     // --- internals -----------------------------------------------------------
 
     /**
-     * a response a client can hold on to, and ask about cheaply next time.
+     * A response a client can hold on to, and ask about cheaply next time.
      *
-     * every response carried no cache headers at all, so a build step reading a
-     * collection every minute got a full WordPress bootstrap, a WP_Query and the
-     * whole resolver each time to be handed bytes it already had.
+     * There is always an ETag, hashed from the body — which is a pure function of
+     * the published content and the query, so it changes when and only when the
+     * answer does. A client that sends back `If-None-Match` gets a 304 with no
+     * body.
      *
-     * so there is an ETAG, always. it is a hash of the body, which is exactly
-     * the right thing to key on here: the body is a pure function of the
-     * published content and the query, so it changes when and only when the
-     * answer does. a client that sends back `If-None-Match` gets a 304 with no
-     * body — the query still runs, but nothing is serialized or transferred, and
-     * that is the bulk of a listing's cost.
-     *
-     * MAX-AGE IS ZERO UNLESS THE SITE SAYS OTHERWISE, and the two are different
-     * promises. an ETag says "ask me and I will tell you cheaply"; a max-age
-     * says "do not ask me for an hour", which means an editor publishing a
-     * correction cannot get it onto a CDN-fronted site until that hour is up.
-     * that is a real trade some sites want and not one to make on their behalf —
-     * see Settings::cacheMaxAge.
+     * max-age is zero unless the site says otherwise, because the two are
+     * different promises: an ETag says "ask me and I will tell you cheaply", a
+     * max-age says "do not ask me for an hour" — which means an editor publishing
+     * a correction cannot get it onto a CDN-fronted site until that hour is up.
      *
      * @param \WP_REST_Request $request
      * @param array            $payload
@@ -196,10 +170,8 @@ class Api
         $etag = '"' . md5((string) wp_json_encode($payload)) . '"';
         $maxAge = Settings::cacheMaxAge();
 
-        // a listing is public, so `public` is honest and lets a shared cache
-        // hold it. `must-revalidate` is what stops a proxy serving a stale copy
-        // past its age rather than asking — which is the failure mode that makes
-        // people distrust caching and turn it off everywhere
+        // `must-revalidate` stops a proxy serving a stale copy past its age
+        // rather than asking
         $control = $maxAge > 0
             ? sprintf('public, max-age=%d, must-revalidate', $maxAge)
             : 'public, max-age=0, must-revalidate';
@@ -215,26 +187,21 @@ class Api
         $response = rest_ensure_response($payload);
         $response->header('ETag', $etag);
         $response->header('Cache-Control', $control);
-        // the query string is part of the answer and the header is not, but a
-        // cache keyed on the URL alone would hand one client another's page of
-        // results if anything ever varied by header. saying so costs nothing
         $response->header('Vary', 'Accept-Encoding, Origin');
 
         return $response;
     }
 
     /**
-     * the collection behind a path segment, if it is open for this shape of read.
+     * The collection behind a path segment, if it is open for this shape of read.
      *
-     * only the collection's own pair is consulted here. the site's master
-     * switch is not: with it off these routes were never registered, so
-     * nothing reaches this method to be refused.
+     * Only the collection's own pair is consulted; with the master switch off
+     * these routes were never registered, so nothing reaches here to be refused.
      *
-     * the refusals say different things on purpose. a collection nobody named
-     * is a 404; one that exists but is closed is a 403 that says where the
-     * switch is — this is a plugin someone is building against, and "not found"
-     * for a collection they are looking at in the admin would send them hunting
-     * for a typo that is not there.
+     * The refusals differ on purpose: a collection nobody named is a 404, one
+     * that exists but is closed is a 403 saying where the switch is. "Not found"
+     * for a collection somebody is looking at in the admin would send them
+     * hunting for a typo that is not there.
      *
      * @param string $name  singular or plural machine name
      * @param string $route list or single
@@ -275,11 +242,9 @@ class Api
     }
 
     /**
-     * resolves a URL segment to a collection id.
-     *
-     * the segment is matched against both machine names, and hyphens are read
-     * as underscores — `team-members` is what a URL wants and `team_members` is
-     * what the key is.
+     * Resolves a URL segment to a collection id, matching both machine names.
+     * Hyphens read as underscores: `team-members` is what a URL wants and
+     * `team_members` is what the key is.
      *
      * @param string $name
      *
@@ -299,16 +264,12 @@ class Api
     }
 
     /**
-     * one entry as the API presents it.
+     * One entry as the API presents it: flat, the way Strapi v5 returns a
+     * document, with resolved values so a client never holds an id it has to
+     * spend another request on.
      *
-     * flat, the way Strapi v5 returns a document: the fields sit beside the
-     * identifiers rather than under an `attributes` envelope. values are the
-     * resolved ones — an image is its attachment, a relation is the entries it
-     * points at — so a client never holds an id it has to spend another request
-     * on.
-     *
-     * `values`, `state` and `ahead` are not here. they describe the editing of
-     * an entry, which is the builder's business and not the public's.
+     * `values`, `state` and `ahead` are absent — they describe the editing of an
+     * entry, which is the builder's business and not the public's.
      *
      * @param array $entry from Entries::shape()
      *
@@ -318,16 +279,11 @@ class Api
     {
         $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
 
-        // `title` is not here. WordPress needs a post_title for every row, so
-        // one is invented when the collection declared no field to name its
-        // entries by — from whichever text field happens to come first, which
-        // means reordering the schema would silently rename every entry. that
-        // is an artifact of storage rather than content.
-        //
-        // `slug` IS here, always. it is a stated setting rather than an
-        // accident — built from the field the collection chose, or the uuid
-        // when it chose none — and it is how a front end addresses an entry,
-        // so an entry that sometimes had one would be a routing bug.
+        // No `title`: WordPress needs a post_title for every row, so one is
+        // invented from whichever text field comes first when the collection
+        // named no field to title by — an artifact of storage, not content.
+        // `slug` is always here, because it is how a front end addresses an
+        // entry and one that sometimes had one would be a routing bug.
         $shaped = ['id' => $entry['id'], 'slug' => $entry['slug']];
 
         return array_merge($shaped, $data, [

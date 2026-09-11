@@ -1,52 +1,27 @@
 /**
  * Arranging the entry form.
  *
- * A canvas, not a settings table. Each field is drawn as a card on the same
- * twelve columns the entry form uses, so this screen looks like the thing it
- * configures and "half width, third from the top" is something you see rather
- * than something you read off a row of dropdowns and assemble in your head.
- *
- * This tab owns how the form BEHAVES, the Schema tab owns what the data is.
- * Nothing set here changes a stored value:
+ * A canvas, not a settings table: each field is a card on the same twelve columns
+ * the entry form uses, so "half width, third from the top" is something you see
+ * rather than read off a row of dropdowns. This tab owns how the form behaves;
+ * the Schema tab owns what the data is. Nothing here changes a stored value.
  *
  *   order   drag a card onto another and they swap places
- *   width   the badge on the card, or drop into a row's leftover space and the
- *           field takes exactly that width
- *   rows    drop onto the strip between two rows and the field starts a row of
- *           its own, at the width it already had. a grid packs its items
- *           together, so where a row ENDS is the one thing widths cannot say —
- *           without stating it, a half-width field dragged below a third-width
- *           one simply floats back up into the space beside it
+ *   width   the badge on the card, or drop into a row's leftover space
+ *   rows    drop onto the strip between two rows to start a row of its own. A
+ *           grid packs its items together, so where a row ENDS is the one thing
+ *           widths cannot say
  *   rest    click the card — placeholder, help text, required, when it shows
  *
- * The previous version made width a consequence of how far across a target you
- * released, which meant every drop was a guess and you could not move a field
- * without also resizing it. A gap, by contrast, has one sensible size: a third
- * of a row left over fits a third. That is a rule you can predict.
+ * Drop targets appear only while dragging, and only the one nearest the pointer
+ * is drawn: lit up all at once they bury the layout under the scaffolding for
+ * changing it. Every target is still mounted and reachable — see `probable`.
  *
- * Those gaps appear ONLY while dragging. Standing there permanently they read
- * as empty content rather than as targets, which is what made the first version
- * of this screen confusing.
- *
- * And only ONE of them is drawn at a time — whichever the pointer is nearest.
- * Drawing them all was the second version's mistake and a worse one: press a
- * card on a form of any size and a dozen dashed boxes bloomed at once, so the
- * layout you were reading vanished behind the scaffolding for changing it. The
- * question stopped being "where do I want this" and became "which of these is
- * the one I want", which is a question about the tool rather than the work.
- * Every target is still mounted and still reachable; see `probable`.
- *
- * The dragging is done with pointer events rather than HTML5 drag-and-drop.
- * That API hands the browser a drag session of its own, and this screen is the
- * worst case for it: the list rearranges live, so the node being dragged and
- * the targets around it are moved, mounted and unmounted throughout. Chrome
- * came out of that with a session it never closed — the layout could be
- * rearranged exactly once, and every press afterwards was swallowed with
- * nothing in the console to say so. A pointer gesture has no such session:
- * a press, some movement, a release, all of it ours.
- *
- * Nothing here reaches the front end. It is presentation of the admin screen,
- * which is this plugin's own to arrange.
+ * Pointer events rather than HTML5 drag-and-drop. That API hands the browser a
+ * drag session of its own, and this screen rearranges live — so the node being
+ * dragged and the targets around it are moved, mounted and unmounted throughout.
+ * Chrome came out of that with a session it never closed: the layout could be
+ * rearranged exactly once, and every press afterwards was swallowed silently.
  */
 
 import { Fragment, useEffect, useRef, useState } from '@wordpress/element'
@@ -121,11 +96,8 @@ const STARTS = {
 }
 
 /**
- * The width a field is set to, or its type's starting width when it has none.
- *
- * Through the shared layout helper, so the Layout tab and the entry form agree
- * about a field nobody has sized yet — this used to say full while the server
- * saved it at its type's width, and the field moved on the first save.
+ * Through the shared layout helper, so this tab and the entry form agree about a
+ * field nobody has sized yet.
  *
  * @param {Object} field
  * @return {string} The width token.
@@ -171,21 +143,16 @@ function fits(span) {
 }
 
 /**
- * Packs fields into rows of twelve, noting the space each row has left over
- * and where one row gives way to the next.
+ * Packs fields into rows of twelve, noting each row's leftover space and where
+ * one row gives way to the next — both of which are drop targets.
  *
- * Both only matter while something is being dragged, which is when they become
- * the answer to "where can this go". A leftover has exactly one sensible size,
- * so dropping into one sets the width rather than asking afterwards. A row
- * boundary has no size at all — dropping there keeps the width the field
- * already had, because starting a row is a decision about position.
+ * A leftover has one sensible size, so dropping into it sets the width. A row
+ * boundary has no size, so dropping there keeps the width the field had.
  *
- * Which is why the field being dragged is passed in: a boundary is only worth
- * offering when dropping on it would move something. A field already sitting at
- * the start of its own row is in exactly the state the strip promises, so the
- * two strips it lies between are no-ops — and being full width they are the
- * likeliest thing under the pointer the instant a drag begins, which made such
- * a card look like one that could not be dragged at all.
+ * The field being dragged is passed in because a boundary is only worth offering
+ * when dropping on it would move something: a field already at the start of its
+ * own row is already in the state the strip promises, and being full width those
+ * strips are the likeliest thing under the pointer when a drag begins.
  *
  * @param {Array}  fields
  * @param {number} dragging Index of the field being dragged, or -1.
@@ -272,34 +239,23 @@ function pack(fields, dragging = -1) {
 }
 
 /**
- * How far the pointer may be from a target and still be taken to mean it.
- *
- * About a row's height. Inside the canvas the pointer is always within this of
- * something, which is the point — the dead space between rows is a dozen pixels
- * and nobody aims at it. Beyond it there is no answer, so dragging out into the
- * page and letting go drops nothing rather than picking the last strip on the
- * screen by default.
+ * How far the pointer may be from a target and still be taken to mean it — about
+ * a row's height. Beyond it there is no answer, so dragging out into the page and
+ * letting go drops nothing rather than picking the last strip by default.
  */
 const REACH = 96
 
 /**
- * The one target a drag most likely means.
+ * The one target a drag most likely means. All of them stay mounted and hittable;
+ * only the likeliest is drawn.
  *
- * EVERY LEGAL TARGET USED TO BE DRAWN AT ONCE. On a form of any size that is a
- * dozen dashed boxes appearing the instant you press a card — the layout you
- * were reading disappears behind the scaffolding for changing it, and the
- * question stops being "where do I want this" and becomes "which of these is
- * the one I want". They are all still here, and all still hittable; only the
- * likeliest is drawn.
+ * Nearest wins, measured to the rectangle rather than its middle, so a wide strip
+ * is not beaten by a small gap that happens to be centred closer. A pointer
+ * inside a target is at distance zero and wins outright.
  *
- * Nearest wins, measured to the rectangle rather than to its middle, so a wide
- * strip is not beaten by a small gap that happens to be centred closer. A
- * pointer inside a target is at distance zero and always wins outright.
- *
- * The targets are measured rather than calculated because they are on screen
- * already: the DOM knows where a grid put them and this would otherwise be a
- * second implementation of the same twelve columns, free to disagree with the
- * first.
+ * Measured rather than calculated because they are on screen already: the DOM
+ * knows where the grid put them, and calculating would be a second implementation
+ * of the same twelve columns, free to disagree with the first.
  *
  * @param {Element|null} canvas
  * @param {number}       x
@@ -360,17 +316,12 @@ function positions(fields) {
 }
 
 /**
- * Writes the arrangement that is on screen into the fields themselves.
+ * Writes the arrangement on screen into the fields themselves.
  *
- * A width is stored; a position was not. Everything else about the layout was
- * inferred from widths at render time, which is why changing one field moved
- * the others — the grid simply re-packed, and there was nothing recorded to say
- * that Full Name had been put where it was on purpose.
- *
- * So before a width changes, every field is pinned to the column and row it is
- * already in. The field being resized changes; the rest stay where they were
- * put, and a gap opens where the width was given back rather than the next
- * field sliding into it.
+ * Position is otherwise inferred from widths at render time, so changing one
+ * field re-packs the grid and moves the others. Pinning every field to the column
+ * and row it is already in before a width changes means the rest stay put, and a
+ * gap opens where the width was given back.
  *
  * @param {Array} fields    the fields as they will be, with the new width
  * @param {Array} reference the fields as they are, whose layout to keep
@@ -504,13 +455,9 @@ export function FormTab({ fields, onChange }) {
     )
 
   /**
-   * Swaps one field for an edited copy of it, and stores the result.
-   *
-   * The dialog has its own confirm button, and a confirm button that only
-   * confirms into another unsaved pile is a confirm button that lied. So
-   * pressing Save there saves the layout — the drag-and-drop on the canvas
-   * still batches behind Save layout, because a drag is exploratory in a way
-   * that filling in a form is not.
+   * Swaps one field for an edited copy and stores the result. The dialog's own
+   * confirm saves immediately; drag-and-drop on the canvas still batches behind
+   * Save layout, because a drag is exploratory in a way a form is not.
    *
    * @param {number} index
    * @param {Object} next
@@ -524,11 +471,8 @@ export function FormTab({ fields, onChange }) {
   }
 
   /**
-   * Reorders as a dragged card passes over another, rather than on drop.
-   *
-   * The layout rearranges under the pointer, so what is on screen mid-drag is
-   * what you will get — including how the rows re-wrap, which is the part that
-   * was hardest to predict before.
+   * Reorders as a dragged card passes over another rather than on drop, so what is
+   * on screen mid-drag is what you get — including how the rows re-wrap.
    *
    * @param {number} over
    * @return {void}
@@ -545,15 +489,12 @@ export function FormTab({ fields, onChange }) {
   }
 
   /**
-   * Drops the dragged field onto a row boundary, giving it a row of its own.
+   * Drops the dragged field onto a row boundary, giving it a row of its own at the
+   * width it already had.
    *
-   * It keeps the width it had: a row of its own is where the field sits, not
-   * how wide it is, and a field that jumped to full width every time it was
-   * moved down would be a field you cannot move down.
-   *
-   * The field after it is pinned to a new row too. Without that it flows up
-   * into whatever the new row has spare — which is the collapse this whole
-   * mechanism exists to stop, only one field further along.
+   * The field after it is pinned to a new row too — without that it flows up into
+   * whatever the new row has spare, which is the collapse this mechanism exists to
+   * stop, one field further along.
    *
    * @param {Object} cell
    * @return {void}
@@ -674,14 +615,11 @@ export function FormTab({ fields, onChange }) {
   }
 
   /**
-   * The rest of the gesture, followed on the window.
+   * The rest of the gesture, followed on the window: the pointer does not stay
+   * over the card it started on, and a release outside the grid has to end the
+   * drag as reliably as one inside it.
    *
-   * On the window rather than on the cards because the pointer does not stay
-   * over the card it started on — that is the entire point — and because a
-   * release outside the grid has to end the drag as reliably as one inside it.
-   *
-   * Bound once. Everything these read is a ref or a functional setter, so the
-   * first render's copies behave the same as any later one.
+   * Bound once — everything these read is a ref or a functional setter.
    */
   useEffect(() => {
     /**
@@ -909,34 +847,20 @@ export function FormTab({ fields, onChange }) {
 
 /**
  * Somewhere to drop: a row's leftover space, or the boundary between two rows.
+ * Visible only while dragging — standing on screen the rest of the time they read
+ * as empty boxes in a form rather than as targets.
  *
- * Only while dragging. Standing on screen the rest of the time, these read as
- * content — empty boxes in a form — rather than as targets, which is what the
- * first version of this tab got wrong.
+ * Every legal target stays mounted, which is what makes them measurable and so
+ * reachable, but one nobody is aiming at draws nothing and holds its place.
  *
- * ONLY ONE OF THEM IS DRAWN. Every legal target is mounted, because that is what
- * makes them measurable and therefore reachable, but a target nobody is aiming
- * at draws nothing at all: it holds its place in the grid and stays invisible.
- * Lit up all at once they buried the layout under the scaffolding for changing
- * it — a dozen dashed boxes, each as loud as the fields they were supposed to
- * be arranged around.
+ * The drawn state keeps the same box as the undrawn one, border included, so
+ * lighting up moves nothing. A target that resized as the pointer approached
+ * would shift the row underneath, moving the target away from the pointer, which
+ * un-picks it — and the two states flicker against each other forever.
  *
- * The one that is drawn keeps the same box as the one that is not, border
- * included, so lighting up moves nothing. A target that resized as the pointer
- * approached would shift the row underneath it, which moves the target away
- * from the pointer, which un-picks it — and the two states flicker against each
- * other forever.
- *
- * A leftover is labeled with the width the field will become, because that is
- * the whole bargain: the gap is this wide, so the field will be too. A boundary
- * makes no such bargain — it is about which row the field is on, and the field
- * arrives at the width it left with. Its label is drawn OUT of the flow, so a
- * strip a dozen pixels tall can carry a word without becoming a box.
- *
- * Which boundaries exist at all is `pack`'s decision, and it offers only the
- * ones that would move the field: a strip saying New row that leaves the field
- * exactly where it was is worse than no strip, because it is full width and
- * therefore the easiest thing on the screen to drop on by accident.
+ * A leftover is labeled with the width the field will become; a boundary makes no
+ * such bargain, so its label is drawn out of the flow and a strip a dozen pixels
+ * tall can carry a word without becoming a box.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The target.
@@ -1136,18 +1060,11 @@ function FieldCard({ field, index, dragging, onPointerDown, onWidth, onRequired 
 }
 
 /**
- * One field's presentation, as a dialog.
+ * One field's presentation, as a dialog. None of it changes what the field
+ * stores, which is why none of it is on the Schema tab.
  *
- * Everything here is about how the entry form BEHAVES — the text it shows, how
- * wide the control is, whether it can be left blank, when it appears at all.
- * None of it changes what the field stores, which is why none of it is on the
- * Schema tab. That tab answers "what is an entry made of"; this one answers
- * "what does filling one in look like".
- *
- * Edits are held here until Done. Writing them straight through meant the card
- * behind the dialog jumped to a new width the instant you touched the control,
- * with no way back — a dialog with a confirm button should not have already
- * happened by the time you press it.
+ * Edits are held here until Done: writing them straight through made the card
+ * behind the dialog jump the instant you touched a control, with no way back.
  *
  * @param {Object} props
  * @return {JSX.Element} The dialog.
@@ -1245,12 +1162,9 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
 }
 
 /**
- * When a field appears on the entry form.
- *
- * The rule reads as a sentence — "show when Contactable is filled in" — so it
- * is laid out as one: the lead-in is a label over the row rather than a word
- * wedged beside the first select, which left the two controls sitting at
- * different heights with nothing lining up.
+ * When a field appears on the entry form. The rule reads as a sentence — "show
+ * when Contactable is filled in" — so it is laid out as one, with the lead-in a
+ * label over the row rather than a word wedged beside the first select.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The settings, or null when nothing could gate it.

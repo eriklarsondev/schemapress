@@ -1,14 +1,10 @@
 /**
- * Where a control sits on the twelve-column form grid.
+ * Where a control sits on the twelve-column form grid — one source for the Form
+ * tab that sets these, the entry form that renders them, and the nested lists
+ * inside a group or a repeater row.
  *
- * One source for the whole app: the Form tab that sets these, the entry form
- * that renders them, and the nested lists inside a group or a repeater row. A
- * component carries its layout with it when it is imported, so a group has to
- * lay its children out the same way the top level does — otherwise arranging a
- * component would be arranging something nobody ever sees.
- *
- * Every class is written out because Tailwind cannot see a computed name, and
- * an unknown width falls back to full: a field should never vanish because its
+ * Every class is written out because Tailwind cannot see a computed name, and an
+ * unknown width falls back to full: a field should never vanish because its
  * layout was mis-set.
  */
 
@@ -43,14 +39,10 @@ const SPACERS = {
 }
 
 /**
- * The width a field is drawn at.
- *
- * Its own when it has one — any field can be set to any width, and that choice
- * always wins. A field that has not been given one yet, which is every field
- * the moment it is added, starts at its TYPE's width rather than full: the
- * server fills in the same default on save (FieldTypes::WIDTHS), so the form
- * shows now what will be stored, instead of a full-width field that jumps to a
- * third the first time it is saved.
+ * Its own width when it has one. A field that has not been given one starts at
+ * its type's, matching what the server fills in on save (FieldTypes::WIDTHS) — so
+ * the form shows now what will be stored, rather than a full-width field that
+ * jumps to a third the first time it is saved.
  *
  * @param {Object} field
  * @return {string} third, half, two-thirds or full.
@@ -91,12 +83,9 @@ export function offsetOf(field) {
 }
 
 /**
- * Whether a field insists on starting a row of its own.
- *
- * A grid packs its items together, so a half-width field after a third-width
- * one shares that row whether or not you meant it to. Arranging a form is
- * partly deciding where a row ENDS, and that is a decision the layout cannot
- * infer from widths — hence a field can say it, and keep saying it however the
+ * A grid packs its items together, so a half-width field after a third-width one
+ * shares that row whether or not you meant it to. Where a row ends cannot be
+ * inferred from widths, so a field says it — and keeps saying it however the
  * fields before it are later resized.
  *
  * @param {Object} field
@@ -107,9 +96,7 @@ export function startsRow(field) {
 }
 
 /**
- * Whether a row break belongs before a field as it is rendered.
- *
- * Never before the first one: there is no row above it to end, and a break
+ * Never before the first field: there is no row above it to end, and a break
  * there is an empty row at the top of the form.
  *
  * @param {Object} field
@@ -121,11 +108,9 @@ export function breakBefore(field, index) {
 }
 
 /**
- * The classes for that break: an item of no height spanning every column.
- *
- * Being full width it cannot share the row above, so it takes what is left of
- * it and the next field begins a row. Below the breakpoint the grid is a single
- * column — every field already has a row to itself — so it is not rendered.
+ * An item of no height spanning every column: being full width it cannot share
+ * the row above, so it takes what is left and the next field begins a row. Below
+ * the breakpoint the grid is one column, so it is not rendered.
  *
  * @return {string} A class string.
  */
@@ -134,17 +119,13 @@ export function rowBreakClass() {
 }
 
 /**
- * The grid classes placing one field.
+ * Width only. A field's leading blank space is drawn as a spacer beside it (see
+ * spacerClass) rather than set here as a column to start at.
  *
- * Width only. A field's leading blank space is drawn as a spacer beside it —
- * see spacerClass — rather than set here as a column to start at.
- *
- * `col-start` was the obvious way to do it and it is wrong: an offset is space
- * before a field ON ITS ROW, and col-start counts from the left edge of the
- * grid. A field third along a row with two columns of space in front of it
- * would be sent to column 3 instead of column 9 — and, being a definite
- * position earlier than the row had already reached, dropped onto the next row
- * as well.
+ * `col-start` is the obvious way and it is wrong: an offset is space before a
+ * field on its row, and col-start counts from the left edge of the grid — so a
+ * field third along a row would be sent to column 3 instead of column 9, and
+ * dropped onto the next row besides.
  *
  * @param {Object} field
  * @return {string} A class string.
@@ -164,9 +145,8 @@ export function leadingSpace(field) {
 }
 
 /**
- * The classes for that blank space: an item of the right width and nothing in
- * it. Below the breakpoint the grid is one column and there is no space to
- * leave, so it is not rendered.
+ * An item of the right width and nothing in it. Below the breakpoint the grid is
+ * one column and there is no space to leave, so it is not rendered.
  *
  * @param {number} columns
  * @return {string} A class string.

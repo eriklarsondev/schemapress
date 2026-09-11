@@ -7,30 +7,21 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * long work, done in pieces.
+ * Long work, done in pieces.
  *
- * three operations in this plugin walk every entry of a collection: rebuilding
- * the index after a field changes, deleting a collection, and minting
- * identifiers for entries that predate having any. all three were written as
- * `numberposts => -1` inside the request that asked for them.
+ * Three operations walk every entry of a collection: rebuilding the index after a
+ * field changes, deleting a collection, and minting identifiers. Done inside the
+ * request that asked for them, a collection of ten thousand entries does not
+ * finish — and half-finishes, leaving the index rebuilt for the entries it got
+ * through and stale for the rest with nothing recording where it stopped.
  *
- * that is fine at the size a collection is when you are building it and wrong at
- * the size it reaches. renaming one field on a collection of ten thousand
- * entries meant a REST request holding ten thousand post objects in memory and
- * writing a meta row per indexable field per entry, which does not finish. what
- * made it worse than slow was that it half-finished: the index was rebuilt for
- * the entries the request got through and stale for the rest, with nothing
- * recording where it stopped.
+ * So the work is a job: it knows how far it has got, and it survives the request
+ * that started it. WP-Cron carries on from the cursor, the admin sees progress,
+ * and WP-CLI can run the whole thing to completion in one go.
  *
- * so the work is a JOB. a job knows what it is doing, how far it has got and how
- * much is left, and it survives the request that started it — WP-Cron picks it
- * up and carries on from the cursor. the admin can see the progress and WP-CLI
- * can run the whole thing to completion in one go.
- *
- * SMALL COLLECTIONS STILL RUN INLINE. queuing a job to reindex six entries would
- * mean a collection whose filters do not work until cron next fires, which is a
- * worse answer than the one-second pause it replaces. INLINE_LIMIT is where that
- * trade turns over.
+ * Small collections still run inline. Queuing a job to reindex six entries would
+ * mean filters that do not work until cron next fires, which is worse than the
+ * one-second pause it replaces. INLINE_LIMIT is where that trade turns over.
  */
 class Batch
 {
@@ -61,10 +52,8 @@ class Batch
     public const INLINE_LIMIT = 200;
 
     /**
-     * how long one drain may run before it reschedules itself.
-     *
-     * twenty seconds, which is comfortably under the shortest PHP time limit
-     * this plugin is likely to meet and long enough to be worth the trip.
+     * How long one drain may run before it reschedules itself — comfortably under
+     * the shortest PHP time limit this is likely to meet.
      */
     public const BUDGET = 20;
 
@@ -82,12 +71,11 @@ class Batch
     }
 
     /**
-     * adds a job to the queue and asks for it to be run.
+     * Adds a job to the queue and asks for it to be run.
      *
-     * a job naming the same operation on the same collection as one already
-     * queued replaces it rather than joining it — reindexing a collection twice
-     * produces the same index as reindexing it once, and the second request is
-     * usually somebody saving the schema again while the first is still running.
+     * A job naming the same operation on the same collection replaces one already
+     * queued: reindexing twice produces the same index as reindexing once, and the
+     * second request is usually somebody saving the schema again.
      *
      * @param string $job  reindex, purge or backfill
      * @param array  $args job-specific, always including type_id
@@ -113,7 +101,7 @@ class Batch
         self::schedule();
 
         /**
-         * fires when long-running work is queued.
+         * Fires when long-running work is queued.
          *
          * @param string $id
          * @param string $job
@@ -125,7 +113,7 @@ class Batch
     }
 
     /**
-     * runs queued work until the budget is spent or the queue is empty.
+     * Runs queued work until the budget is spent or the queue is empty.
      *
      * @param integer $budget seconds, or 0 for "until it is finished"
      *
@@ -162,9 +150,8 @@ class Batch
     }
 
     /**
-     * runs one job to completion, ignoring the budget.
-     *
-     * what WP-CLI calls, and what a test calls: neither wants to wait for cron.
+     * Runs one job to completion, ignoring the budget — what WP-CLI and the tests
+     * call, since neither wants to wait for cron.
      *
      * @param string $id
      *
@@ -210,7 +197,7 @@ class Batch
     // --- the steps -----------------------------------------------------------
 
     /**
-     * advances one job by one chunk, removing it when it is finished.
+     * Advances one job by one chunk, removing it when it is finished.
      *
      * @param array $job
      *
@@ -259,7 +246,7 @@ class Batch
             self::store($jobs);
 
             /**
-             * fires when a queued job finishes.
+             * Fires when a queued job finishes.
              *
              * @param string $id
              * @param array  $job
@@ -275,7 +262,7 @@ class Batch
     }
 
     /**
-     * rebuilds a chunk of a collection's index.
+     * Rebuilds a chunk of a collection's index.
      *
      * @param array $job
      *
@@ -292,7 +279,7 @@ class Batch
     }
 
     /**
-     * permanently deletes a chunk of a collection's entries.
+     * Permanently deletes a chunk of a collection's entries.
      *
      * @param array $job
      *
@@ -319,13 +306,10 @@ class Batch
     }
 
     /**
-     * re-addresses a chunk of a collection's entries.
+     * Re-addresses a chunk of a collection's entries. Only entries still carrying
+     * a uuid are touched, so a re-run cannot rewrite a published address.
      *
-     * queued when a collection changes the field its slugs are built from. only
-     * entries still carrying a uuid are touched, so this is idempotent and a
-     * re-run cannot rewrite an address anybody has published.
-     *
-     * the trash is left out: a trashed entry's post_name is WordPress's own
+     * The trash is left out: a trashed entry's post_name is WordPress's own
      * `__trashed` form, and restoring is what gives it a real one back.
      *
      * @param array $job
@@ -343,7 +327,7 @@ class Batch
     }
 
     /**
-     * mints identifiers for a chunk of a collection's entries.
+     * Mints identifiers for a chunk of a collection's entries.
      *
      * @param array $job
      *
@@ -360,11 +344,9 @@ class Batch
     }
 
     /**
-     * one page of a collection's entry ids.
-     *
-     * ordered by ID so the cursor means the same thing between requests. the
-     * default `date` ordering would let an entry edited mid-job move across the
-     * cursor and be handled twice or not at all.
+     * One page of a collection's entry ids, ordered by ID so the cursor means the
+     * same thing between requests. The default `date` ordering would let an entry
+     * edited mid-job move across the cursor and be handled twice or not at all.
      *
      * @param integer $type_id
      * @param integer $offset
@@ -393,7 +375,7 @@ class Batch
     }
 
     /**
-     * how many entries a job has to get through, for the progress display.
+     * How many entries a job has to get through, for the progress display.
      *
      * @param string $job
      * @param array  $args
@@ -434,6 +416,8 @@ class Batch
     }
 
     /**
+     * Writes the queue back, removing it when nothing is left.
+     *
      * @param array $jobs
      *
      * @return void
@@ -482,6 +466,8 @@ class Batch
     }
 
     /**
+     * Releases the queue lock.
+     *
      * @return void
      */
     private static function unlock()
@@ -490,7 +476,7 @@ class Batch
     }
 
     /**
-     * whether a collection is small enough to do the work on the spot.
+     * Whether a collection is small enough to do the work on the spot.
      *
      * @param integer $type_id
      *

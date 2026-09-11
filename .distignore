@@ -8,6 +8,13 @@
 #
 # Read by `npm run package`, which is what builds the zip. The format is one
 # path fragment per line, the same as WP-CLI's `wp dist-archive`.
+#
+# THIS IS THE SECOND FILTER, NOT THE ONLY ONE. The file list comes from `git
+# ls-files`, so an untracked file cannot ship whether or not it is named here.
+# That ordering matters: this list is a denylist, and a denylist over a working
+# directory ships whatever nobody thought to add to it — which is how
+# .claude/settings.local.json ended up inside a release, and how a stray .env
+# would have.
 
 # --- version control and CI --------------------------------------------------
 
@@ -36,18 +43,17 @@ node_modules
 package-lock.json
 
 # --- development tooling -----------------------------------------------------
+#
+# .config/ holds the linter and formatter rulesets. The BUILD config is not in
+# there and does not belong there — webpack, PostCSS and Tailwind ship with
+# src/, because a package carrying its own source has to carry what rebuilds it.
 
+.config
+.cache
 composer.json
 composer.lock
-phpcs.xml.dist
-phpcs.xml
-.php-cs-fixer.dist.php
-.php-cs-fixer.php
-.php-cs-fixer.cache
 .phpunit.result.cache
 .eslintrc.js
-.eslintignore
-.prettierrc
 .prettierignore
 
 # --- the suite and the scripts -----------------------------------------------
@@ -73,10 +79,11 @@ assets
 # the GPL requires the license to travel with the work and the directory expects
 # to find it. The rest is written for somebody reading the repository, and would
 # otherwise turn up inside a stranger's WordPress admin.
+#
+# docs/*.md is the exception and stays: the Documentation screen renders it.
 
 README.md
 CHANGELOG.md
-CONTRIBUTING.md
 
 # --- generated at runtime ----------------------------------------------------
 
@@ -89,6 +96,22 @@ generated
 # and is not obviously wrong from the outside.
 
 schemapress.*.zip
+
+# --- local tooling and environment -------------------------------------------
+#
+# None of these are tracked, so `git ls-files` already excludes them. They are
+# named anyway: the two filters are independent, and a belt-and-braces entry
+# costs a line against the chance somebody commits one by accident.
+
+.claude
+.env
+.env.local
+.idea
+.vscode
+composer.phar
+*.log
+*.bak
+*.orig
 
 # --- operating systems -------------------------------------------------------
 

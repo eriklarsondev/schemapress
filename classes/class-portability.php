@@ -7,37 +7,22 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * collections, as a file.
+ * Collections, as a file — so a schema can go into version control, move from
+ * staging to production, or seed a fresh install.
  *
- * a collection's definition lived in exactly one place: a JSON string in one
- * meta row of one database. that is a fine place to keep it and the only place
- * it was, which made three ordinary things impossible.
+ * The file is an export rather than the source of truth: a definition here is
+ * edited through a UI by people who do not have the repository, so the database
+ * stays authoritative and this is how a copy of it travels.
  *
- * you could not put a schema in version control, so "when did this field become
- * required" had no answer. you could not move one from staging to production
- * without rebuilding it by hand in a second admin and hoping the field keys came
- * out the same — and they would not, because a key is derived from a label and
- * the labels get retyped. and you could not seed a fresh install, so every
- * developer on a project started from an empty SchemaPress.
+ * The key is the identity. An import matches an existing collection by its
+ * machine key, never by title or post id — the key is the one thing stable
+ * across two installations. A title is what somebody typed and a post id is a row
+ * number in a database this file has left.
  *
- * Strapi keeps its content types as files in the repository and this does not,
- * for a good reason — a definition here is edited through a UI by people who do
- * not have the repository. so the file is an EXPORT rather than the source of
- * truth: the database stays authoritative, and this is how a copy of it travels.
- *
- * THE KEY IS THE IDENTITY. an import matches an existing collection by its
- * machine key, never by its title or its post id, because the key is the one
- * thing that is stable across two installations — it is what the post type is
- * named after and what a template refers to. a title is what somebody typed and
- * a post id is a row number in a database this file has left.
- *
- * WHAT AN IMPORT MAY TOUCH. only this plugin's own post types — the schema and
- * component posts, and each collection's entry post type. a site's pages, posts
- * and every other plugin's content are never read, written or deleted. the one
- * thing an import shares with the rest of the site is the MEDIA LIBRARY, and
- * that is why attachment ids are matched against it by file rather than trusted:
- * on a site with its own uploads, id 482 already exists and is somebody else's
- * photograph.
+ * An import touches only this plugin's own post types. The one thing it shares
+ * with the rest of the site is the media library, which is why attachment ids are
+ * matched by file rather than trusted: on a site with its own uploads, id 482
+ * already exists and is somebody else's photograph.
  */
 class Portability
 {
@@ -48,13 +33,9 @@ class Portability
     public const FORMAT = 1;
 
     /**
-     * how many entries one export carries before it is refused.
-     *
-     * an export is one JSON document held in memory and handed to a browser.
-     * that is the right shape for a schema and for the seed data a fresh install
-     * wants, and the wrong shape for a backup of a collection with a hundred
-     * thousand rows in it — which is what a database backup is for, and what
-     * this would silently fail at.
+     * How many entries one export carries before it is refused. An export is one
+     * JSON document held in memory; a collection with a hundred thousand rows in
+     * it wants a database backup instead.
      */
     public const MAX_ENTRIES = 5000;
 
@@ -65,7 +46,7 @@ class Portability
     public const POST_TYPE_LIMIT = 20;
 
     /**
-     * one or more collections as a portable document.
+     * One or more collections as a portable document.
      *
      * @param integer[] $type_ids  empty for every collection
      * @param array     $options   entries: include the content too
@@ -139,12 +120,11 @@ class Portability
     }
 
     /**
-     * every entry of a collection, in the shape import() reads back.
+     * Every entry of a collection, in the shape import() reads back.
      *
-     * STORED values, not resolved ones. an image is its attachment id here, and
-     * the id means nothing anywhere but this site — so every id an entry refers
-     * to is also collected into `$media`, and the export carries a manifest
-     * saying which FILE each one was. that is what an import matches against.
+     * Stored values, not resolved ones. An image is its attachment id, which
+     * means nothing off this site — so every id is collected into `$media` and
+     * the export carries a manifest saying which file each one was.
      *
      * @param integer $type_id
      * @param array   $definition
@@ -205,12 +185,9 @@ class Portability
     }
 
     /**
-     * which file each exported attachment id was.
-     *
-     * the uploads-relative path is the identity that survives a move — it is
-     * the same on a staging site and a production site whose uploads were
-     * synced, and on this site when a file is read back into it. the URL is
-     * carried too, for a person reading the file, and is never trusted.
+     * Which file each exported attachment id was. The uploads-relative path is
+     * the identity that survives a move. The URL is carried for a person reading
+     * the file and is never trusted.
      *
      * @param integer[] $ids
      *
@@ -240,11 +217,9 @@ class Portability
     }
 
     /**
-     * every component, with its fields.
-     *
-     * components always travel, whichever collections were asked for. they are
-     * small, and a collection whose fields came from one is more useful beside
-     * the component it was built from than without it.
+     * Every component, with its fields. Components always travel, whichever
+     * collections were asked for — they are small, and a collection whose fields
+     * came from one is more useful beside it.
      *
      * @return array
      */
@@ -272,14 +247,11 @@ class Portability
     // --- reading one back ----------------------------------------------------
 
     /**
-     * restores collections from an exported document.
+     * Restores collections from an exported document.
      *
-     * the whole document is checked BEFORE anything is written. the first
-     * version of this wrote as it read, so a file whose fourth collection was
-     * unusable left the first three imported and the rest not, with an error
-     * that said nothing about the half that had already happened. every refusal
-     * here is now either up front, with nothing changed, or per entry and
-     * reported.
+     * The whole document is checked before anything is written, so every refusal
+     * is either up front with nothing changed, or per entry and reported. Writing
+     * as it read left a file whose fourth collection was unusable half-imported.
      *
      * @param mixed  $payload the decoded document
      * @param array  $options mode: merge or replace, entries: restore content
@@ -355,7 +327,7 @@ class Portability
         SchemaRepository::flush();
 
         /**
-         * fires after an import has been applied.
+         * Fires after an import has been applied.
          *
          * @param array $report
          * @param array $payload the document that was read
@@ -366,7 +338,7 @@ class Portability
     }
 
     /**
-     * every reason a document cannot be imported, found before anything is
+     * Every reason a document cannot be imported, found before anything is
      * written.
      *
      * @param array $payload
@@ -485,7 +457,7 @@ class Portability
     }
 
     /**
-     * a 400 an import refuses with.
+     * A 400 an import refuses with.
      *
      * @param string $code
      * @param string $message
@@ -498,7 +470,7 @@ class Portability
     }
 
     /**
-     * a list from the payload, defended against a document that says a list is
+     * A list from the payload, defended against a document that says a list is
      * something else.
      *
      * @param array  $payload
@@ -512,10 +484,9 @@ class Portability
     }
 
     /**
-     * creates or updates one collection.
-     *
-     * nothing in here can fail the import: validate() has already refused
-     * anything that would. what CAN go wrong is per entry, and is reported.
+     * Creates or updates one collection. Nothing here can fail the import —
+     * validate() has already refused anything that would. What can go wrong is
+     * per entry, and is reported.
      *
      * @param array   $collection
      * @param boolean $replace
@@ -586,23 +557,17 @@ class Portability
     }
 
     /**
-     * the settings a collection ends up with.
+     * The settings a collection ends up with.
      *
-     * the file's settings are about the SHAPE of the collection — which field
-     * names an entry, which columns the table shows — and those it may set. two
-     * are about THIS SITE, and a file does not get to decide them:
+     * The file may set anything about the SHAPE of the collection. Two settings
+     * are about this site and a file does not get to decide them:
      *
-     *   publicApi   what the site publishes to the internet. an import is not a
-     *               decision to publish somebody else's content, and a staging
-     *               export whose collections were open would otherwise open
-     *               them here. a collection the import creates starts closed.
+     *   publicApi   an import is not a decision to publish somebody else's
+     *               content; a collection an import creates starts closed
+     *   editRoles   or importing a schema could open a restricted collection to
+     *               every editor, or lock out the team that owns it
      *
-     *   editRoles   who may edit the collection. merging a file used to take
-     *               the file's answer, so importing a schema could quietly open
-     *               a restricted collection to every editor — or lock out the
-     *               team that owns it.
-     *
-     * merge also keeps whether the collection has drafts, because turning that
+     * Merge also keeps whether the collection has drafts, because turning that
      * off changes what every future save does to a live site.
      *
      * @param array|null $stored   the collection's own definition, or null
@@ -634,13 +599,10 @@ class Portability
     }
 
     /**
-     * folds incoming fields into stored ones.
-     *
-     * a field the file names replaces the stored one of the same key; a field
-     * only the file has is appended; a field only the database has stays. that
-     * last rule is the whole difference between merge and replace, and it is
-     * what makes merge safe to run against a production collection: nothing an
-     * import does under it can orphan values.
+     * Folds incoming fields into stored ones: same key replaces, file-only is
+     * appended, database-only stays. That last rule is the difference between
+     * merge and replace, and what makes merge safe against a production
+     * collection — nothing it does can orphan values.
      *
      * @param array $stored
      * @param array $incoming
@@ -667,13 +629,10 @@ class Portability
     }
 
     /**
-     * what applying a file will do to fields that already hold values.
-     *
-     * not refusals — the person importing may well mean both — but neither is
-     * something to find out about later. a field whose type changes has its
-     * values read against the new type from now on, so "Engineer" stored in a
-     * text field that became a dropdown without that option reads as nothing;
-     * and replace removes a field outright, orphaning whatever it held.
+     * What applying a file will do to fields that already hold values. Not
+     * refusals — the person importing may mean both — but not things to find out
+     * about later: a changed type is read against the new type from now on, and
+     * replace removes a field outright, orphaning whatever it held.
      *
      * @param array   $stored
      * @param array   $incoming
@@ -722,11 +681,8 @@ class Portability
     }
 
     /**
-     * fields the file has whose type this site does not.
-     *
-     * a site that registered a custom field type exports fields of it; a site
-     * without that type cannot store them, and normalizing drops them without a
-     * word. the word is here.
+     * Fields the file has whose type this site does not. Normalizing drops them
+     * without a word; the word is here.
      *
      * @param array  $raw   the file's definition, before normalizing
      * @param string $label
@@ -758,7 +714,7 @@ class Portability
     }
 
     /**
-     * a field type's human name.
+     * A field type's human name.
      *
      * @param string $type
      *
@@ -772,12 +728,9 @@ class Portability
     }
 
     /**
-     * gives a new collection the plural from the file, if nothing else uses it.
-     *
-     * the plural is an address — the API answers on it — so it cannot be one
-     * another collection already answers on, as its plural or its key. when the
-     * file's is taken, one is derived here instead, the way a collection created
-     * in the admin gets one.
+     * Gives a new collection the plural from the file, if nothing else uses it.
+     * The plural is an address, so it cannot be one another collection already
+     * answers on; when the file's is taken, one is derived instead.
      *
      * @param integer $id
      * @param string  $plural
@@ -808,7 +761,7 @@ class Portability
     }
 
     /**
-     * restores a collection's entries.
+     * Restores a collection's entries.
      *
      * @param integer $type_id
      * @param array   $entries
@@ -891,7 +844,7 @@ class Portability
     }
 
     /**
-     * whether an entry identifier is in a collection's trash.
+     * Whether an entry identifier is in a collection's trash.
      *
      * @param integer $type_id
      * @param string  $uid
@@ -914,7 +867,7 @@ class Portability
     }
 
     /**
-     * gives a freshly created entry the identifier it had in the export.
+     * Gives a freshly created entry the identifier it had in the export.
      *
      * @param integer $type_id
      * @param string  $minted the uuid save() gave it
@@ -943,15 +896,12 @@ class Portability
     // --- media ---------------------------------------------------------------
 
     /**
-     * visits every attachment id in a value bag, replacing each with what the
-     * callback returns.
+     * Visits every attachment id in a value bag, replacing each with what the
+     * callback returns — export collects with it, import remaps with it.
      *
-     * one walker for both directions: export collects with it, import remaps
-     * with it. an image or file becomes the returned id or null; a gallery keeps
-     * the ids that came back and drops the rest, because a gallery with a hole
-     * in it is a broken image in the middle of a slideshow. groups and repeater
-     * rows are walked into, because that is where most images in a real schema
-     * actually live.
+     * A gallery keeps the ids that came back and drops the rest, because a hole
+     * in one is a broken image mid-slideshow. Groups and repeater rows are walked
+     * into, which is where most images in a real schema live.
      *
      * @param array    $values
      * @param array    $fields
@@ -1020,18 +970,14 @@ class Portability
     }
 
     /**
-     * the attachment on THIS site that an exported id referred to.
+     * The attachment on this site that an exported id referred to.
      *
-     * with a manifest, the file is looked for: by its uploads path first, which
-     * matches on the same site and on one whose uploads were synced, then by
-     * its filename when exactly one attachment has it. two attachments called
-     * photo.jpg is not a match, it is a guess, and a guess is the thing this
-     * exists to stop.
+     * With a manifest: by uploads path first, then by filename when exactly one
+     * attachment has it. Two attachments called photo.jpg is a guess, not a
+     * match, and a guess is what this exists to stop.
      *
-     * without a manifest — a hand-written file, or one that was edited — an id
-     * is only trusted when the file says it came from this very site. from
-     * anywhere else it is dropped, because the alternative is exactly the bug
-     * this replaced: id 482 is always SOMETHING on a site with its own uploads.
+     * Without a manifest, an id is trusted only when the file says it came from
+     * this very site — id 482 is always something on a site with its own uploads.
      *
      * @param integer $id
      * @param array   $media by reference: manifest, sameSite, cache, counts
@@ -1068,7 +1014,7 @@ class Portability
     }
 
     /**
-     * finds an attachment by the file it holds.
+     * Finds an attachment by the file it holds.
      *
      * @param string $file uploads-relative, e.g. 2026/09/photo.jpg
      *
@@ -1121,11 +1067,8 @@ class Portability
     }
 
     /**
-     * the last segment of an uploads path.
-     *
-     * not basename(), which is locale-sensitive and mangles a leading multibyte
-     * character — and a filename is exactly where somebody's own alphabet turns
-     * up.
+     * Not basename(), which is locale-sensitive and mangles a leading multibyte
+     * character — and a filename is exactly where somebody's own alphabet shows.
      *
      * @param string $file
      *
@@ -1140,7 +1083,7 @@ class Portability
     }
 
     /**
-     * whether a document was exported from this site.
+     * Whether a document was exported from this site.
      *
      * @param string $site
      *
@@ -1154,13 +1097,10 @@ class Portability
     // --- components ----------------------------------------------------------
 
     /**
-     * creates or updates one component, matched by its name.
-     *
-     * a component has no machine key — nothing stores content against it — so
-     * the label is the only identity it has. that makes a match weaker evidence
-     * than a collection's, and it is why merge is honored here too: the first
-     * version of this replaced a same-named component's fields outright in
-     * either mode, so a site's own "Address" was overwritten by a file's.
+     * Creates or updates one component, matched by its name — a component has no
+     * machine key, so the label is the only identity it has. That makes the match
+     * weaker evidence than a collection's, which is why merge is honored here
+     * too rather than a file's "Address" overwriting the site's own.
      *
      * @param mixed   $component
      * @param boolean $replace
@@ -1212,7 +1152,7 @@ class Portability
     }
 
     /**
-     * the collection holding a machine key, if this site has one.
+     * The collection holding a machine key, if this site has one.
      *
      * @param string $key
      *
@@ -1230,7 +1170,7 @@ class Portability
     }
 
     /**
-     * a filename for an export, naming the site and the day.
+     * A filename for an export, naming the site and the day.
      *
      * @param integer[] $type_ids
      *
