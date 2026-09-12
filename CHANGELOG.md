@@ -20,9 +20,15 @@ a minor bump may still change behavior, and the notes say when it does.
   tag matches the plugin header, rebuilds, packages and publishes to wordpress.org, then
   attaches the zip to a GitHub release. Edits to `readme.txt` or `assets/` on `main` update
   the directory listing on their own, since wordpress.org versions those separately from
-  the code. Inert until `SVN_USERNAME` and `SVN_PASSWORD` are set.
-- **Plugin Check in CI.** The directory's own review tool, which catches what a phpcs
-  ruleset cannot express — readme parsing, header fields, trademark and naming rules.
+  the code. Both SVN steps are skipped when `SVN_USERNAME` is unset — until the plugin is
+  approved there are no credentials, and a readme edit should not turn `main` red over
+  something there is nothing to do about. Everything else on a tag still runs, and the zip
+  is still attached to a GitHub release.
+- **Plugin Check in CI**, run against the built package rather than the checkout. The
+  directory's own review tool catches what a phpcs ruleset cannot express — readme parsing,
+  header fields, trademark and naming rules — but pointed at the repository it reviews
+  files that never ship, and reported 38 errors in `tests/`, `bin/` and the dotfiles. The
+  job packages the plugin and unpacks it first, so what is checked is what a reviewer sees.
 - **The compiled documentation is cached.** `Docs::forClient()` read and CommonMark-parsed
   all 22 Markdown files on every admin page load, and built a fresh converter per callout.
   Now memoized per request and held in a transient keyed on the plugin version and the
@@ -94,6 +100,12 @@ a minor bump may still change behavior, and the notes say when it does.
   guard because counting reads back through `all()`. The test stub had modelled
   `wp_count_posts()` as returning zeros rather than nothing, which is why the suite never
   caught it; it is faithful now, and three assertions cover the case.
+- **`array_is_list()` in the validator, against a declared floor of WordPress 6.2.**
+  WordPress only polyfilled it in 6.5. Nothing could actually break — the function is
+  native from PHP 8.1 and the plugin's header requires 8.2, which WordPress enforces before
+  it will activate — so this was a declaration the directory's tooling reads as a violation
+  rather than a live fault. Replaced with an explicit key comparison so the two headers
+  agree without narrowing the supported range. Found by Plugin Check on its first run.
 - **The release zip shipped untracked local files.** `bin/package.php` walked the working
   directory and filtered it through `.distignore`, which is a denylist — so anything nobody
   had thought to name went into the release. A local `.claude/settings.local.json` did, and

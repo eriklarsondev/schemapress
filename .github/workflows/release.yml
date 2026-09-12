@@ -76,7 +76,16 @@ jobs:
       # header, the constant, readme.txt and package.json disagree.
       - run: npm run package
 
+      # Until the plugin is approved there are no SVN credentials, and there is
+      # no point failing a tag over that: everything above — the suite, the
+      # build check, the package — is worth running either way, and the GitHub
+      # release below still happens. Skipped rather than failed.
+      - name: Are the directory credentials set?
+        id: svn
+        run: echo "ready=${{ secrets.SVN_USERNAME != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Publish
+        if: steps.svn.outputs.ready == 'true'
         uses: 10up/action-wordpress-plugin-deploy@stable
         with:
           generate-zip: false
@@ -100,7 +109,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: 10up/action-wordpress-plugin-asset-update@stable
+      # Same as the publish step: without credentials this is nothing to do, not
+      # a failure. Left ungated it turned every readme.txt edit on main into a
+      # red build.
+      - name: Are the directory credentials set?
+        id: svn
+        run: echo "ready=${{ secrets.SVN_USERNAME != '' }}" >> "$GITHUB_OUTPUT"
+
+      - if: steps.svn.outputs.ready == 'true'
+        uses: 10up/action-wordpress-plugin-asset-update@stable
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}

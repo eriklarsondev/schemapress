@@ -72,22 +72,42 @@ jobs:
     # the review team runs, so it should not be the submission that runs it
     # first.
     #
-    # build/ is committed, but vendor/ is not — and a missing autoloader reads
-    # to the checker as a broken plugin, so composer install has to come first.
+    # IT RUNS AGAINST THE PACKAGED PLUGIN, NOT THE REPOSITORY. Pointed at the
+    # checkout it reviews the whole tree — and reported 38 errors in files that
+    # never ship: `hidden_files` for .eslintrc.js and .editorconfig, unescaped
+    # output in tests/, mkdir and unlink in bin/package.php. None of that is in
+    # the zip, so none of it is what a reviewer sees. Unpacking the real package
+    # is both the honest test and the quiet one.
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           coverage: none
 
-      - run: composer install --no-dev
+      # package.php sources its file list from `git ls-files` and rebuilds
+      # vendor/ with --no-dev itself, so this needs the dev install, not a
+      # --no-dev one
+      - run: npm ci
+
+      - run: composer install
+
+      - name: Build the package the directory would serve
+        run: |
+          npm run package
+          mkdir -p /tmp/pkg
+          unzip -q schemapress.*.zip -d /tmp/pkg
 
       - uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: './'
+          build-dir: /tmp/pkg/schemapress
 
   static:
     name: Lint and format

@@ -317,7 +317,7 @@ class Validator
             // link of { url: '', label: '', target: '' } is an empty control
             // rather than a filled one. JS tells the two apart by their type;
             // here they are both arrays, so the shape is what says which
-            if (array_is_list($value)) {
+            if (self::isList($value)) {
                 return false;
             }
 
@@ -425,7 +425,7 @@ class Validator
         }
 
         if (is_array($value)) {
-            if (array_is_list($value)) {
+            if (self::isList($value)) {
                 return count($value) > 0;
             }
 
@@ -438,5 +438,22 @@ class Validator
         }
 
         return true;
+    }
+
+    /**
+     * Whether an array is a list rather than a map.
+     *
+     * Not array_is_list(), which is native from PHP 8.1 — so safe on the 8.2
+     * this plugin requires — but which WordPress only polyfilled in 6.5. Plugin
+     * Check reads that as a plugin promising `Requires at least: 6.2` and then
+     * calling something 6.2 does not have. Spelling it out keeps the promise.
+     *
+     * @param array $value
+     *
+     * @return boolean
+     */
+    private static function isList(array $value)
+    {
+        return $value === [] || array_keys($value) === range(0, count($value) - 1);
     }
 }
