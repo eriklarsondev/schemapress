@@ -55,14 +55,23 @@ function useAttachment(id) {
 }
 
 /**
- * Image picker with a thumbnail preview.
+ * Image picker, showing the whole picture.
+ *
+ * A chosen image is drawn at the full width of the cell it sits in and at its
+ * own height — all of it, never cropped. A picture is chosen for what is in it,
+ * and a strip cut across the middle of a portrait said nothing about whether it
+ * was the right one. That is also what the sidebar is for: an image there is a
+ * column wide, where the full width of the form would make it a poster.
  *
  * @param {Object} props
  * @return {JSX.Element} The control.
  */
 export function ImageField({ field, value, onChange }) {
   const attachment = useAttachment(value)
-  const thumbnail = attachment?.sizes?.medium?.url || attachment?.url
+  // big enough for the widest cell the form draws. medium is 300px at most, and
+  // a full-width cell stretched it into a blur
+  const size = attachment?.sizes?.large || attachment?.sizes?.full || null
+  const source = size?.url || attachment?.url
 
   const select = () =>
     openMediaModal({ title: field.label, type: 'image' }, (next) => onChange(next.id))
@@ -70,19 +79,29 @@ export function ImageField({ field, value, onChange }) {
   return (
     <Field label={field.label} help={field.help} required={field.required}>
       {value ? (
-        <div className="group relative w-full overflow-hidden rounded-lg border border-border">
+        <div className="group relative w-full overflow-hidden rounded-lg border border-border bg-muted/40">
           {/* the same width the empty picker takes, which is the width the cell
-              was given on the Layout tab. w-fit here meant a chosen image shrank
+              was given on the Form tab. w-fit here meant a chosen image shrank
               the control back to the picture's own size, so a field set to full
-              width stopped being full width the moment it had a value in it.
-              object-cover fills that width without stretching the picture — it
-              crops, which a preview can afford and a distorted face cannot */}
-          <img
-            src={thumbnail}
-            alt={attachment?.alt || ''}
-            className="block h-32 w-full object-cover"
-          />
-          <div className="absolute inset-x-0 bottom-0 flex gap-1 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+              width stopped being full width the moment it had a value in it */}
+          {source ? (
+            <img
+              src={source}
+              alt={attachment?.alt || ''}
+              // its own proportions, so the space is the right shape while the
+              // file loads instead of jumping open when it arrives
+              width={size?.width || attachment?.width}
+              height={size?.height || attachment?.height}
+              className="block h-auto w-full"
+            />
+          ) : (
+            // the attachment is still being looked up
+            <div className="h-32 w-full" />
+          )}
+
+          {/* on focus as well as hover: tabbing onto Replace should not land on
+              a button nobody can see */}
+          <div className="absolute inset-x-0 bottom-0 flex gap-1 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <Button size="sm" variant="secondary" onClick={select}>
               {__('Replace', 'schemapress')}
             </Button>

@@ -28,6 +28,7 @@ import { ComponentView } from './views/ComponentView'
 import { DocsView } from './views/DocsView'
 import { SettingsView } from './views/SettingsView'
 import { JobsBanner } from './JobsBanner'
+import { AdminNotices } from './AdminNotices'
 
 /**
  * Routes that are a screen of their own rather than a collection.
@@ -124,15 +125,21 @@ export function App({ settings }) {
   }, [types, selected, route.view, navigate])
 
   return (
-    // `.schemapress` is the scope every Tailwind utility is prefixed with, and
-    // that prefix is a descendant selector — so this element carries the class
-    // alone, and all layout utilities go on the child inside it
-    <div className="schemapress">
-      {/* the shell is exactly the viewport below wp-admin's bar and does not
-          scroll: the sidebar is a map, and a map that scrolls away with the
-          thing you are reading has stopped being one. what scrolls is the pane
-          — and the sidebar's own list, when it outgrows the column */}
-      <div className="flex h-[calc(100vh-32px)] overflow-hidden bg-muted/30">
+    // the shell fills the screen below wp-admin's bar and does not scroll: the
+    // sidebar is a map, and a map that scrolls away with the thing you are
+    // reading has stopped being one. what scrolls is the pane — and the
+    // sidebar's own list, when it outgrows the column.
+    //
+    // it is drawn in plain CSS (`.sp-shell` in style.css) because it sits
+    // OUTSIDE the `.schemapress` scope. wp-admin's notices are moved into the
+    // pane, and inside the scope they would be restyled by it. so the scope is
+    // applied twice — around the sidebar and around the screen — and the
+    // notices sit between the two
+    <div className="sp-shell">
+      {/* `.schemapress` is the scope every Tailwind utility is prefixed with,
+          and that prefix is a descendant selector — so a scope element carries
+          no utilities of its own, and they go on the child inside it */}
+      <div className="schemapress sp-shell__nav">
         <Sidebar
           types={types || []}
           components={components}
@@ -147,17 +154,18 @@ export function App({ settings }) {
           onOpenDocs={(id) => open('docs', id)}
           onOpenSettings={() => open('settings')}
         />
+      </div>
 
-        {/* the builder screens are cards laid on the muted ground, so the ground
-            is what separates one card from the next. the docs are not cards —
-            they are a column of text, and text wants paper. so the pane itself
-            goes white there rather than the page floating a white block on gray */}
-        <main
-          className={cn(
-            'min-w-0 flex-1 overflow-y-auto px-6 py-6 xl:px-8',
-            route.view === 'docs' && 'bg-background'
-          )}
-        >
+      {/* the builder screens are cards laid on the muted ground, so the ground
+          is what separates one card from the next. the docs are not cards —
+          they are a column of text, and text wants paper. so the pane itself
+          goes white there rather than the page floating a white block on gray */}
+      <main className={cn('sp-shell__main', route.view === 'docs' && 'sp-shell__main--paper')}>
+        {/* first, because they are the site's rather than this app's: on any
+            other screen they sit above everything the page draws */}
+        <AdminNotices />
+
+        <div className="schemapress">
           {/* above whatever screen is open, because the work it describes is
               about the site rather than about this screen — a reindex started
               on one collection is still running while you are looking at
@@ -207,9 +215,11 @@ export function App({ settings }) {
               )}
             </ErrorBoundary>
           )}
-        </main>
-      </div>
+        </div>
+      </main>
 
+      {/* outside both scopes, which is fine: every dialog portals into a
+          scoped container of its own (portalContainer in ui/utils) */}
       {leaving ? (
         <ConfirmDialog
           open

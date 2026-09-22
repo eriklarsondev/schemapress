@@ -205,7 +205,14 @@ export function TypeView({ type, onChanged, onDeleted }) {
         </TabPanel>
 
         <TabPanel value="layout">
-          <FormTab fields={fields} onChange={saveFields} />
+          {/* drawn as the entry screen is, sidebar and all — and that screen
+              only has a status card when the collection has drafts */}
+          <FormTab
+            fields={fields}
+            onChange={saveFields}
+            sidebar
+            drafts={type.draftAndPublish !== false}
+          />
         </TabPanel>
       </Tabs>
 

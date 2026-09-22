@@ -78,8 +78,16 @@ JSON rather than as JSON inside a string. Invalid JSON is not stored.
 ### Starting widths
 
 A new field starts at a width that suits what its control draws. **This is only a
-starting point** — the Layout tab sets any field to any width, and a width you choose is
+starting point** — the Form tab sets any field to any width, and a width you choose is
 kept, full included.
+
+Widths can also be set while dragging, both ways and at every size. A row's spare space
+offers every width that fits it, and a **New row** strip every width there is, full
+included: the further across you take the field, the wider it comes out. Holding a field
+over its own place and moving across it resizes it where it stands — back towards the
+start of the row to narrow it, on into any space after it to widen it — which is how a
+full-width field is narrowed in a form with no space to spare. The target is drawn at the
+width you will get before you let go.
 
 | Starts at | Types |
 | --- | --- |
@@ -90,6 +98,22 @@ kept, full included.
 Fields that already exist keep the width they were saved with. A field type you register
 yourself can declare its own with a `width` key — `third`, `half`, `two-thirds` or `full` —
 and starts full if it does not.
+
+### The sidebar
+
+A collection's entry screen has a sidebar beside the form, holding the entry's status,
+its endpoint, when it was edited, and deleting it. A field can go there too: drag its card
+into the sidebar on the **Form** tab, or use **Move to the sidebar** under its width badge.
+It sits under the status card, the full width of the column.
+
+That is where an image is at its best. An image field shows the whole picture at the full
+width of wherever it sits, never cropped — a column's width in the sidebar, where across
+the whole form it would be a poster.
+
+Only a collection's own fields can go in the sidebar. A field inside a group or a
+repeater is drawn by its group, and a component's fields are drawn wherever the component
+is used, so neither has one. Like widths, the sidebar is the admin screen's business: it
+is stored as `region` in the field's config, and nothing it does reaches the API.
 
 ### What can be filtered and sorted
 

@@ -124,6 +124,27 @@ check('rich text still starts full', 'full', $widths[4]['config']['width']);
 check('a width somebody chose is kept, full included', 'full', $widths[5]['config']['width']);
 check('an unreadable width falls back to the type\'s', 'third', $widths[6]['config']['width']);
 check('refuses a negative offset', 0, $offsets[3]['config']['offset']);
+
+// the sidebar is a column of the entry SCREEN, beside the entry's status. only
+// the form's own fields can sit in it: a field inside a group is drawn by the
+// group, so a sidebar setting there would be a promise nothing keeps
+$regions = SchemaModel::normalize([
+    'fields' => [
+        ['label' => 'Photo', 'type' => 'image', 'config' => ['region' => 'sidebar']],
+        ['label' => 'Body', 'type' => 'wysiwyg'],
+        ['label' => 'Odd', 'type' => 'text', 'config' => ['region' => 'footer']],
+        [
+            'label' => 'Links',
+            'type' => 'repeater',
+            'fields' => [['label' => 'Icon', 'type' => 'image', 'config' => ['region' => 'sidebar']]],
+        ],
+    ],
+])['fields'];
+
+check('keeps a field in the sidebar', 'sidebar', $regions[0]['config']['region']);
+check('a field starts in the main column', 'main', $regions[1]['config']['region']);
+check('an unknown column falls back to the main one', 'main', $regions[2]['config']['region']);
+check('a nested field stays where its group draws it', 'main', $regions[3]['fields'][0]['config']['region']);
 check('keeps whitelisted repeater config', 2, $fields[4]['config']['max']);
 check('drops unknown config keys', false, array_key_exists('junk', $fields[4]['config']));
 check('recurses into repeater children', 'link', $fields[4]['fields'][1]['type']);

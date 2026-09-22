@@ -166,11 +166,16 @@ class Docs
      * added through `schemapress/docs/files`. Hashing the paths and their
      * modification times covers both, and an edit simply lands on a new key.
      *
+     * So does whether the parser is there. Without it every page compiles to
+     * raw Markdown — and that was cached for a week under the same key, so
+     * running `composer install` to fix it changed nothing: the warning went,
+     * because that is asked live, and the plain text stayed.
+     *
      * @return string
      */
     private static function cacheKey()
     {
-        $stamps = [];
+        $stamps = [self::parserAvailable() ? 'parsed' : 'raw'];
 
         foreach (self::files() as $path) {
             $stamps[] = $path . ':' . (string) filemtime($path);

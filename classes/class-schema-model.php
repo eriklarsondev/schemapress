@@ -286,12 +286,14 @@ class SchemaModel
     /**
      * Normalizes a list of field definitions, recursing into types that nest.
      *
-     * @param array $fields
-     * @param array $used
+     * @param array   $fields
+     * @param array   $used
+     * @param boolean $nested whether these are a group's or a repeater's fields
+     *                        rather than the entry form's own
      *
      * @return array
      */
-    public static function normalizeFields(array $fields, array &$used)
+    public static function normalizeFields(array $fields, array &$used, $nested = false)
     {
         $normalized = [];
 
@@ -309,7 +311,7 @@ class SchemaModel
             $label = isset($field['label']) ? sanitize_text_field($field['label']) : '';
             $key = self::uniqueKey($field['key'] ?? $label, $used, 'field');
 
-            $normalized[] = self::normalizeField($field, $key, $label, $type);
+            $normalized[] = self::normalizeField($field, $key, $label, $type, $nested);
         }
 
         return $normalized;
@@ -318,14 +320,15 @@ class SchemaModel
     /**
      * Builds a single normalized field, recursing for group/repeater children.
      *
-     * @param array  $field
-     * @param string $key
-     * @param string $label
-     * @param string $type
+     * @param array   $field
+     * @param string  $key
+     * @param string  $label
+     * @param string  $type
+     * @param boolean $nested
      *
      * @return array
      */
-    private static function normalizeField(array $field, $key, $label, $type)
+    private static function normalizeField(array $field, $key, $label, $type, $nested = false)
     {
         $normalized = [
             'key' => $key,
@@ -338,13 +341,13 @@ class SchemaModel
             // about the DATA — what the collection will accept — while the
             // config bag is what the form does with it
             'unique' => !empty($field['unique']),
-            'config' => self::normalizeConfig($field, $type),
+            'config' => self::normalizeConfig($field, $type, $nested),
         ];
 
         if (FieldTypes::hasChildren($type)) {
             $childKeys = [];
             $children = isset($field['fields']) && is_array($field['fields']) ? $field['fields'] : [];
-            $normalized['fields'] = self::normalizeFields($children, $childKeys);
+            $normalized['fields'] = self::normalizeFields($children, $childKeys, true);
         }
 
         return $normalized;
@@ -383,12 +386,13 @@ class SchemaModel
     /**
      * Whitelists a field's type-specific config bag.
      *
-     * @param array  $field
-     * @param string $type
+     * @param array   $field
+     * @param string  $type
+     * @param boolean $nested
      *
      * @return array
      */
-    private static function normalizeConfig(array $field, $type)
+    private static function normalizeConfig(array $field, $type, $nested = false)
     {
         $config = isset($field['config']) && is_array($field['config']) ? $field['config'] : [];
 
@@ -413,6 +417,11 @@ class SchemaModel
             // row whether or not that was the intent. this is how the intent is
             // stated, and it survives the fields before it being resized
             'new_row' => !empty($config['new_row']),
+            // which column of the entry screen the control sits in: the form, or
+            // the sidebar beside it that holds the entry's status. only the
+            // form's own fields have a choice — one inside a group or a repeater
+            // row is drawn by that group, wherever the group is
+            'region' => !$nested && ($config['region'] ?? '') === 'sidebar' ? 'sidebar' : 'main',
             'condition' => self::normalizeCondition($config['condition'] ?? null),
         ];
 

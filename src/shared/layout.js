@@ -96,6 +96,20 @@ export function startsRow(field) {
 }
 
 /**
+ * Which column of the entry screen a field sits in: the form itself, or the
+ * sidebar beside it that holds the entry's status.
+ *
+ * Anything unreadable is the form — the same bargain an unknown width makes: a
+ * field should never vanish because its layout was mis-set.
+ *
+ * @param {Object} field
+ * @return {string} main or sidebar.
+ */
+export function regionOf(field) {
+  return field?.config?.region === 'sidebar' ? 'sidebar' : 'main'
+}
+
+/**
  * Never before the first field: there is no row above it to end, and a break
  * there is an empty row at the top of the form.
  *
@@ -162,4 +176,32 @@ export function spacerClass(columns) {
  */
 export function gridClass() {
   return 'grid grid-cols-1 gap-4 sm:grid-cols-12'
+}
+
+/**
+ * The entry screen's two columns — the form, and the sidebar beside it. The Form
+ * tab draws its canvas on the same two, so what it shows is where things land.
+ *
+ * `grid-cols-1` below the breakpoint, where they stack, rather than no columns
+ * at all: an implicit column is sized to its widest content, and an image drawn
+ * from its large size is 1024px of content — the form came out wider than the
+ * pane and scrolled sideways.
+ *
+ * @return {string} A class string.
+ */
+export function columnsClass() {
+  return 'grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]'
+}
+
+/**
+ * The sidebar column. Sticky, so it stays beside a long form — and scrolling on
+ * its own once it is taller than the pane, or a field put in it could sit below
+ * the fold until the end of the form was reached. The height is the pane's: the
+ * screen less wp-admin's bar (see `--sp-admin-bar` in style.css), less the room
+ * kept above and below it.
+ *
+ * @return {string} A class string.
+ */
+export function sidebarClass() {
+  return 'flex flex-col gap-3 lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_var(--sp-admin-bar,32px)_-_3rem)] lg:self-start lg:overflow-y-auto'
 }

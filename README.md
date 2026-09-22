@@ -86,7 +86,7 @@ is not committed; the release zip carries its own, built with `--no-dev`.
 ```bash
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
-npm test                  # both suites (543 assertions, no framework)
+npm test                  # both suites (547 assertions, no framework)
 npm run format            # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check      # report without writing; this is what CI runs
 npm run lint:js           # ESLint over the admin

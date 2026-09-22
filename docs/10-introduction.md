@@ -44,8 +44,9 @@ PHP loop, or JSON to a front end that is not WordPress at all — see **Endpoint
 and **Twig & Timber**.
 
 :::note One exception, and it is not presentation
-The **Layout** tab arranges fields on the *entry form* — which order you fill them in, how
-wide each control is. It shapes the admin screen and never reaches the front end.
+The **Form** tab arranges fields on the *entry form* — which order you fill them in, how
+wide each control is, which sit in the sidebar beside the entry's status. It shapes the
+admin screen and never reaches the front end.
 :::
 
 ### The model

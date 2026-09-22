@@ -4,7 +4,10 @@
  * The page is the fields and nothing else. Everything that is *about* the entry
  * rather than *in* it — whether it is published, how far the draft has run
  * ahead, deleting it — lives in the sidebar, so the main column is only ever
- * the thing being written.
+ * the thing being written. A field can be put in the sidebar too, from the Form
+ * tab: an image that sits beside the writing rather than in the middle of it.
+ * Those go under the status card, which stays first because publishing is the
+ * act the sidebar is for.
  *
  * There is no Title input. The listing title is derived from the entry's own
  * first text field, so asking for it separately would be asking twice and
@@ -49,9 +52,12 @@ import { clearUnsaved, useUnsavedGuard } from '../../shared/unsaved'
 import {
   breakBefore,
   cellClass,
+  columnsClass,
   gridClass,
   leadingSpace,
+  regionOf,
   rowBreakClass,
+  sidebarClass,
   spacerClass,
 } from '../../shared/layout'
 import { api } from '../../shared/api'
@@ -251,6 +257,31 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
 
   const visible = visibleFields(fields, entry.values)
 
+  // split after the conditions are applied, not before: a condition can name a
+  // field in the other column, and whether a field shows is a question about
+  // the entry rather than about where the field is drawn
+  const main = visible.filter((field) => regionOf(field) === 'main')
+  const side = visible.filter((field) => regionOf(field) === 'sidebar')
+
+  /**
+   * One field's control, wherever it is drawn.
+   *
+   * @param {Object} field
+   * @return {JSX.Element} The control.
+   */
+  const control = (field) => (
+    <FieldControl
+      field={field}
+      value={entry.values?.[field.key]}
+      onChange={(value) =>
+        setEntry({
+          ...entry,
+          values: { ...entry.values, [field.key]: value },
+        })
+      }
+    />
+  )
+
   // with drafts off there is one copy of an entry, so there is nothing to
   // publish, discard or take down — and no state worth a card
   const drafts = type.draftAndPublish !== false
@@ -344,20 +375,27 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card>
-          <CardBody>
-            {fields.length === 0 ? (
-              <Alert variant="warning">
-                {__(
-                  'This collection has no fields yet. Add some in the Schema tab.',
-                  'schemapress'
-                )}
-              </Alert>
-            ) : (
-              <UnsaveableProvider onChange={reportUnsaveable}>
+      {/* around both columns, because a field in either can be holding text it
+          cannot store — and Save is gated on all of them */}
+      <UnsaveableProvider onChange={reportUnsaveable}>
+        <div className={columnsClass()}>
+          <Card>
+            <CardBody>
+              {fields.length === 0 ? (
+                <Alert variant="warning">
+                  {__(
+                    'This collection has no fields yet. Add some in the Schema tab.',
+                    'schemapress'
+                  )}
+                </Alert>
+              ) : fields.every((field) => regionOf(field) === 'sidebar') ? (
+                // an empty card here reads as a form that failed to load
+                <p className="text-[13px] text-muted-foreground">
+                  {__('Every field on this form is in the sidebar.', 'schemapress')}
+                </p>
+              ) : (
                 <div className={gridClass()}>
-                  {visible.map((field, index) => (
+                  {main.map((field, index) => (
                     <Fragment key={field.key}>
                       {breakBefore(field, index) ? (
                         <div aria-hidden="true" className={rowBreakClass()} />
@@ -367,63 +405,64 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
                         <div aria-hidden="true" className={spacerClass(leadingSpace(field))} />
                       ) : null}
 
-                      <div className={cellClass(field)}>
-                        <FieldControl
-                          field={field}
-                          value={entry.values?.[field.key]}
-                          onChange={(value) =>
-                            setEntry({
-                              ...entry,
-                              values: { ...entry.values, [field.key]: value },
-                            })
-                          }
-                        />
-                      </div>
+                      <div className={cellClass(field)}>{control(field)}</div>
                     </Fragment>
                   ))}
                 </div>
-              </UnsaveableProvider>
-            )}
-          </CardBody>
-        </Card>
+              )}
+            </CardBody>
+          </Card>
 
-        <aside className="flex flex-col gap-3 lg:sticky lg:top-6 lg:self-start">
-          {drafts ? (
-            <StatusCard
-              entry={entry}
-              busy={busy}
-              blocked={blocked()}
-              onPublish={() => save(true)}
-              onUnpublish={() => run(api.unpublishEntry(type.id, entry.id))}
-              onDiscard={() => run(api.discardDraft(type.id, entry.id))}
-            />
-          ) : null}
+          <aside className={sidebarClass()}>
+            {drafts ? (
+              <StatusCard
+                entry={entry}
+                busy={busy}
+                blocked={blocked()}
+                onPublish={() => save(true)}
+                onUnpublish={() => run(api.unpublishEntry(type.id, entry.id))}
+                onDiscard={() => run(api.discardDraft(type.id, entry.id))}
+              />
+            ) : null}
 
-          {entry.id ? <IdCard entry={entry} type={type} /> : null}
+            {/* one card, one column: the sidebar is too narrow for the grid, so
+                a width set here would be a promise it could not keep */}
+            {side.length > 0 ? (
+              <Card>
+                <CardBody className="flex flex-col gap-4">
+                  {side.map((field) => (
+                    <Fragment key={field.key}>{control(field)}</Fragment>
+                  ))}
+                </CardBody>
+              </Card>
+            ) : null}
 
-          {entry.id ? <DetailsCard entry={entry} drafts={drafts} /> : null}
+            {entry.id ? <IdCard entry={entry} type={type} /> : null}
 
-          {entry.id ? (
-            <Card>
-              <CardBody className="flex flex-col gap-2">
-                <Label>{__('Danger zone', 'schemapress')}</Label>
+            {entry.id ? <DetailsCard entry={entry} drafts={drafts} /> : null}
 
-                {/* red before you touch it, not on hover: what the button does
-                    is not the kind of thing you should have to discover */}
-                <Button
-                  variant="destructive-outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setRemoving(true)}
-                >
-                  <Trash2 />
-                  {__('Delete entry', 'schemapress')}
-                </Button>
-              </CardBody>
-            </Card>
-          ) : null}
-        </aside>
-      </div>
+            {entry.id ? (
+              <Card>
+                <CardBody className="flex flex-col gap-2">
+                  <Label>{__('Danger zone', 'schemapress')}</Label>
+
+                  {/* red before you touch it, not on hover: what the button does
+                      is not the kind of thing you should have to discover */}
+                  <Button
+                    variant="destructive-outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setRemoving(true)}
+                  >
+                    <Trash2 />
+                    {__('Delete entry', 'schemapress')}
+                  </Button>
+                </CardBody>
+              </Card>
+            ) : null}
+          </aside>
+        </div>
+      </UnsaveableProvider>
 
       {leaving ? (
         <ConfirmDialog

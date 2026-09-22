@@ -31,11 +31,39 @@ a minor bump may still change behavior, and the notes say when it does.
   job packages the plugin and unpacks it first, so what is checked is what a reviewer sees.
 - **The compiled documentation is cached.** `Docs::forClient()` read and CommonMark-parsed
   all 22 Markdown files on every admin page load, and built a fresh converter per callout.
-  Now memoized per request and held in a transient keyed on the plugin version and the
-  sources' modification times, so an edit still lands immediately.
+  Now memoized per request and held in a transient keyed on the plugin version, the
+  sources' modification times and whether the parser is installed, so an edit still lands
+  immediately — and so does `composer install`. Without the last of those, pages compiled
+  to raw Markdown before the parser was there kept being served for a week after it
+  arrived, with the warning that would have explained it already gone.
+- **Fields in the sidebar.** A collection's entry screen has a sidebar holding the entry's
+  status, endpoint, details and delete button, and a field can now sit there too, under
+  the status card and the full width of the column. The Form tab draws the same two
+  columns, with those cards as silhouettes in the sidebar: drag a field across, or use
+  **Move to the sidebar** under its width badge — which is also the way back, at whichever
+  width. Stored as `config.region` (`main` or `sidebar`); only a collection's own fields
+  can have one, since a field inside a group is drawn by the group and a component's are
+  drawn wherever it is used. The sidebar now scrolls on its own once it is taller than the
+  pane, so what is put in it is never stranded below the fold of a long form.
 
 ### Changed
 
+- **Widths are set by dragging, both ways and at every size.** Dropping into a row's
+  spare space always widened a field to fill it, a New row strip always kept its width,
+  and a full-width field in a form with no spare space could not be narrowed by dragging
+  at all. Now a row's spare space offers every width that fits it and a New row strip all
+  four, full included — the field stretches from where the row starts to the pointer, so
+  moving across runs through ⅓, ½, ⅔ and Full. Holding a field over its own place resizes
+  it where it stands: back towards the start of the row narrows it, on into any space
+  after it widens it, measured from where it was picked up so a wobble changes nothing,
+  and the fields around it stay where they were, as the width badge leaves them. Every
+  target is drawn at the width you will get; level between two, a field keeps its own.
+- **An image field shows the whole picture**, at the full width of its cell and at its
+  own height, from the large size rather than the 300px medium one. It was a 128px strip
+  cropped across the middle, which said little about whether it was the right image.
+- **A card being dragged on the Form tab keeps its height.** It collapsed to its label the
+  moment a drag began, moving everything below it — in the sidebar's single column, enough
+  to put a different card under the pointer and swap the two.
 - **Tooling configuration moved out of the root**, which had grown to 27 visible entries.
   `phpcs.xml.dist` and `.php-cs-fixer.dist.php` are now `.config/phpcs.xml` and
   `.config/php-cs-fixer.php`; `.eslintignore` folded into `.eslintrc.js`, `.prettierrc`
@@ -92,6 +120,16 @@ a minor bump may still change behavior, and the notes say when it does.
 
 ### Fixed
 
+- **The sidebar scrolled away whenever WordPress showed a notice.** The shell was sized to
+  `100vh - 32px` — the window less the admin bar — on the assumption that nothing else sat
+  above it. Core's update nag does, on every screen until the site is updated, and so does
+  any plugin's notice: the page came out taller than the window, and scrolling it took the
+  sidebar along. wp-admin's notices are now moved to the top of the pane, where they scroll
+  away with the content as they do on every other screen, and the shell takes whatever
+  height is left instead of one worked out in advance, so anything else printed above it
+  can only make it shorter. The admin bar's height is read from core's
+  `--wp-admin--admin-bar--height`, which also makes it right below 783px, where the bar is
+  46px, and the pane no longer hands its scroll on to the page when it reaches the end.
 - **Every collection reported zero entries.** `ContentType::all()` counted entries eagerly,
   but `registerAll()` reaches it on `init` *before* it has registered the post types — and
   `wp_count_posts()` answers with an empty object for a post type that does not exist yet.

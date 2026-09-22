@@ -24,9 +24,9 @@ Then add fields on the **Schema** tab. Each field has a type and a machine key o
 | Avatar | `avatar` | Image |
 | Bio | `bio` | Rich text |
 
-Two more tabs sit beside it. **Layout** arranges those fields on the entry form — widths,
-row breaks, what order you fill them in. It shapes the admin screen and nothing else.
-**Entries** is where the content goes.
+Two more tabs sit beside it. **Form** arranges those fields on the entry form — widths,
+row breaks, what order you fill them in, and which go in the sidebar. It shapes the admin
+screen and nothing else. **Entries** is where the content goes.
 
 Add an entry and publish it.
 

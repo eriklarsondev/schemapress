@@ -358,6 +358,12 @@
 
   right: 0px;
 }
+.schemapress .inset-x-4 {
+
+  left: 1rem;
+
+  right: 1rem;
+}
 .schemapress .inset-y-0 {
 
   top: 0px;
@@ -390,6 +396,10 @@
 
   bottom: 0px;
 }
+.schemapress .bottom-\[5px\] {
+
+  bottom: 5px;
+}
 .schemapress .left-0 {
 
   left: 0px;
@@ -410,6 +420,10 @@
 
   right: 0.375rem;
 }
+.schemapress .start-0 {
+
+  inset-inline-start: 0px;
+}
 .schemapress .top-1\.5 {
 
   top: 0.375rem;
@@ -421,6 +435,10 @@
 .schemapress .top-4 {
 
   top: 1rem;
+}
+.schemapress .top-\[5px\] {
+
+  top: 5px;
 }
 .schemapress .z-10 {
 
@@ -596,6 +614,10 @@
 
   display: table;
 }
+.schemapress .\!grid {
+
+  display: grid !important;
+}
 .schemapress .grid {
 
   display: grid;
@@ -746,6 +768,10 @@
 
   height: 1.25rem;
 }
+.schemapress .h-7 {
+
+  height: 1.75rem;
+}
 .schemapress .h-8 {
 
   height: 2rem;
@@ -758,9 +784,9 @@
 
   height: 18px;
 }
-.schemapress .h-\[calc\(100vh-32px\)\] {
+.schemapress .h-auto {
 
-  height: calc(100vh - 32px);
+  height: auto;
 }
 .schemapress .h-full {
 
@@ -1003,6 +1029,10 @@
 
   resize: vertical;
 }
+.schemapress .resize {
+
+  resize: both;
+}
 .schemapress .grid-cols-1 {
 
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -1042,6 +1072,10 @@
 .schemapress .items-center {
 
   align-items: center;
+}
+.schemapress .justify-start {
+
+  justify-content: flex-start;
 }
 .schemapress .justify-end {
 
@@ -1227,6 +1261,10 @@
 
   border-color: hsl(var(--sp-border) / 0.7);
 }
+.schemapress .border-destructive\/25 {
+
+  border-color: hsl(var(--sp-destructive) / 0.25);
+}
 .schemapress .border-destructive\/30 {
 
   border-color: hsl(var(--sp-destructive) / 0.3);
@@ -1315,6 +1353,10 @@
 
   background-color: hsl(var(--sp-background));
 }
+.schemapress .bg-background\/60 {
+
+  background-color: hsl(var(--sp-background) / 0.6);
+}
 .schemapress .bg-black\/40 {
 
   background-color: rgb(0 0 0 / 0.4);
@@ -1369,6 +1411,10 @@
 
   background-color: hsl(var(--sp-muted));
 }
+.schemapress .bg-muted-foreground\/15 {
+
+  background-color: hsl(var(--sp-muted-foreground) / 0.15);
+}
 .schemapress .bg-muted-foreground\/40 {
 
   background-color: hsl(var(--sp-muted-foreground) / 0.4);
@@ -1404,6 +1450,10 @@
 .schemapress .bg-primary\/10 {
 
   background-color: hsl(var(--sp-primary) / 0.1);
+}
+.schemapress .bg-primary\/15 {
+
+  background-color: hsl(var(--sp-primary) / 0.15);
 }
 .schemapress .bg-primary\/25 {
 
@@ -1496,6 +1546,12 @@
 .schemapress .p-5 {
 
   padding: 1.25rem;
+}
+.schemapress .px-0\.5 {
+
+  padding-left: 0.125rem;
+
+  padding-right: 0.125rem;
 }
 .schemapress .px-1 {
 
@@ -1933,6 +1989,10 @@
 
   color: hsl(var(--sp-destructive-foreground));
 }
+.schemapress .text-destructive\/60 {
+
+  color: hsl(var(--sp-destructive) / 0.6);
+}
 .schemapress .text-emerald-600 {
 
   --tw-text-opacity: 1;
@@ -2105,6 +2165,10 @@
 
   outline-offset: -2px;
 }
+.schemapress .outline-primary {
+
+  outline-color: hsl(var(--sp-primary));
+}
 .schemapress .outline-ring\/50 {
 
   outline-color: hsl(var(--sp-ring) / 0.5);
@@ -2161,6 +2225,14 @@
 
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
+.schemapress .transition-\[width\] {
+
+  transition-property: width;
+
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  transition-duration: 150ms;
+}
 .schemapress .transition-all {
 
   transition-property: all;
@@ -2201,8 +2273,15 @@
 
   transition-duration: 150ms;
 }
+.schemapress .duration-100 {
 
-.schemapress {
+  transition-duration: 100ms;
+}
+
+/* declared on the shell as well, which is drawn outside the scope — see "the
+   shell" below — and still paints with the palette */
+.schemapress,
+.sp-shell {
   /* One cool navy family, hue 218–224 throughout. What separates the tokens is
      lightness and how much chroma they are allowed to carry — a gray that is
      genuinely neutral reads as unfinished next to wp-admin, and three tokens
@@ -2263,7 +2342,11 @@
   --sp-appbar-active: 223 45% 26%;
 
   --sp-radius: 0.6rem;
+}
 
+/* the type is the scope's alone. the shell holds wp-admin's notices, and they
+   are set in wp-admin's type, not this app's */
+.schemapress {
   color: hsl(var(--sp-foreground));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   font-size: 14px;
@@ -2491,18 +2574,48 @@ body.toplevel_page_schemapress #wpcontent {
   padding-left: 0;
 }
 
+/* the admin bar's height. core publishes it as a custom property; the
+   fallbacks are its two sizes, for a WordPress old enough not to */
+body.toplevel_page_schemapress {
+  --sp-admin-bar: var(--wp-admin--admin-bar--height, 32px);
+}
+
+@media screen and (max-width: 782px) {
+  body.toplevel_page_schemapress {
+    --sp-admin-bar: var(--wp-admin--admin-bar--height, 46px);
+  }
+}
+
+/* THE SHELL TAKES WHAT IS LEFT OF THE SCREEN, rather than a height worked out
+   in advance. It was `100vh - 32px`: the admin bar, and an assumption that
+   nothing else sat above the app. Something usually did — core's update nag
+   alone made the page 67px taller than the window, so the page scrolled and
+   took the sidebar with it.
+
+   As a column the app ends, anything above it can only make the shell shorter.
+   Notices are moved into the pane (AdminNotices.js), so what this still
+   answers for is everything else: the Help tab, or a plugin's banner printed
+   without a notice class. */
 body.toplevel_page_schemapress #wpbody-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--sp-admin-bar));
+  /* on a phone 100vh includes the space behind the browser's own toolbar */
+  height: calc(100dvh - var(--sp-admin-bar));
   padding-bottom: 0;
+}
+
+body.toplevel_page_schemapress .schemapress-wrap,
+body.toplevel_page_schemapress #schemapress-admin-root {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 body.toplevel_page_schemapress .schemapress-wrap {
   margin: 0;
   padding: 0;
-}
-
-/* wp-admin prints notices into the wrap; keep them off the app bar */
-body.toplevel_page_schemapress .schemapress-wrap > .notice {
-  margin: 12px 24px;
 }
 
 body.toplevel_page_schemapress #wpfooter {
@@ -2513,6 +2626,74 @@ body.toplevel_page_schemapress #wpfooter {
   margin: 0;
   padding: 24px;
   color: hsl(220 9% 46%);
+}
+
+/* --- the shell ------------------------------------------------------------ */
+
+/* The sidebar beside the pane. Written here rather than as utilities because
+   it sits OUTSIDE the `.schemapress` scope, where no utility reaches: the
+   pane holds wp-admin's notices, and inside the scope the reset would strip
+   their borders and margins. The scope is applied to the sidebar and to the
+   screen instead, and the notices sit in the pane between the two. */
+.sp-shell {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* a scope root, so it takes no utilities. being a flex row is what stretches
+   the sidebar inside it to the height of the shell */
+.sp-shell__nav {
+  display: flex;
+  flex: none;
+}
+
+.sp-shell__main {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow-y: auto;
+  /* the pane scrolls to its end and stops there. the page behind it can still
+     be taller than the window — an admin menu longer than the screen makes it
+     so — and the wheel would otherwise carry on into it and move the shell */
+  overscroll-behavior-y: contain;
+  padding: 1.5rem;
+  background-color: hsl(var(--sp-muted) / 0.3);
+}
+
+@media (min-width: 1280px) {
+  .sp-shell__main {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+}
+
+.sp-shell__main--paper {
+  background-color: hsl(var(--sp-background));
+}
+
+/* wp-admin's notices, moved in by AdminNotices.js. Core draws them, and only
+   where they sit is decided here: the margins core gives them assume a page
+   title above and the gutter this screen removes, so they take the pane's own
+   rhythm instead — the 1rem that also separates the jobs banner from the
+   screen under it. */
+.sp-notices > .notice,
+.sp-notices > div.updated,
+.sp-notices > div.error,
+.sp-notices > .update-nag {
+  margin: 0 0 1rem;
+}
+
+/* inline-block everywhere else, sized to its one sentence and sat alone above
+   a page title. here it heads a stack of full-width notices, and would be the
+   one narrow box in it */
+.sp-notices > .update-nag {
+  display: block;
+}
+
+/* a position, never a thing to see: core inserts notices after it */
+.sp-notices > .wp-header-end {
+  display: none;
 }
 
 /* --- documentation prose ------------------------------------------------- */
@@ -3560,6 +3741,11 @@ body.toplevel_page_schemapress #wpfooter {
   opacity: 0.5;
 }
 
+.schemapress :is(.group:focus-within .group-focus-within\:opacity-100) {
+
+  opacity: 1;
+}
+
 .schemapress :is(.group:hover .group-hover\:translate-x-0\.5) {
 
   --tw-translate-x: 0.125rem;
@@ -3866,6 +4052,11 @@ body.toplevel_page_schemapress #wpfooter {
     top: 1.5rem;
   }
 
+  .schemapress .lg\:max-h-\[calc\(100dvh_-_var\(--sp-admin-bar\2c 32px\)_-_3rem\)\] {
+
+    max-height: calc(100dvh - var(--sp-admin-bar,32px) - 3rem);
+  }
+
   .schemapress .lg\:grid-cols-2 {
 
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3880,6 +4071,11 @@ body.toplevel_page_schemapress #wpfooter {
 
     align-self: flex-start;
   }
+
+  .schemapress .lg\:overflow-y-auto {
+
+    overflow-y: auto;
+  }
 }
 
 @media (min-width: 1280px) {
@@ -3887,13 +4083,6 @@ body.toplevel_page_schemapress #wpfooter {
   .schemapress .xl\:block {
 
     display: block;
-  }
-
-  .schemapress .xl\:px-8 {
-
-    padding-left: 2rem;
-
-    padding-right: 2rem;
   }
 }
 

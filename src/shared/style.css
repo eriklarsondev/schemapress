@@ -11,7 +11,10 @@
 @tailwind components;
 @tailwind utilities;
 
-.schemapress {
+/* declared on the shell as well, which is drawn outside the scope — see "the
+   shell" below — and still paints with the palette */
+.schemapress,
+.sp-shell {
   /* One cool navy family, hue 218–224 throughout. What separates the tokens is
      lightness and how much chroma they are allowed to carry — a gray that is
      genuinely neutral reads as unfinished next to wp-admin, and three tokens
@@ -72,7 +75,11 @@
   --sp-appbar-active: 223 45% 26%;
 
   --sp-radius: 0.6rem;
+}
 
+/* the type is the scope's alone. the shell holds wp-admin's notices, and they
+   are set in wp-admin's type, not this app's */
+.schemapress {
   color: hsl(var(--sp-foreground));
   font-family: theme("fontFamily.sans");
   font-size: 14px;
@@ -296,18 +303,48 @@ body.toplevel_page_schemapress #wpcontent {
   padding-left: 0;
 }
 
+/* the admin bar's height. core publishes it as a custom property; the
+   fallbacks are its two sizes, for a WordPress old enough not to */
+body.toplevel_page_schemapress {
+  --sp-admin-bar: var(--wp-admin--admin-bar--height, 32px);
+}
+
+@media screen and (max-width: 782px) {
+  body.toplevel_page_schemapress {
+    --sp-admin-bar: var(--wp-admin--admin-bar--height, 46px);
+  }
+}
+
+/* THE SHELL TAKES WHAT IS LEFT OF THE SCREEN, rather than a height worked out
+   in advance. It was `100vh - 32px`: the admin bar, and an assumption that
+   nothing else sat above the app. Something usually did — core's update nag
+   alone made the page 67px taller than the window, so the page scrolled and
+   took the sidebar with it.
+
+   As a column the app ends, anything above it can only make the shell shorter.
+   Notices are moved into the pane (AdminNotices.js), so what this still
+   answers for is everything else: the Help tab, or a plugin's banner printed
+   without a notice class. */
 body.toplevel_page_schemapress #wpbody-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--sp-admin-bar));
+  /* on a phone 100vh includes the space behind the browser's own toolbar */
+  height: calc(100dvh - var(--sp-admin-bar));
   padding-bottom: 0;
+}
+
+body.toplevel_page_schemapress .schemapress-wrap,
+body.toplevel_page_schemapress #schemapress-admin-root {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 body.toplevel_page_schemapress .schemapress-wrap {
   margin: 0;
   padding: 0;
-}
-
-/* wp-admin prints notices into the wrap; keep them off the app bar */
-body.toplevel_page_schemapress .schemapress-wrap > .notice {
-  margin: 12px 24px;
 }
 
 body.toplevel_page_schemapress #wpfooter {
@@ -318,6 +355,74 @@ body.toplevel_page_schemapress #wpfooter {
   margin: 0;
   padding: 24px;
   color: hsl(220 9% 46%);
+}
+
+/* --- the shell ------------------------------------------------------------ */
+
+/* The sidebar beside the pane. Written here rather than as utilities because
+   it sits OUTSIDE the `.schemapress` scope, where no utility reaches: the
+   pane holds wp-admin's notices, and inside the scope the reset would strip
+   their borders and margins. The scope is applied to the sidebar and to the
+   screen instead, and the notices sit in the pane between the two. */
+.sp-shell {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* a scope root, so it takes no utilities. being a flex row is what stretches
+   the sidebar inside it to the height of the shell */
+.sp-shell__nav {
+  display: flex;
+  flex: none;
+}
+
+.sp-shell__main {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow-y: auto;
+  /* the pane scrolls to its end and stops there. the page behind it can still
+     be taller than the window — an admin menu longer than the screen makes it
+     so — and the wheel would otherwise carry on into it and move the shell */
+  overscroll-behavior-y: contain;
+  padding: 1.5rem;
+  background-color: hsl(var(--sp-muted) / 0.3);
+}
+
+@media (min-width: 1280px) {
+  .sp-shell__main {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+}
+
+.sp-shell__main--paper {
+  background-color: hsl(var(--sp-background));
+}
+
+/* wp-admin's notices, moved in by AdminNotices.js. Core draws them, and only
+   where they sit is decided here: the margins core gives them assume a page
+   title above and the gutter this screen removes, so they take the pane's own
+   rhythm instead — the 1rem that also separates the jobs banner from the
+   screen under it. */
+.sp-notices > .notice,
+.sp-notices > div.updated,
+.sp-notices > div.error,
+.sp-notices > .update-nag {
+  margin: 0 0 1rem;
+}
+
+/* inline-block everywhere else, sized to its one sentence and sat alone above
+   a page title. here it heads a stack of full-width notices, and would be the
+   one narrow box in it */
+.sp-notices > .update-nag {
+  display: block;
+}
+
+/* a position, never a thing to see: core inserts notices after it */
+.sp-notices > .wp-header-end {
+  display: none;
 }
 
 /* --- documentation prose ------------------------------------------------- */
