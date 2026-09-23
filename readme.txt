@@ -26,15 +26,20 @@ decisions in it.
 
 = Reading your content =
 
-Three surfaces over one query grammar, so a filter means the same thing in all
+Three query surfaces over one grammar, so a filter means the same thing in all
 three:
 
-* **PHP** — `SchemaPress::collection('team_members')->where('role', 'Engineer')`
-* **Twig** — `{% for person in sp_collection('team_members') %}`, via Timber
-* **HTTP** — `GET /wp-json/schemapress/api/team-members?role=Engineer&sort=name`
+* **PHP** — `SchemaPress::collection('team-members')->where('role', 'Engineer')`
+* **REST** — `GET /wp-json/schemapress/api/team-members?role=Engineer&sort=name`
+* **GraphQL** — `teamMembers(where: { role: { eq: "Engineer" } })`, with WPGraphQL
 
 The HTTP API is Strapi-shaped, down to the parameter names and the `data`/`meta`
-envelope, so a client written against one reads against the other.
+envelope, so a client written against one reads against the other. GraphQL exposes
+exactly what REST exposes, behind the same switches.
+
+Twig is not a fourth surface: the PHP file queries and the template renders what it
+was handed. Entries read as plain properties, so `person.full_name` resolves with
+nothing to install or register.
 
 = What is off by default =
 
@@ -75,8 +80,8 @@ same entry get a refusal rather than one of them silently losing their work.
 PHP 8.2 or newer. That is what league/commonmark's own dependencies require —
 the Markdown parser behind the documentation screen.
 
-Timber is optional, is not bundled, and only affects the Twig functions. Install
-it in your theme if you want them.
+WPGraphQL is optional and not bundled. Install it and every collection you have
+opened for reading joins the site's GraphQL schema.
 
 = Source code =
 

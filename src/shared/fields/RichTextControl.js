@@ -1,10 +1,17 @@
 /**
  * Rich text field backed by the editor WordPress already loads.
  *
- * wp.editor.initialize gives the same TinyMCE + Quicktags pair the classic
- * editor uses, so formatting, the media button and shortcodes behave exactly
- * as authors expect. If that API is unavailable the control degrades to a
- * plain textarea rather than failing.
+ * wp.editor.initialize gives the same TinyMCE the classic editor uses, so
+ * formatting behaves exactly as authors expect. If that API is unavailable the
+ * control degrades to a plain textarea rather than failing.
+ *
+ * Two things the classic editor has are deliberately off here. The **media
+ * button** inserts an <img> into the markup, which puts an attachment id inside
+ * a text field where nothing can find it again — this plugin has an Image field
+ * for that, and one whose value the API resolves. The **Visual/Text tabs** are
+ * off because the raw HTML is not the field's value: what is stored has been
+ * through wp_kses_post, so the markup the Text tab invites somebody to write is
+ * not necessarily the markup that comes back.
  */
 
 import { useEffect, useRef, useState } from '@wordpress/element'
@@ -34,8 +41,10 @@ export function RichTextField({ field, value, onChange }) {
     const { editor } = window.wp
 
     editor.initialize(id, {
-      mediaButtons: true,
-      quicktags: true,
+      mediaButtons: false,
+      // off, which is also what takes the Visual/Text tabs away: the switcher
+      // only appears when there are two modes to switch between
+      quicktags: false,
       tinymce: {
         wpautop: true,
         toolbar1: 'formatselect,bold,italic,bullist,numlist,blockquote,link,unlink,undo,redo',
@@ -47,15 +56,7 @@ export function RichTextField({ field, value, onChange }) {
       },
     })
 
-    // the text tab writes straight to the textarea, bypassing TinyMCE events
-    const textarea = document.getElementById(id)
-    const onInput = (event) => onChangeRef.current(event.target.value)
-    textarea?.addEventListener('input', onInput)
-
-    return () => {
-      textarea?.removeEventListener('input', onInput)
-      editor.remove(id)
-    }
+    return () => editor.remove(id)
   }, [id, supported])
 
   if (!supported) {

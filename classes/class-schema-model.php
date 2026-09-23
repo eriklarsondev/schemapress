@@ -90,40 +90,7 @@ class SchemaModel
                 ? self::normalizeSlugField($settings['slugField'], $fields)
                 : self::defaultSlugField($fields),
             'listColumns' => self::normalizeColumns($settings['listColumns'] ?? null, $fields),
-            // which roles may edit this collection's entries. empty is open to
-            // everyone who may edit content, which is what every collection was
-            // before this existed — see Capabilities::canEditCollection
-            'editRoles' => self::normalizeRoles($settings['editRoles'] ?? null),
         ];
-    }
-
-    /**
-     * Coerces a list of role slugs. Not checked against the roles this site has:
-     * an import from a site with a `finance` role should keep the restriction
-     * rather than drop it and open the collection to everybody. A role that does
-     * not exist matches no user, which fails closed.
-     *
-     * @param mixed $roles
-     *
-     * @return string[]
-     */
-    private static function normalizeRoles($roles)
-    {
-        if (!is_array($roles)) {
-            return [];
-        }
-
-        $clean = [];
-
-        foreach ($roles as $role) {
-            $slug = sanitize_key((string) $role);
-
-            if ($slug !== '' && !in_array($slug, $clean, true)) {
-                $clean[] = $slug;
-            }
-        }
-
-        return $clean;
     }
 
     /**

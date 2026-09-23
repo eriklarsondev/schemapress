@@ -3,8 +3,8 @@
 
 ## Writing a client
 
-How to actually call it. **Endpoints** describes the addresses, **Response format** the
-shape that comes back, and **Filters** the parameters.
+How to actually call it. **Endpoints** describes the addresses, **Querying** the
+request, and **Values in JSON** the shape that comes back.
 
 ### Before anything works
 
@@ -147,7 +147,7 @@ foreach ($body['data'] as $person) {
 array, so filters can be written as PHP arrays rather than as strings.
 
 :::warning Do not call your own site over HTTP
-On the same install, use the PHP API directly — see **PHP**. An HTTP round trip to
+On the same install, use the PHP API directly — see **The query object**. An HTTP round trip to
 yourself is slower, can deadlock on a single-worker server, and returns the same data.
 :::
 

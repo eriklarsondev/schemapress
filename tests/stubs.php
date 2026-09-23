@@ -34,6 +34,7 @@ $GLOBALS['wp_filters'] = [];
 $GLOBALS['wp_actions'] = [];
 $GLOBALS['wp_options'] = [];
 $GLOBALS['wp_rest_routes'] = [];
+$GLOBALS['wp_graphql'] = ['types' => [], 'inputs' => [], 'enums' => [], 'fields' => []];
 
 /**
  * Empties the store between tests.
@@ -51,6 +52,7 @@ function sp_test_reset()
     $GLOBALS['wp_actions'] = [];
     $GLOBALS['wp_options'] = [];
     $GLOBALS['wp_rest_routes'] = [];
+    $GLOBALS['wp_graphql'] = ['types' => [], 'inputs' => [], 'enums' => [], 'fields' => []];
 
     SchemaPress\ContentType::flush();
     SchemaPress\SchemaRepository::flush();
@@ -335,6 +337,76 @@ function is_wp_error($value)
     return $value instanceof WP_Error;
 }
 
+// --- WPGraphQL ---------------------------------------------------------------
+
+// WPGraphQL is not installed here and is not a dependency, so these stand in
+// for its four registration functions and record what was asked for. That is
+// the testable half: whether a schema built against a real WPGraphQL is the
+// schema this plugin described is WPGraphQL's job, and whether this plugin
+// describes the right one is ours.
+//
+// Their mere existence is also what Graphql::available() reads, so a test can
+// exercise both the present and the absent case by defining or hiding them.
+
+function register_graphql_object_type($name, array $config = [])
+{
+    $GLOBALS['wp_graphql']['types'][$name] = $config;
+}
+
+function register_graphql_input_type($name, array $config = [])
+{
+    $GLOBALS['wp_graphql']['inputs'][$name] = $config;
+}
+
+function register_graphql_enum_type($name, array $config = [])
+{
+    $GLOBALS['wp_graphql']['enums'][$name] = $config;
+}
+
+function register_graphql_field($type, $field, array $config = [])
+{
+    $GLOBALS['wp_graphql']['fields'][$type][$field] = $config;
+}
+
+/**
+ * Builds the schema the way WPGraphQL would ask for it, and hands back what
+ * was registered.
+ *
+ * @return array
+ */
+function sp_test_graphql()
+{
+    $GLOBALS['wp_graphql'] = ['types' => [], 'inputs' => [], 'enums' => [], 'fields' => []];
+
+    (new SchemaPress\Graphql())->register();
+
+    return $GLOBALS['wp_graphql'];
+}
+
+/**
+ * What one registered field resolves to, given a source and arguments.
+ *
+ * @param array  $schema from sp_test_graphql()
+ * @param string $type
+ * @param string $field
+ * @param mixed  $source
+ * @param array  $args
+ *
+ * @return mixed
+ */
+function sp_test_resolve(array $schema, $type, $field, $source = null, array $args = [])
+{
+    $config = $type === 'RootQuery'
+        ? ($schema['fields']['RootQuery'][$field] ?? null)
+        : ($schema['types'][$type]['fields'][$field] ?? null);
+
+    if (!$config || !isset($config['resolve'])) {
+        return null;
+    }
+
+    return call_user_func($config['resolve'], $source, $args, null, null);
+}
+
 // --- REST --------------------------------------------------------------------
 
 // recorded rather than discarded: whether the content API's namespace is
@@ -594,6 +666,13 @@ function wp_insert_post($data, $wp_error = false)
             $id
         ),
         'post_status' => $data['post_status'] ?? 'publish',
+        // set once here and never again, exactly as WordPress does: post_date is
+        // when the row was made, and wp_update_post below leaves it alone. The
+        // store used to have none, and ordering by `date` fell back to the id —
+        // which made publishedAt and createdAt indistinguishable in a test and
+        // hid a real bug, where publishedAt ordered by a column that does not
+        // move while reporting a meta row that does
+        'post_date_gmt' => sp_test_stamp(),
         'post_modified_gmt' => sp_test_stamp(),
     ];
 
@@ -1044,9 +1123,11 @@ class WP_Query
             return strcmp((string) $a->post_modified_gmt, (string) $b->post_modified_gmt);
         }
 
-        // the store has no post_date, and ids are handed out in order, so the id
-        // is the creation order this is asking about
-        return $a->ID <=> $b->ID;
+        // when the row was made, which is what `date` means to WP_Query and what
+        // createdAt is read from. It never moves, so an entry republished later
+        // keeps its place here — the whole point of it being separate from
+        // publishedAt
+        return strcmp((string) $a->post_date_gmt, (string) $b->post_date_gmt);
     }
 }
 
@@ -1332,7 +1413,12 @@ require_once SCHEMAPRESS_PATH . 'classes/class-component.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-capabilities.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-portability.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-api.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-graphql.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-upgrade.php';
+
+// the procedural aliases a theme actually calls. loaded here so the suite can
+// exercise the front door rather than only the class behind it
+require_once SCHEMAPRESS_PATH . 'includes/helpers.php';
 
 // field types register on construction
 new SchemaPress\FieldTypes();

@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
  * the same structures by hand.
  *
  *   ?role=Engineer&sort=name&limit=50
- *   SchemaPress::collection('team_member')->where('role', 'Engineer')->sort('name')
+ *   SchemaPress::collection('team-members')->where('role', 'Engineer')->sort('name')
  *
  * Filters run against the Index, not the stored JSON — see class-index.php.
  *
@@ -71,8 +71,23 @@ class Query
         'slug' => 'name',
         'createdAt' => 'date',
         'updatedAt' => 'modified',
-        'publishedAt' => 'date',
     ];
+
+    /**
+     * The one entry-level sort that is not a post-row column.
+     *
+     * `publishedAt` is reported from a meta row that moves forward every time the
+     * published copy does, so ordering by `post_date` — which WordPress sets once
+     * and never moves — put the list in an order its own values contradicted.
+     * Ordering by the row the value is read from is the only way the two agree.
+     *
+     * The cost is that it spends the single meta key WP_Query orders by, so it
+     * cannot be combined with a sort on one of the collection's own fields. See
+     * orderArgs().
+     *
+     * @var string
+     */
+    public const PUBLISHED_SORT = 'publishedAt';
 
     /**
      * Reads a request's parameters into a query spec.
@@ -328,27 +343,21 @@ class Query
         $clauses = [];
 
         foreach ($filters as $key => $value) {
-            // $and / $or take a list of filter objects and nest
             if ($key === '$and' || $key === '$or') {
-                $nested = self::metaQuery(
-                    self::flatten(is_array($value) ? $value : []),
-                    $indexable,
-                    $key === '$or' ? 'OR' : 'AND',
-                    $draft
-                );
+                $group = self::group($key, $value, $indexable, $draft);
 
-                if ($nested) {
-                    $clauses[] = $nested;
+                if ($group) {
+                    $clauses[] = $group;
                 }
 
                 continue;
             }
 
-            if (!isset($indexable[$key]) || !is_array($value)) {
+            if (!isset($indexable[$key])) {
                 continue;
             }
 
-            foreach ($value as $operator => $operand) {
+            foreach (self::conditions($value) as $operator => $operand) {
                 $clause = self::clause($key, $indexable[$key], $operator, $operand, $draft);
 
                 if ($clause) {
@@ -365,26 +374,89 @@ class Query
     }
 
     /**
-     * Merges a list of filter objects into one, so `$or: [{a}, {b}]` reads as a
-     * single set of clauses joined by OR.
+     * An `$and` or `$or` group: a LIST of filter objects, each one a query in
+     * its own right, joined by the group's relation.
      *
-     * @param array $list
+     * The list used to be merged into a single flat object before being read,
+     * which was wrong twice over. `$or: [{role: Design}, {role: Writer}]` lost a
+     * branch outright, because merging two objects that name the same field
+     * keeps one of them — so the query answered as though you had only asked the
+     * second. And `$or: [{a, b}, {c}]` came out as `a OR b OR c` rather than
+     * `(a AND b) OR c`, which is a strictly wider question than the one asked.
+     * Both failed by returning MORE than was wanted, which is the direction a
+     * filter on a published collection must never fail in.
      *
-     * @return array
+     * @param string  $key       $and or $or
+     * @param mixed   $value     the list of filter objects
+     * @param array   $indexable
+     * @param boolean $draft
+     *
+     * @return array empty when no branch survived
      */
-    private static function flatten(array $list)
+    private static function group($key, $value, array $indexable, $draft)
     {
-        $merged = [];
+        $list = is_array($value) ? $value : [];
 
-        foreach ($list as $entry) {
-            if (is_array($entry)) {
-                foreach ($entry as $key => $value) {
-                    $merged[$key] = $value;
-                }
+        // one object rather than a list of them can only mean one branch, and
+        // refusing it would be a filter silently dropped
+        if ($list && array_keys($list) !== range(0, count($list) - 1)) {
+            $list = [$list];
+        }
+
+        $branches = [];
+
+        foreach ($list as $branch) {
+            // AND inside a branch, whichever relation joins the branches: the
+            // conditions of one object all have to hold for that object to
+            $nested = is_array($branch) ? self::metaQuery($branch, $indexable, 'AND', $draft) : [];
+
+            if ($nested) {
+                $branches[] = $nested;
             }
         }
 
-        return $merged;
+        if (!$branches) {
+            return [];
+        }
+
+        // a group of one is that branch. wrapping it would nest a relation
+        // around a single clause, which reads as noise in a slow query log
+        if (count($branches) === 1) {
+            return $branches[0];
+        }
+
+        return array_merge(['relation' => $key === '$or' ? 'OR' : 'AND'], $branches);
+    }
+
+    /**
+     * The conditions on one field, as operator => operand.
+     *
+     * Three shapes reach here and all three mean something:
+     *
+     *   ['$gte' => 10]     what Strapi writes, and what where() builds
+     *   'Engineer'         `filters[role]=Engineer`, with the operator left off
+     *   ['a', 'b']         `filters[role][]=a&filters[role][]=b`
+     *
+     * The last two used to be dropped, so a filter that named a real field and
+     * gave it a real value was ignored — and an ignored filter WIDENS the
+     * result. Strapi wants an operator there; a reader who leaves it off has
+     * still said plainly what they meant.
+     *
+     * @param mixed $value
+     *
+     * @return array
+     */
+    private static function conditions($value)
+    {
+        if (!is_array($value)) {
+            return ['$eq' => $value];
+        }
+
+        if ($value && array_keys($value) === range(0, count($value) - 1)) {
+            return ['$in' => array_values($value)];
+        }
+
+        return $value;
     }
 
     /**
@@ -521,8 +593,12 @@ class Query
 
     /**
      * Sort clauses as WP_Query ordering. WP_Query takes one meta key to order by,
-     * so the first field-based clause wins and any after it are dropped; reserved
-     * keys live on the post row and combine freely.
+     * so the first clause that needs one wins and any after it are dropped;
+     * reserved keys live on the post row and combine freely.
+     *
+     * `publishedAt` is the one entry-level key that needs a meta row rather than
+     * a column — see PUBLISHED_SORT — so it competes for that single key with a
+     * sort on one of the collection's own fields.
      *
      * @param array   $sort
      * @param array   $indexable
@@ -541,6 +617,21 @@ class Query
 
             if (isset(self::RESERVED_SORT[$field])) {
                 $orderby[self::RESERVED_SORT[$field]] = $clause['direction'];
+
+                continue;
+            }
+
+            // publishedAt and a field sort want the same single meta key, so
+            // whichever was asked for first keeps it — the rule the field
+            // sorts already follow among themselves
+            if ($field === self::PUBLISHED_SORT) {
+                if ($metaKey !== '') {
+                    continue;
+                }
+
+                $metaKey = Entries::META_PUBLISHED_AT;
+                $metaType = 'CHAR';
+                $orderby['meta_value'] = $clause['direction'];
 
                 continue;
             }

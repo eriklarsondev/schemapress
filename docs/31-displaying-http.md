@@ -1,7 +1,11 @@
-<!-- group: Content API -->
+<!-- group: Displaying content -->
 <!-- description: The data and meta envelope, the shape of an entry, and what each field type becomes in JSON. -->
 
-## Response format
+## Values in JSON
+
+What a response carries, and what to expect of each field in it. How to ask for one is
+**Querying**; the same values in a theme are **Values in PHP** and **Values in
+Twig**.
 
 ### The envelope
 
@@ -63,19 +67,42 @@ Fields sit **beside** the identifiers rather than under an `attributes` envelope
     "height": 800,
     "sizes": {}
   },
-  "updatedAt": "2026-09-06 19:41:35",
-  "publishedAt": "2026-09-06 19:41:35"
+  "createdAt": "2026-09-06T19:41:35Z",
+  "updatedAt": "2026-09-06T19:41:35Z",
+  "publishedAt": "2026-09-06T19:41:35Z"
 }
 ```
 
-Three keys are always present and always mean the same thing:
+Five keys are always present and always mean the same thing:
 
 | Key | |
 | --- | --- |
 | `id` | A uuid, stable for the life of the entry |
-| `updatedAt` / `publishedAt` | ISO-8601 instants in UTC — `2026-09-08T09:35:00Z` |
+| `slug` | How a front end addresses the entry, and the other thing `/{collection}/{id}` takes |
+| `createdAt` | When the entry was made. Never moves again |
+| `updatedAt` | When it was last written, published or not |
+| `publishedAt` | When its published copy last moved forward |
 
-Everything else is one of your fields, under the machine key you gave it.
+All three timestamps are ISO-8601 instants in UTC — `2026-09-08T09:35:00Z`. Everything else
+is one of your fields, under the machine key you gave it.
+
+:::note `createdAt` and `publishedAt` drift apart on purpose
+An entry made in January and corrected in September has a January `createdAt` and a
+September `publishedAt`. Sorting by one is not the same as sorting by the other — see
+**Sorting & pagination**.
+:::
+
+:::caution A field of yours cannot take one of these five names
+A field labelled "ID" keys to `id`, which is the name this document is addressed by.
+The entry's own value wins and **the field moves to `id_field`** — it is still delivered,
+under a name that is not load-bearing.
+
+It has to work that way: a document whose `id` was a SKU would report an identifier
+`/{collection}/{id}` does not answer to, so a client could not fetch the entry by the id it
+had just been handed. The same applies to `slug`, `createdAt`, `updatedAt` and
+`publishedAt`. If you see an `_field` suffix in a response, rename the field — the suffix
+is a repair, not a convention to build on.
+:::
 
 ### Titles and slugs
 

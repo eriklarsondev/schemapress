@@ -55,7 +55,7 @@ An entry is never a duplicate of itself, which is what makes a unique field edit
 :::caution Uniqueness is top-level only
 A field inside a Repeater or a Component cannot be unique. The mirror that answers the
 question holds one value per field per entry, and a repeater has many — the same reason
-those fields cannot be filtered. See **Indexing** under Content API.
+those fields cannot be filtered. See **What can be queried** under Querying content.
 :::
 
 ### When a rule is broken

@@ -71,18 +71,16 @@ intact.
 
 ### Per collection
 
-A collection can name the roles allowed to edit **its** entries, under **Who can edit
-these** in its settings dialog. A Grants collection can belong to finance while News belongs
-to comms.
+There is nothing per collection. Anyone with `schemapress_edit_content` may edit the
+entries of every collection on the site, and who has that is a question about roles, which
+WordPress already answers.
 
-Naming no roles — which is what every collection starts as — means anyone with
-`schemapress_edit_content`. Naming some narrows it to those, plus anyone who can manage
-schemas: somebody able to delete the collection outright is not meaningfully kept out of its
-entries.
-
-A role that does not exist on this site matches nobody, which fails closed. That is
-deliberate, so a collection imported from an install with a `finance` role keeps its
-restriction rather than quietly opening to everyone.
+A collection used to be able to name the roles allowed to edit **its** entries, under **Who
+can edit these** in its settings dialog — a Grants collection for finance, a News
+collection for comms. It was a second permission system beside WordPress's own, settable
+in a different place for every collection, and one more thing to check when somebody could
+not edit something. If you want that division, draw it with roles and capabilities: give
+the finance team a role of their own and grant it `schemapress_edit_content`.
 
 :::note The screens follow the transport, not the other way round
 Every route checks for itself. What the capability sends to the browser only stops the

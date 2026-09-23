@@ -40,8 +40,8 @@ like** is your theme's business. There are no widths, columns, colors or CSS cla
 collection.
 
 That line is the whole design. It is why the same entry can come out as a Twig template, a
-PHP loop, or JSON to a front end that is not WordPress at all — see **Endpoints**, **PHP**
-and **Twig & Timber**.
+PHP loop, or JSON to a front end that is not WordPress at all. **Querying** covers asking
+for it on all three, and **Displaying values** covers rendering what comes back.
 
 :::note One exception, and it is not presentation
 The **Form** tab arranges fields on the *entry form* — which order you fill them in, how
@@ -59,6 +59,7 @@ Three things, deliberately:
 | **Field** | One piece of an entry. Name, Bio, Photo, Author. |
 | **Entry** | One of the things. Ada Lovelace. |
 
-A collection has a **machine key** derived from its name — `team_member` for "Team Member".
-That key is what templates and the API use, and it does not follow later renames: renaming
-a label should not break every template that reads it.
+A collection has a **machine key** derived from its name — `team_member` for "Team Member" —
+and you ask for it by the plural, hyphenated: `team-members`, in a template and in a URL
+alike. Neither follows a later rename: renaming a label should not break every template
+that reads it.

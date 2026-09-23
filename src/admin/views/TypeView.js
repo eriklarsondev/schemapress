@@ -19,9 +19,10 @@
 import { useCallback, useEffect, useState } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Table2, Wrench, LayoutList, SlidersHorizontal } from 'lucide-react'
-import { Tabs, TabPanel, Loading, Alert, Button } from '../../ui'
+import { Tabs, TabPanel, Loading, Alert, Button, ConfirmDialog } from '../../ui'
 import { api } from '../../shared/api'
 import { can } from '../../shared/settings'
+import { hasUnsavedPanel, unsavedMessage, PANEL } from '../../shared/unsaved'
 import { EntriesView } from './EntriesView'
 import { EntryView } from './EntryView'
 import { FieldsTab } from './FieldsTab'
@@ -38,6 +39,9 @@ export function TypeView({ type, onChanged, onDeleted }) {
   const [definition, setDefinition] = useState(null)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('entries')
+  // the tab somebody is trying to reach with work unsaved on the one they are
+  // on, held until they say whether to lose it
+  const [leaving, setLeaving] = useState('')
 
   // the version this screen's copy of the definition was built on, sent back
   // with a save so one made against a definition that has since moved is
@@ -189,7 +193,14 @@ export function TypeView({ type, onChanged, onDeleted }) {
         ) : null}
       </header>
 
-      <Tabs tabs={tabs} value={tab} onValueChange={setTab}>
+      {/* a panel unmounts when you leave it, so the Form tab's arrangement is
+          gone before anything else could ask about it — the strip has to ask
+          on the way out, as the sidebar does */}
+      <Tabs
+        tabs={tabs}
+        value={tab}
+        onValueChange={(next) => (hasUnsavedPanel() ? setLeaving(next) : setTab(next))}
+      >
         <TabPanel value="entries">
           <EntriesView
             type={type}
@@ -215,6 +226,23 @@ export function TypeView({ type, onChanged, onDeleted }) {
           />
         </TabPanel>
       </Tabs>
+
+      {leaving ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(next) => !next && setLeaving('')}
+          title={__('Leave without saving?', 'schemapress')}
+          description={unsavedMessage(PANEL)}
+          confirmLabel={__('Leave', 'schemapress')}
+          onConfirm={() => {
+            // nothing to clear by hand: the panel unmounts on the way out and
+            // takes its registration with it, and anything the view around it
+            // is holding is still there to be asked about later
+            setTab(leaving)
+            setLeaving('')
+          }}
+        />
+      ) : null}
 
       {configuring ? (
         <SettingsDialog

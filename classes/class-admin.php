@@ -88,16 +88,12 @@ class Admin
             'rest' => Assets::restContext(),
             'fieldTypes' => $this->fieldTypesForClient(),
             'datasets' => Datasets::forClient(),
-            'elements' => Elements::all(),
             'adminUrl' => esc_url_raw(admin_url('admin.php?page=' . self::PAGE_SLUG)),
             // bootstrapped rather than fetched: a collection's settings dialog
             // reads these to say when the API it offers to publish to is off,
             // and should not wait on a request to say so
             'site' => Settings::all(),
             'can' => ['manageSchema' => Capabilities::canManage()],
-            // the site's own role list, so one added by another plugin is
-            // offered without this plugin knowing about it
-            'roles' => Capabilities::roles(),
             // work already in flight, so a reindex started before a reload is
             // still visible after it
             'jobs' => Batch::status(),

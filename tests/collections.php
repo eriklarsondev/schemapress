@@ -814,11 +814,21 @@ $labels = ContentType::labels($plural);
 check('offers a singular label', 'Team Member', $labels['singular']);
 check('offers a plural label', 'Team Members', $labels['plural']);
 
-// both machine names reach the same collection: which one a template author
-// reaches for depends on the sentence they are writing
+// the plural-hyphen form is the one the documentation teaches, on all three
+// surfaces — so it has to answer in PHP and Twig, not only in a URL. the other
+// three spellings still reach the same collection, because a name somebody
+// already typed into a template should not stop working
+check('finds it by the plural-hyphen name', 1, count(Content::collection('team-members')->fields()));
 check('finds it by the singular key', 1, count(Content::collection('team_member')->fields()));
 check('finds it by the plural key', 1, count(Content::collection('team_members')->fields()));
-check('still misses a real typo', 0, count(Content::collection('team_membrs')->fields()));
+check('finds it by the singular hyphenated', 1, count(Content::collection('team-member')->fields()));
+check('still misses a real typo', 0, count(Content::collection('team-membrs')->fields()));
+
+// the procedural front door resolves it the same way, because it is the same
+// call — a name the documentation prints has to work where a theme types it
+check('the helper takes it', 1, count(schemapress_collection('team-members')->fields()));
+check('and so does has()', true, schemapress_has_collection('team-members'));
+check('a typo is still absent', false, schemapress_has_collection('team-membrs'));
 
 // two types whose plurals would collide must stay distinct
 $person = sp_test_type('Person', []);
@@ -1483,6 +1493,44 @@ check(
     preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $shaped['updatedAt'])
 );
 
+check(
+    'and createdAt, which is a different instant from publishedAt',
+    1,
+    preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $shaped['createdAt'])
+);
+
+// A field labelled "ID" keys to `id`, which is the name the entry is addressed
+// by. Delivering the field under it replaced the uuid, so the document reported
+// an identifier /{collection}/{id} does not answer to — the entry could not be
+// fetched by the id it had just handed out. The entry's name wins and the field
+// moves; dropping it instead would lose the value silently.
+$refs = sp_test_type('Ref', [
+    ['label' => 'ID', 'type' => 'text'],
+    ['label' => 'Slug', 'type' => 'text'],
+    ['label' => 'Name', 'type' => 'text'],
+], ['titleField' => 'name', 'publicApi' => ['list' => true, 'single' => true]]);
+
+$ref = Entries::save($refs, null, ['publish' => true, 'values' => [
+    'id' => 'EXTERNAL-REF-9',
+    'slug' => 'a-field-slug',
+    'name' => 'Widget One',
+]]);
+
+$shapedRef = sp_test_single('refs', $ref['id'])['data'];
+
+check('a field called id does not replace the entry uuid', $ref['id'], $shapedRef['id']);
+check('nor does one called slug replace the slug', $ref['slug'], $shapedRef['slug']);
+check('the field is still delivered, moved aside', 'EXTERNAL-REF-9', $shapedRef['id_field']);
+check('and so is the other one', 'a-field-slug', $shapedRef['slug_field']);
+
+// the point of all of it: what the document reports as its id has to be the
+// thing the single route answers to
+check(
+    'an entry is fetchable by the id its own response reports',
+    'Widget One',
+    sp_test_single('refs', $shapedRef['id'])['data']['name']
+);
+
 check('an unpublished entry is not listed', 1, count(sp_test_list('books')['data']));
 check('and is not readable by id', 404, sp_test_single('books', $hidden['id'])->get_error_data()['status']);
 
@@ -1594,6 +1642,54 @@ check(
     sp_test_query(['filters' => ['$or' => [['name' => ['$eq' => 'Ada']], ['role' => ['$eq' => 'Designer']]]]])
 );
 
+// each entry of an $or list is a query of its own. the list used to be merged
+// into one flat object first, which kept only the last of two branches naming
+// the same field — so this answered as though only the second had been asked
+check(
+    '$or keeps both branches when they name the same field',
+    ['Barbara', 'Grace', 'Ada'],
+    sp_test_query(['filters' => ['$or' => [
+        ['role' => ['$eq' => 'Engineer']],
+        ['role' => ['$eq' => 'Designer']],
+    ]]])
+);
+
+// and the conditions inside one branch are joined by AND: `(a AND b) OR c`,
+// not `a OR b OR c`. flattening made it the second, which is a strictly wider
+// question than the one asked — nobody is a Designer with a headcount over 10,
+// so Grace must not be here
+check(
+    '$or does not widen a branch that has two conditions',
+    ['Katherine'],
+    sp_test_query(['filters' => ['$or' => [
+        ['role' => ['$eq' => 'Designer'], 'headcount' => ['$gte' => 10]],
+        ['role' => ['$null' => 'true']],
+    ]]])
+);
+
+check(
+    '$and nests inside $or',
+    ['Barbara', 'Grace'],
+    sp_test_query(['filters' => ['$or' => [
+        ['$and' => [['role' => ['$eq' => 'Engineer']], ['headcount' => ['$gte' => 10]]]],
+        ['role' => ['$eq' => 'Designer']],
+    ]]])
+);
+
+// a filter that names a real field and gives it a real value has said what it
+// means, operator or not. it used to be dropped — and a dropped filter widens
+check(
+    'reads filters[field]=value without an operator',
+    ['Grace', 'Ada'],
+    sp_test_query(['filters' => ['role' => 'Engineer']])
+);
+
+check(
+    'and reads a list under filters[field][] as any of',
+    ['Barbara', 'Grace', 'Ada'],
+    sp_test_query(['filters' => ['role' => ['Engineer', 'Designer']]])
+);
+
 // a filter naming a field that does not exist, or one that cannot be indexed,
 // is dropped rather than obeyed — which means it returns MORE than was asked
 // for, so the test has to prove it did not quietly return nothing
@@ -1624,6 +1720,52 @@ check(
 );
 
 check('sorts by the reserved title key', ['Ada', 'Barbara', 'Grace', 'Katherine'], sp_test_query(['sort' => 'title:asc']));
+
+// createdAt is the post row's own date. WordPress sets it when the row is made
+// and never moves it again, so this is the order they were written in
+check(
+    'sorts by the reserved createdAt key',
+    ['Ada', 'Grace', 'Barbara', 'Katherine'],
+    sp_test_query(['sort' => 'createdAt:asc'])
+);
+
+// publishedAt is NOT that column, and this is the test that says which one the
+// sort reads. It is reported from a meta row that moves forward every time the
+// published copy does, while post_date does not move at all — so ordering by
+// post_date put the list in an order its own publishedAt values contradicted.
+// Reversing the meta against creation order is what makes the two tell apart:
+// against post_date this comes back in creation order no matter what the meta
+// says.
+$published_at = [];
+
+foreach (get_posts([
+    'post_type' => ContentType::get($staff)['postType'],
+    'numberposts' => -1,
+    'post_status' => ['publish', 'draft'],
+]) as $row) {
+    $published_at[$row->post_title] = $row->ID;
+}
+
+foreach ([
+    'Ada' => '2026-04-01',
+    'Grace' => '2026-03-01',
+    'Barbara' => '2026-02-01',
+    'Katherine' => '2026-01-01',
+] as $who => $day) {
+    update_post_meta($published_at[$who], Entries::META_PUBLISHED_AT, $day . 'T00:00:00Z');
+}
+
+check(
+    'sorts by publishedAt, the value it reports rather than the row it was made on',
+    ['Katherine', 'Barbara', 'Grace', 'Ada'],
+    sp_test_query(['sort' => 'publishedAt:asc'])
+);
+
+check(
+    'and the other way',
+    ['Ada', 'Grace', 'Barbara', 'Katherine'],
+    sp_test_query(['sort' => 'publishedAt:desc'])
+);
 
 // --- paging ------------------------------------------------------------------
 
@@ -1667,6 +1809,19 @@ check(
     2,
     count($people->filter(['$or' => [['name' => ['$eq' => 'Ada']], ['role' => ['$eq' => 'Designer']]]])->get())
 );
+
+// the same window `?start=` opens over HTTP. it used to have no equivalent
+// here, so a theme could page but could not skip
+$ordered = $people->sort('name');
+
+check('offset() skips entries rather than pages', 'Barbara', $ordered->offset(1)->first()->get('name'));
+check('and composes with limit()', ['Barbara', 'Grace'], array_map(
+    function ($entry) {
+        return $entry->get('name');
+    },
+    $ordered->offset(1)->limit(2)->get()
+));
+check('while total() still counts them all', 4, $ordered->offset(1)->limit(2)->total());
 
 // a query is immutable, so holding one and reading it twice cannot have the
 // first read reshape the second
@@ -1853,6 +2008,186 @@ check(
     'Engineer',
     Entries::get($roles, $person['id'], 0, Entries::DRAFT)['values']['role']
 );
+
+// --- the GraphQL schema ------------------------------------------------------
+
+echo "\nThe GraphQL schema\n";
+
+sp_test_reset();
+
+$crew = sp_test_type('Crew Member', [
+    ['label' => 'Full Name', 'type' => 'text'],
+    ['label' => 'Role', 'type' => 'text'],
+    ['label' => 'Headcount', 'type' => 'number'],
+    ['label' => 'Lead', 'type' => 'toggle'],
+    ['label' => 'Avatar', 'type' => 'image'],
+    ['label' => 'Bio', 'type' => 'wysiwyg'],
+    ['label' => 'Links', 'type' => 'repeater', 'fields' => [
+        ['label' => 'Label', 'type' => 'text'],
+        ['label' => 'Address', 'type' => 'url'],
+    ]],
+], ['titleField' => 'full_name', 'publicApi' => ['list' => true, 'single' => true]]);
+
+foreach ([
+    ['full_name' => 'Ada', 'role' => 'Engineer', 'headcount' => 3, 'lead' => true],
+    ['full_name' => 'Grace', 'role' => 'Engineer', 'headcount' => 12, 'lead' => false],
+    ['full_name' => 'Barbara', 'role' => 'Designer', 'headcount' => 7, 'lead' => false],
+] as $person) {
+    Entries::save($crew, null, ['publish' => true, 'values' => $person]);
+}
+
+$schema = sp_test_graphql();
+
+// the type name is the singular key in PascalCase, and the root fields are the
+// two machine names in camelCase — GraphQL has no dashes, so the plural-hyphen
+// form every other surface takes cannot be spelled here
+check('registers a type per collection', true, isset($schema['types']['CrewMember']));
+check('names the list query by the plural', true, isset($schema['fields']['RootQuery']['crewMembers']));
+check('and the single query by the singular', true, isset($schema['fields']['RootQuery']['crewMember']));
+
+$fields = $schema['types']['CrewMember']['fields'];
+
+check('field keys arrive camelCased', true, isset($fields['fullName']));
+check('the entry keeps its own identity fields', true, isset($fields['id'], $fields['slug'], $fields['publishedAt']));
+check('a number is a Float', 'Float', $fields['headcount']['type']);
+check('a toggle is a Boolean', 'Boolean', $fields['lead']['type']);
+check('rich text is a String', 'String', $fields['bio']['type']);
+check('an image gets the shared media type', 'SchemaPressMedia', $fields['avatar']['type']);
+check('a repeater is a list of its own type', ['list_of' => 'CrewMemberLinks'], $fields['links']['type']);
+check('and that type has the row fields', true, isset($schema['types']['CrewMemberLinks']['fields']['address']));
+
+// only what can be filtered is offered as a filter, and each by the shape it
+// compares as — the same rule the index applies
+$where = $schema['inputs']['CrewMemberWhere']['fields'];
+
+check('a where input is generated', true, isset($where['fullName'], $where['headcount']));
+check('text compares as a string', 'SchemaPressStringFilter', $where['role']['type']);
+check('a number compares as a number', 'SchemaPressNumberFilter', $where['headcount']['type']);
+check('a toggle compares as a boolean', 'SchemaPressBooleanFilter', $where['lead']['type']);
+check('rich text cannot be filtered', false, isset($where['bio']));
+check('nor can a repeater', false, isset($where['links']));
+check('and the tree operators are there', true, isset($where['and'], $where['or']));
+
+$sort = $schema['enums']['CrewMemberSortField']['values'];
+
+check('sortable fields are an enum', 'full_name', $sort['FULL_NAME']['value']);
+check('with the entry keys alongside', 'publishedAt', $sort['PUBLISHED_AT']['value']);
+check('and nothing that cannot be sorted', false, isset($sort['BIO']));
+
+// the resolvers: a query through the schema has to give the answer the same
+// query gives over HTTP, because it is the same spec underneath
+$list = sp_test_resolve($schema, 'RootQuery', 'crewMembers', null, [
+    'where' => ['role' => ['eq' => 'Engineer']],
+    'sort' => [['field' => 'full_name', 'direction' => 'ASC']],
+]);
+
+check('the list resolver filters', ['Ada', 'Grace'], array_map(function ($entry) {
+    return $entry['data']['full_name'];
+}, $list['nodes']));
+check('and reports the total', 2, $list['total']);
+check('and how many this page returned', 2, $list['count']);
+
+$paged = sp_test_resolve($schema, 'RootQuery', 'crewMembers', null, [
+    'sort' => [['field' => 'full_name', 'direction' => 'ASC']],
+    'offset' => 1,
+    'limit' => 1,
+]);
+
+check('offset and limit page it', ['Barbara'], array_map(function ($entry) {
+    return $entry['data']['full_name'];
+}, $paged['nodes']));
+check('while the total still counts them all', 3, $paged['total']);
+
+// an $or through the schema is the $or the REST layer fixed: two branches on
+// one field keep both, and a branch of two conditions is not widened
+$either = sp_test_resolve($schema, 'RootQuery', 'crewMembers', null, [
+    'where' => ['or' => [
+        ['role' => ['eq' => 'Designer']],
+        ['headcount' => ['gte' => 10]],
+    ]],
+    'sort' => [['field' => 'full_name', 'direction' => 'ASC']],
+]);
+
+check('or keeps every branch', ['Barbara', 'Grace'], array_map(function ($entry) {
+    return $entry['data']['full_name'];
+}, $either['nodes']));
+
+// the translation itself, where the shapes are easiest to read: a GraphQL
+// `where` becomes the same filter tree a query string parses to
+$crewFields = SchemaRepository::definition($crew)['fields'];
+
+check(
+    'isNull is the $null/$notNull pair as one flag',
+    ['role' => ['$null' => false]],
+    SchemaPress\Graphql::filters(['role' => ['isNull' => false]], $crewFields)
+);
+
+check(
+    'and every other operator is a rename',
+    ['headcount' => ['$gte' => 10, '$lt' => 20], 'full_name' => ['$startsWith' => 'A']],
+    SchemaPress\Graphql::filters([
+        'headcount' => ['gte' => 10, 'lt' => 20],
+        'fullName' => ['startsWith' => 'A'],
+    ], $crewFields)
+);
+
+check(
+    'a branch keeps its own conditions together',
+    ['$or' => [
+        ['role' => ['$eq' => 'Designer'], 'headcount' => ['$gte' => 10]],
+        ['role' => ['$eq' => 'Writer']],
+    ]],
+    SchemaPress\Graphql::filters(['or' => [
+        ['role' => ['eq' => 'Designer'], 'headcount' => ['gte' => 10]],
+        ['role' => ['eq' => 'Writer']],
+    ]], $crewFields)
+);
+
+check(
+    'a filter on a field that cannot be indexed is dropped',
+    [],
+    SchemaPress\Graphql::filters(['bio' => ['eq' => 'x']], $crewFields)
+);
+
+$single = sp_test_resolve($schema, 'RootQuery', 'crewMember', null, ['slug' => 'ada']);
+
+check('the single resolver reads a slug', 'Ada', $single['data']['full_name']);
+check('and misses what is not there', null, sp_test_resolve($schema, 'RootQuery', 'crewMember', null, ['slug' => 'nobody']));
+check('and refuses to guess with no argument', null, sp_test_resolve($schema, 'RootQuery', 'crewMember', null, []));
+
+// a field resolver reads the resolved bag, so what GraphQL returns is what the
+// REST layer returns rather than the stored value
+check('a field resolver reads the resolved value', 'Ada', sp_test_resolve($schema, 'CrewMember', 'fullName', $list['nodes'][0]));
+check('and the entry id comes off the entry', true, sp_test_resolve($schema, 'CrewMember', 'id', $list['nodes'][0]) !== '');
+
+// --- what the schema will not expose -----------------------------------------
+
+echo "\nGraphQL exposes what REST exposes\n";
+
+sp_test_reset();
+
+$closed = sp_test_type('Secret', [['label' => 'Name', 'type' => 'text']]);
+$listOnly = sp_test_type('Notice', [
+    ['label' => 'Name', 'type' => 'text'],
+], ['publicApi' => ['list' => true, 'single' => false]]);
+
+$schema = sp_test_graphql();
+
+check('a closed collection has no type at all', false, isset($schema['types']['Secret']));
+check('and no query to reach it', false, isset($schema['fields']['RootQuery']['secrets']));
+check('one open for lists gets the list query', true, isset($schema['fields']['RootQuery']['notices']));
+check('and not the single query', false, isset($schema['fields']['RootQuery']['notice']));
+
+// the site's master switch governs both surfaces: it is the one that means
+// "this site is not serving content over HTTP right now"
+SchemaPress\Settings::save(['restApi' => false]);
+
+$schema = sp_test_graphql();
+
+check('the master switch takes the whole schema down', [], $schema['fields']);
+check('including the shared types', [], $schema['types']);
+
+SchemaPress\Settings::save(['restApi' => true]);
 
 // --- result ------------------------------------------------------------------
 

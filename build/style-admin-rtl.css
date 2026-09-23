@@ -352,12 +352,6 @@
 
   inset: 0px;
 }
-.schemapress .inset-x-0 {
-
-  right: 0px;
-
-  left: 0px;
-}
 .schemapress .inset-x-4 {
 
   right: 1rem;
@@ -392,13 +386,21 @@
 
   top: -5rem;
 }
-.schemapress .bottom-0 {
+.schemapress .bottom-2 {
 
-  bottom: 0px;
+  bottom: 0.5rem;
 }
 .schemapress .bottom-\[5px\] {
 
   bottom: 5px;
+}
+.schemapress .end-0 {
+
+  inset-inline-end: 0px;
+}
+.schemapress .end-1 {
+
+  inset-inline-end: 0.25rem;
 }
 .schemapress .left-0 {
 
@@ -423,6 +425,10 @@
 .schemapress .start-0 {
 
   inset-inline-start: 0px;
+}
+.schemapress .start-1 {
+
+  inset-inline-start: 0.25rem;
 }
 .schemapress .top-1\.5 {
 
@@ -815,6 +821,10 @@
 .schemapress .w-0\.5 {
 
   width: 0.125rem;
+}
+.schemapress .w-1\.5 {
+
+  width: 0.375rem;
 }
 .schemapress .w-12 {
 
@@ -1291,6 +1301,10 @@
 
   border-color: hsl(var(--sp-primary) / 0.3);
 }
+.schemapress .border-primary\/60 {
+
+  border-color: hsl(var(--sp-primary) / 0.6);
+}
 .schemapress .border-red-300 {
 
   --tw-border-opacity: 1;
@@ -1458,6 +1472,10 @@
 .schemapress .bg-primary\/25 {
 
   background-color: hsl(var(--sp-primary) / 0.25);
+}
+.schemapress .bg-primary\/5 {
+
+  background-color: hsl(var(--sp-primary) / 0.05);
 }
 .schemapress .bg-primary\/\[0\.06\] {
 
@@ -2164,10 +2182,6 @@
 .schemapress .-outline-offset-2 {
 
   outline-offset: -2px;
-}
-.schemapress .outline-primary {
-
-  outline-color: hsl(var(--sp-primary));
 }
 .schemapress .outline-ring\/50 {
 
@@ -2926,9 +2940,10 @@ body.toplevel_page_schemapress #wpfooter {
   cursor: pointer;
 }
 
-/* the Text tab is a real textarea, and the control surface every other field
-   wears is wrong on it: it sits inside the editor's own frame, which is already
-   drawing the border and the fill */
+/* the textarea behind the editor. TinyMCE hides it, so this is what shows if it
+   fails to initialize — and the control surface every other field wears is
+   wrong on it either way, because it sits inside a frame already drawing the
+   border and the fill */
 .schemapress .schemapress-rte textarea {
   min-height: 0;
   border: 0;
@@ -3513,49 +3528,52 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* --- rich text ----------------------------------------------------------- */
 
-/* TinyMCE renders its own chrome; only the container border is ours */
-.schemapress .wp-editor-container {
+/* TinyMCE renders its own chrome; only the outer border is ours.
+
+   It hangs on `.schemapress-rte` — the element this app renders — rather than
+   on `.wp-editor-container`, which core builds only when the editor has both a
+   Visual and a Code mode to wrap. This one has neither, so that container is
+   never created and a border hung on it drew nothing: the field sat with no
+   outline in a column of outlined ones. See RichTextControl.js. */
+.schemapress .schemapress-rte {
   border: 1px solid hsl(var(--sp-input));
   border-radius: calc(var(--sp-radius) - 2px);
   overflow: hidden;
 }
 
-.schemapress .wp-editor-tabs {
-  margin-bottom: -1px;
+/* and TinyMCE's own outermost one, so the frame is a single line rather than
+   two a pixel apart. Only the outer container — the toolbar keeps the rule
+   under it, which is the skin's own separator */
+.schemapress .schemapress-rte .mce-tinymce {
+  border: 0;
+  box-shadow: none;
 }
-
 .schemapress .placeholder\:text-muted-foreground::-moz-placeholder {
 
   color: hsl(var(--sp-muted-foreground));
 }
-
 .schemapress .placeholder\:text-muted-foreground::placeholder {
 
   color: hsl(var(--sp-muted-foreground));
 }
-
 .schemapress .last\:border-0:last-child {
 
   border-width: 0px;
 }
-
 .schemapress .empty\:mb-0:empty {
 
   margin-bottom: 0px;
 }
-
 .schemapress .focus-within\:opacity-100:focus-within {
 
   opacity: 1;
 }
-
 .schemapress .hover\:-translate-y-px:hover {
 
   --tw-translate-y: -1px;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
 .schemapress .hover\:scale-110:hover {
 
   --tw-scale-x: 1.1;
@@ -3564,112 +3582,94 @@ body.toplevel_page_schemapress #wpfooter {
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
 .schemapress .hover\:border-destructive\/50:hover {
 
   border-color: hsl(var(--sp-destructive) / 0.5);
 }
-
 .schemapress .hover\:border-primary\/40:hover {
 
   border-color: hsl(var(--sp-primary) / 0.4);
 }
-
 .schemapress .hover\:border-primary\/50:hover {
 
   border-color: hsl(var(--sp-primary) / 0.5);
 }
-
 .schemapress .hover\:border-primary\/60:hover {
 
   border-color: hsl(var(--sp-primary) / 0.6);
 }
-
 .schemapress .hover\:border-ring\/30:hover {
 
   border-color: hsl(var(--sp-ring) / 0.3);
 }
-
 .schemapress .hover\:border-ring\/40:hover {
 
   border-color: hsl(var(--sp-ring) / 0.4);
 }
-
 .schemapress .hover\:bg-accent:hover {
 
   background-color: hsl(var(--sp-accent));
 }
-
 .schemapress .hover\:bg-accent\/40:hover {
 
   background-color: hsl(var(--sp-accent) / 0.4);
 }
-
 .schemapress .hover\:bg-accent\/60:hover {
 
   background-color: hsl(var(--sp-accent) / 0.6);
 }
-
 .schemapress .hover\:bg-background:hover {
 
   background-color: hsl(var(--sp-background));
 }
-
 .schemapress .hover\:bg-destructive\/10:hover {
 
   background-color: hsl(var(--sp-destructive) / 0.1);
 }
-
 .schemapress .hover\:bg-destructive\/90:hover {
 
   background-color: hsl(var(--sp-destructive) / 0.9);
 }
-
 .schemapress .hover\:bg-muted:hover {
 
   background-color: hsl(var(--sp-muted));
 }
-
 .schemapress .hover\:bg-primary\/10:hover {
 
   background-color: hsl(var(--sp-primary) / 0.1);
 }
-
 .schemapress .hover\:bg-primary\/5:hover {
 
   background-color: hsl(var(--sp-primary) / 0.05);
 }
-
 .schemapress .hover\:bg-primary\/90:hover {
 
   background-color: hsl(var(--sp-primary) / 0.9);
 }
-
 .schemapress .hover\:bg-secondary\/80:hover {
 
   background-color: hsl(var(--sp-secondary) / 0.8);
 }
-
 .schemapress .hover\:text-accent-foreground:hover {
 
   color: hsl(var(--sp-accent-foreground));
 }
-
 .schemapress .hover\:text-destructive:hover {
 
   color: hsl(var(--sp-destructive));
 }
-
 .schemapress .hover\:text-foreground:hover {
 
   color: hsl(var(--sp-foreground));
 }
-
 .schemapress .hover\:underline:hover {
 
   text-decoration-line: underline;
 }
+.schemapress .hover\:opacity-90:hover {
 
+  opacity: 0.9;
+}
 .schemapress .hover\:shadow-md:hover {
 
   --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -3678,7 +3678,6 @@ body.toplevel_page_schemapress #wpfooter {
 
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
 .schemapress .hover\:shadow-sm:hover {
 
   --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -3687,21 +3686,18 @@ body.toplevel_page_schemapress #wpfooter {
 
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
 .schemapress .focus\:outline-none:focus {
 
   outline: 2px solid transparent;
 
   outline-offset: 2px;
 }
-
 .schemapress .focus-visible\:outline-none:focus-visible {
 
   outline: 2px solid transparent;
 
   outline-offset: 2px;
 }
-
 .schemapress .focus-visible\:ring-2:focus-visible {
 
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
@@ -3710,93 +3706,80 @@ body.toplevel_page_schemapress #wpfooter {
 
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
+.schemapress .focus-visible\:ring-inset:focus-visible {
 
+  --tw-ring-inset: inset;
+}
 .schemapress .focus-visible\:ring-ring:focus-visible {
 
   --tw-ring-color: hsl(var(--sp-ring));
 }
-
 .schemapress .focus-visible\:ring-ring\/30:focus-visible {
 
   --tw-ring-color: hsl(var(--sp-ring) / 0.3);
 }
-
 .schemapress .focus-visible\:ring-offset-1:focus-visible {
 
   --tw-ring-offset-width: 1px;
 }
-
 .schemapress .disabled\:pointer-events-none:disabled {
 
   pointer-events: none;
 }
-
 .schemapress .disabled\:cursor-not-allowed:disabled {
 
   cursor: not-allowed;
 }
-
 .schemapress .disabled\:opacity-50:disabled {
 
   opacity: 0.5;
 }
-
 .schemapress :is(.group:focus-within .group-focus-within\:opacity-100) {
 
   opacity: 1;
 }
-
 .schemapress :is(.group:hover .group-hover\:translate-x-0\.5) {
 
   --tw-translate-x: 0.125rem;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
 .schemapress :is(.group:hover .group-hover\:border-primary\/40) {
 
   border-color: hsl(var(--sp-primary) / 0.4);
 }
-
 .schemapress :is(.group:hover .group-hover\:bg-primary) {
 
   background-color: hsl(var(--sp-primary));
 }
-
 .schemapress :is(.group:hover .group-hover\:text-primary) {
 
   color: hsl(var(--sp-primary));
 }
-
 .schemapress :is(.group:hover .group-hover\:text-primary-foreground) {
 
   color: hsl(var(--sp-primary-foreground));
 }
-
 .schemapress :is(.group:hover .group-hover\:opacity-100) {
 
   opacity: 1;
 }
-
 .schemapress :is(.group:hover .group-hover\:opacity-60) {
 
   opacity: 0.6;
 }
-
 .schemapress .data-\[state\=checked\]\:translate-x-3\.5[data-state="checked"] {
 
   --tw-translate-x: 0.875rem;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
 .schemapress .data-\[state\=unchecked\]\:translate-x-0[data-state="unchecked"] {
 
   --tw-translate-x: 0px;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
 @keyframes sp-collapse-up {
 
   from {
@@ -3809,12 +3792,10 @@ body.toplevel_page_schemapress #wpfooter {
     height: 0;
   }
 }
-
 .schemapress .data-\[state\=closed\]\:animate-sp-collapse-up[data-state="closed"] {
 
   animation: sp-collapse-up .18s ease-out;
 }
-
 @keyframes sp-collapse-down {
 
   from {
@@ -3827,47 +3808,38 @@ body.toplevel_page_schemapress #wpfooter {
     height: var(--radix-collapsible-content-height);
   }
 }
-
 .schemapress .data-\[state\=open\]\:animate-sp-collapse-down[data-state="open"] {
 
   animation: sp-collapse-down .18s ease-out;
 }
-
 .schemapress .data-\[state\=checked\]\:border-primary[data-state="checked"] {
 
   border-color: hsl(var(--sp-primary));
 }
-
 .schemapress .data-\[highlighted\]\:bg-accent[data-highlighted] {
 
   background-color: hsl(var(--sp-accent));
 }
-
 .schemapress .data-\[state\=active\]\:bg-background[data-state="active"] {
 
   background-color: hsl(var(--sp-background));
 }
-
 .schemapress .data-\[state\=checked\]\:bg-primary[data-state="checked"] {
 
   background-color: hsl(var(--sp-primary));
 }
-
 .schemapress .data-\[highlighted\]\:text-accent-foreground[data-highlighted] {
 
   color: hsl(var(--sp-accent-foreground));
 }
-
 .schemapress .data-\[state\=active\]\:text-foreground[data-state="active"] {
 
   color: hsl(var(--sp-foreground));
 }
-
 .schemapress .data-\[state\=checked\]\:text-primary-foreground[data-state="checked"] {
 
   color: hsl(var(--sp-primary-foreground));
 }
-
 .schemapress .data-\[state\=active\]\:shadow-sm[data-state="active"] {
 
   --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -3876,7 +3848,6 @@ body.toplevel_page_schemapress #wpfooter {
 
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
 @media (min-width: 640px) {
 
   .schemapress .sm\:col-span-1 {
@@ -4039,23 +4010,7 @@ body.toplevel_page_schemapress #wpfooter {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-
 @media (min-width: 1024px) {
-
-  .schemapress .lg\:sticky {
-
-    position: sticky;
-  }
-
-  .schemapress .lg\:top-6 {
-
-    top: 1.5rem;
-  }
-
-  .schemapress .lg\:max-h-\[calc\(100dvh_-_var\(--sp-admin-bar\2c 32px\)_-_3rem\)\] {
-
-    max-height: calc(100dvh - var(--sp-admin-bar,32px) - 3rem);
-  }
 
   .schemapress .lg\:grid-cols-2 {
 
@@ -4066,18 +4021,7 @@ body.toplevel_page_schemapress #wpfooter {
 
     grid-template-columns: minmax(0,1fr) 18rem;
   }
-
-  .schemapress .lg\:self-start {
-
-    align-self: flex-start;
-  }
-
-  .schemapress .lg\:overflow-y-auto {
-
-    overflow-y: auto;
-  }
 }
-
 @media (min-width: 1280px) {
 
   .schemapress .xl\:block {
@@ -4085,22 +4029,18 @@ body.toplevel_page_schemapress #wpfooter {
     display: block;
   }
 }
-
 .schemapress .\[\&\:\:-moz-progress-bar\]\:bg-primary::-moz-progress-bar {
 
   background-color: hsl(var(--sp-primary));
 }
-
 .schemapress .\[\&\:\:-webkit-progress-bar\]\:bg-border::-webkit-progress-bar {
 
   background-color: hsl(var(--sp-border));
 }
-
 .schemapress .\[\&\:\:-webkit-progress-value\]\:bg-primary::-webkit-progress-value {
 
   background-color: hsl(var(--sp-primary));
 }
-
 .schemapress :is(.\[\&\>span\]\:truncate>span) {
 
   overflow: hidden;
@@ -4109,31 +4049,26 @@ body.toplevel_page_schemapress #wpfooter {
 
   white-space: nowrap;
 }
-
 .schemapress :is(.\[\&_\*\]\:invisible *) {
 
   visibility: hidden;
 }
-
 .schemapress :is(.\[\&_svg\]\:pointer-events-none svg) {
 
   pointer-events: none;
 }
-
 .schemapress :is(.\[\&_svg\]\:size-3\.5 svg) {
 
   width: 0.875rem;
 
   height: 0.875rem;
 }
-
 .schemapress :is(.\[\&_svg\]\:size-4 svg) {
 
   width: 1rem;
 
   height: 1rem;
 }
-
 .schemapress :is(.\[\&_svg\]\:shrink-0 svg) {
 
   flex-shrink: 0;

@@ -121,7 +121,7 @@ Filterable: Text, Textarea, Email, URL, Phone, Dropdown, Color, Number, Date, Da
 time, Time, Toggle, Image, File.
 
 Not filterable: Rich Text, Link, Group, JSON, Gallery, and anything inside a Repeater. See
-**Indexing** for why.
+**What can be queried** for why.
 
 ### Adding your own
 

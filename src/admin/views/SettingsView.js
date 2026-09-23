@@ -284,13 +284,13 @@ export function SettingsView({ types = [], onSaved, onImported }) {
 
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[14px] font-semibold">
-              {__('PHP and Twig', 'schemapress')}
+              {__('Your theme', 'schemapress')}
               <Badge variant="outline">{__('always on', 'schemapress')}</Badge>
             </p>
 
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
               {__(
-                'How your theme reads content — SchemaPress::collection() and sp_collection(). They run on the server and never go over HTTP, so the switch above does not touch them and a page the site renders itself is unaffected either way.',
+                'How your theme reads content — SchemaPress::collection(), in a PHP file. It runs on the server and never goes over HTTP, so the switch above does not touch it and a page the site renders itself is unaffected either way.',
                 'schemapress'
               )}
             </p>

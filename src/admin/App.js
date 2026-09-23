@@ -18,7 +18,7 @@ import { useRoute } from './useRoute'
 import { Loading, Alert, Button, ConfirmDialog, cn } from '../ui'
 import { api } from '../shared/api'
 import { can } from '../shared/settings'
-import { clearUnsaved, hasUnsaved } from '../shared/unsaved'
+import { clearUnsaved, hasUnsaved, unsavedMessage } from '../shared/unsaved'
 import { Sidebar } from './Sidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { CreateTypeDialog } from './CreateTypeDialog'
@@ -225,10 +225,9 @@ export function App({ settings }) {
           open
           onOpenChange={(next) => !next && setLeaving(null)}
           title={__('Leave without saving?', 'schemapress')}
-          description={__(
-            'The entry you are editing has changes that have not been saved. Leaving loses them.',
-            'schemapress'
-          )}
+          // the screen being left says what would be lost — an entry half
+          // filled in and a form half rearranged are both reachable from here
+          description={unsavedMessage()}
           confirmLabel={__('Leave', 'schemapress')}
           onConfirm={() => {
             clearUnsaved()

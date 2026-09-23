@@ -2,12 +2,12 @@
 
 /**
  * Procedural aliases for the reading API, because a WordPress template is a
- * procedural place. The API proper is `SchemaPress::collection('team_members')`.
+ * procedural place. The API proper is `SchemaPress::collection('team-members')`.
  *
- * Prefixed `schemapress_` rather than `sp_`: SportsPress is on the plugin
- * directory with tens of thousands of installations and uses `sp_` throughout.
- * The Twig functions in class-timber.php can stay `sp_collection()` because
- * those names live in a Twig environment this plugin owns.
+ * The prefix is the whole name, deliberately: `sp_` would be shorter and belongs
+ * to SportsPress, which has tens of thousands of installations and uses it
+ * throughout. Two plugins declaring one function name is a fatal error, so
+ * nothing in this plugin may claim those two letters.
  *
  * @package SchemaPress
  */
@@ -22,7 +22,7 @@ if (!function_exists('schemapress_collection')) {
     /**
      * a collection, by its machine key.
      *
-     *   foreach (schemapress_collection('team_members') as $person) {
+     *   foreach (schemapress_collection('team-members') as $person) {
      *     echo esc_html($person->name);
      *   }
      *

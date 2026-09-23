@@ -238,7 +238,13 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
 
   const dirty = entry ? JSON.stringify(entry.values || {}) !== saved : false
 
-  useUnsavedGuard(dirty)
+  useUnsavedGuard(
+    dirty,
+    __(
+      'The entry you are editing has changes that have not been saved. Leaving loses them.',
+      'schemapress'
+    )
+  )
 
   if (!entry) {
     return error ? (

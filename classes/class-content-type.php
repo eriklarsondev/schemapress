@@ -266,9 +266,6 @@ class ContentType
                 // settings screen names the collections a change would affect,
                 // which it can only do if the listing says which they are
                 'publicApi' => $definition['settings']['publicApi'],
-                // which roles own this collection's entries, empty for "anyone
-                // who may edit content" — see Capabilities::canEditCollection
-                'editRoles' => $definition['settings']['editRoles'],
                 'fields' => count($definition['fields']),
                 'entries' => null,
                 // the version a save is made against. the builder sends this
@@ -356,6 +353,57 @@ class ContentType
     public static function collections()
     {
         return self::all();
+    }
+
+    /**
+     * A collection by any of the names it answers to.
+     *
+     * Four spellings reach one collection — `team-members`, `team_members`,
+     * `team-member`, `team_member` — because a name is typed in a URL, in a
+     * template and on a command line, and those three places have different
+     * habits about hyphens. **`team-members` is the form the documentation
+     * teaches**: it is the one that reads like a URL, and it is the same string
+     * on all three surfaces. The others keep working, because a template that
+     * already types one should not stop rendering.
+     *
+     * One implementation, because there were three and they had drifted: the
+     * reading API read hyphens and spaces, the REST layer read hyphens, and the
+     * CLI read neither — so the name printed in the documentation was refused
+     * by the one surface that cannot guess what you meant.
+     *
+     * @param string $name
+     *
+     * @return array|null The collection, or null when nothing matches.
+     */
+    public static function find($name)
+    {
+        $name = sanitize_key(str_replace([' ', '-'], '_', (string) $name));
+
+        if ($name === '') {
+            return null;
+        }
+
+        foreach (self::all() as $type) {
+            if ($type['key'] === $name || $type['plural'] === $name) {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The same lookup, as an id.
+     *
+     * @param string $name
+     *
+     * @return integer 0 when nothing matches.
+     */
+    public static function idFor($name)
+    {
+        $type = self::find($name);
+
+        return $type ? $type['id'] : 0;
     }
 
     /**

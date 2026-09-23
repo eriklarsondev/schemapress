@@ -6,13 +6,17 @@
  * rather than read off a row of dropdowns. This tab owns how the form behaves;
  * the Schema tab owns what the data is. Nothing here changes a stored value.
  *
- *   order   drag a card onto another and they swap places
- *   width   the badge on the card, or drop into a row's leftover space — which
- *           offers every width that fits it, and takes the one the pointer has
- *           reached across it
- *   rows    drop onto the strip between two rows to start a row of its own. A
- *           grid packs its items together, so where a row ENDS is the one thing
- *           widths cannot say
+ *   order   drag a card onto the middle of another and they swap places
+ *   width   drop a card on the FLANK of another and they share that row,
+ *           divided evenly: two across is a half each, three a third each.
+ *           Or drop into a row's leftover space, where the widths that fit
+ *           share the space and the pointer says which — a third in the near
+ *           half of six spare columns, a half in the far half. The badge on
+ *           the card, or moving across it while holding it, says otherwise
+ *   rows    drop onto the strip between two rows to start a row of its own,
+ *           at whichever of the four widths the pointer has reached across it.
+ *           A grid packs its items together, so where a row ENDS is the one
+ *           thing widths cannot say
  *   column  a collection's form has a sidebar beside it, under the entry's
  *           status: drag a card into it, or move it from the width badge
  *   rest    click the card — placeholder, help text, required, when it shows
@@ -49,6 +53,7 @@ import {
 } from '../../ui'
 import { move } from '../../shared/utils'
 import { conditionTargets } from '../../shared/conditions'
+import { clearUnsaved, useUnsavedGuard, PANEL } from '../../shared/unsaved'
 // the canvas must break its rows exactly the way the entry form does, or it is
 // a picture of a layout rather than the layout
 import {
@@ -155,23 +160,47 @@ function fits(span) {
 }
 
 /**
- * The width a field dropped into a gap comes out at, from how far across the gap
- * the pointer has gone.
+ * The width a field dropped into a space comes out at, from how far across the
+ * space the pointer has gone.
  *
- * Every width that fits is on offer, not only the widest: filling a row's spare
- * space was the one move that always resized the field, and always to as big as
- * it could be. Now the field stretches from the start of the gap to the pointer
- * — whichever width ends nearest to it — so moving across the space runs through
- * the sizes, and one that ends exactly where you are is the one you get. Level
- * between two, the field keeps the width it already has.
+ * The widths that fit SHARE the space evenly, rather than each claiming the
+ * part of it that it covers. Six spare columns hold a third and a half; by
+ * coverage the half would only win the last sixth of the space and the third
+ * would have everything before it, which is not what dragging further to make
+ * it wider is supposed to mean. Split evenly, the near half of the gap is a
+ * third and the far half is a half — and the far end always fills the space,
+ * whatever is free.
  *
- * @param {number} gap     How many columns are free.
+ * @param {number} room    How many columns are free.
+ * @param {number} through How far across them the pointer is, 0 to 1.
+ * @return {Object|null} The width option, or null if nothing fits.
+ */
+function sizeAcross(room, through) {
+  const options = WIDTHS.filter((option) => option.span <= room)
+
+  if (options.length === 0) {
+    return null
+  }
+
+  return options[Math.min(Math.floor(through * options.length), options.length - 1)]
+}
+
+/**
+ * The width nearest to how far the pointer has reached, of those that fit.
+ *
+ * For resizing a field where it stands, which is measured in columns travelled
+ * from where the pointer started rather than as a fraction of a target: the
+ * field is already a width, and the gesture nudges it up and down from there.
+ *
+ * Level between two widths, the field keeps the one it already has.
+ *
+ * @param {number} room    How many columns are free.
  * @param {number} reach   How far into them the pointer is, in columns.
  * @param {string} current The dragged field's own width.
  * @return {Object|null} The width option, or null if nothing fits.
  */
-function sizeFor(gap, reach, current) {
-  const options = WIDTHS.filter((option) => option.span <= gap)
+function sizeFor(room, reach, current) {
+  const options = WIDTHS.filter((option) => option.span <= room)
 
   if (options.length === 0) {
     return null
@@ -236,11 +265,17 @@ function pack(fields, dragging = -1) {
    * @return {void}
    */
   const close = (at) => {
-    if (used > 0 && used < 12) {
-      // `own` when the field being dragged is the last on the row: the space is
-      // then straight after it, and moving into it widens the field where it
-      // stands rather than moving it along
-      cells.push({ gap: 12 - used, at, start: used, row, own: row[row.length - 1] === dragging })
+    // `own` when the field being dragged is the last on the row: the space is
+    // then straight after it, and moving into it widens the field where it
+    // stands rather than moving it along
+    const mine = row[row.length - 1] === dragging
+
+    // an own cell even on a row with nothing spare — a full-width field has
+    // none, and it is the one that most wants resizing. it draws nothing until
+    // the field narrows, and then it is the room the field gave back: without
+    // somewhere for that room to go, the row below would rise into it
+    if (used > 0 && (used < 12 || mine)) {
+      cells.push({ gap: 12 - used, at, start: used, row, own: mine })
     }
 
     cells.push({ gap: 12, at, start: 0, row: [], newRow: true })
@@ -536,6 +571,68 @@ function positions(fields) {
 }
 
 /**
+ * Which main-column fields share each row, as places in the whole list.
+ *
+ * The same walk `positions` does, reported in the whole list's terms because a
+ * drop moves a field among all of them and not only the ones on the form — a
+ * sidebar field can sit in the middle of a row's fields without being on it.
+ *
+ * @param {Array}   fields
+ * @param {boolean} sidebar
+ * @return {Array<Array<number>>} One array of indices per row, in order.
+ */
+function rowsOf(fields, sidebar) {
+  const main = []
+
+  fields.forEach((field, index) => {
+    if (columnOf(field, sidebar) === 'main') {
+      main.push(index)
+    }
+  })
+
+  const at = positions(main.map((index) => fields[index]))
+  const out = []
+
+  main.forEach((index, n) => {
+    if (n === 0 || at[n].row !== at[n - 1].row) {
+      out.push([])
+    }
+
+    out[out.length - 1].push(index)
+  })
+
+  return out
+}
+
+/**
+ * What everything on a row comes out at once one more field joins it: the row
+ * divided evenly. One field takes the whole row, two take a half each, three a
+ * third each.
+ *
+ * This is the whole of the width detection for dropping beside a card. Nothing
+ * is aimed at and nothing is swept across — a row says how many fields are on
+ * it, and that is the width. Four across would be a quarter, narrower than any
+ * control here is drawn, so a row already three wide takes nothing more.
+ *
+ * @param {Array}   fields
+ * @param {boolean} sidebar
+ * @param {number}  index   A field on the row being joined.
+ * @param {number}  joining The field arriving, which may be on the row already.
+ * @return {Object|null} The width option, or null when the row is full.
+ */
+function evenWidth(fields, sidebar, index, joining) {
+  const row = (rowsOf(fields, sidebar).find((one) => one.includes(index)) || []).filter(
+    (one) => one !== joining
+  )
+
+  if (row.length === 0 || row.length >= 3) {
+    return null
+  }
+
+  return WIDTHS.find((option) => option.span === Math.floor(12 / (row.length + 1))) || null
+}
+
+/**
  * Writes the arrangement on screen into the fields themselves.
  *
  * Position is otherwise inferred from widths at render time, so changing one
@@ -608,6 +705,9 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   // how many columns the field would take where it is being aimed — a gap, a
   // new row, or its own place — read from the pointer; 0 when that sizes nothing
   const [fill, setFillState] = useState(0)
+  // the card whose row the pointer is offering to share, and which flank of it
+  // — {index, side} — or null when that is not what is being aimed at
+  const [beside, setBesideState] = useState(null)
   const [editing, setEditing] = useState(-1)
 
   // the gesture is followed from listeners bound once to the window, so what
@@ -617,6 +717,7 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   const draggingRef = useRef(-1)
   const overRef = useRef(-1)
   const fillRef = useRef(0)
+  const besideRef = useRef(null)
   const cellsRef = useRef([])
   const draftRef = useRef(draft)
   const sidebarRef = useRef(sidebar)
@@ -629,6 +730,15 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   }, [fields])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(fields)
+
+  // an arrangement lives in this component until Save layout, and leaving the
+  // tab unmounts it — so walking away without saving is the one way to lose
+  // work on this screen, and the only place that knows it is this one
+  useUnsavedGuard(
+    dirty,
+    __('The form layout has changes that have not been saved. Leaving loses them.', 'schemapress'),
+    PANEL
+  )
 
   const cells = arrange(draft, dragging, sidebar)
 
@@ -684,13 +794,75 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   }
 
   /**
+   * Sets which card's row is being offered to share, and on which flank.
+   *
+   * @param {Object|null} value {index, side}, or null.
+   * @return {void}
+   */
+  const setBeside = (value) => {
+    const now = besideRef.current
+
+    if (now === value || (now && value && now.index === value.index && now.side === value.side)) {
+      return
+    }
+
+    besideRef.current = value
+    setBesideState(value)
+  }
+
+  /**
+   * Which flank of a card the pointer is on, when it is on one.
+   *
+   * The outer quarter of each side offers to share the row; the half in the
+   * middle is left to passing over, which swaps the two. A row that is already
+   * three across offers nothing, because a fourth would be a quarter.
+   *
+   * This is what makes a width happen by dragging at all. Every row of a form
+   * starts out one field wide, so a row's spare space — the other way a width
+   * is decided here — does not exist yet on a form nobody has arranged.
+   *
+   * @param {Element} node The card.
+   * @param {number}  onto Its place in the list.
+   * @param {number}  x
+   * @return {string|null} start, end or null.
+   */
+  const besideAt = (node, onto, x) => {
+    const current = draftRef.current
+    const sided = sidebarRef.current
+
+    if (
+      columnOf(current[onto], sided) !== 'main' ||
+      !evenWidth(current, sided, onto, draggingRef.current)
+    ) {
+      return null
+    }
+
+    const rect = node.getBoundingClientRect()
+    const rtl = getComputedStyle(node).direction === 'rtl'
+    const through = (rtl ? rect.right - x : x - rect.left) / rect.width
+
+    if (through <= 0.25) {
+      return 'start'
+    }
+
+    return through >= 0.75 ? 'end' : null
+  }
+
+  /**
    * The width the field would take at a target, from where the pointer is.
    *
-   * A gap, or a New row strip — which is a whole empty row, twelve columns of
-   * it — is measured from the side the row starts on, which is the right in a
-   * right-to-left admin: how far across it the pointer has gone is how wide the
-   * field comes out. The space straight after the field's own place is part of
-   * resizing it where it stands, so it is measured the way that is.
+   * The space is measured from the side the row starts on — the right in a
+   * right-to-left admin — and the widths that fit share it evenly, so moving
+   * across it runs through them and the far end always fills it. Six spare
+   * columns hold a third or a half and the pointer says which; four hold a
+   * third and nothing else, so there is nothing to say and anywhere in them
+   * gives the same answer.
+   *
+   * A row boundary is a whole empty row, twelve columns of it, so all four
+   * widths are on offer there.
+   *
+   * The space straight after the field's own place is part of resizing it where
+   * it stands, so it is measured the way that is.
    *
    * @param {number} target Index into the cells.
    * @param {number} x
@@ -698,9 +870,8 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
    */
   const reachOf = (target, x) => {
     const cell = cellsRef.current[target]
-    const node = canvas.current?.querySelector(`[data-sp-gap="${target}"]`)
 
-    if (!cell || !node || cell.region !== 'main') {
+    if (!cell || cell.region !== 'main') {
       return 0
     }
 
@@ -708,14 +879,16 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       return resizeOf(x)
     }
 
+    const node = canvas.current?.querySelector(`[data-sp-gap="${target}"]`)
+
+    if (!node) {
+      return 0
+    }
+
     const rect = node.getBoundingClientRect()
     const across = getComputedStyle(node).direction === 'rtl' ? rect.right - x : x - rect.left
     const through = Math.min(1, Math.max(0, across / rect.width))
-    const option = sizeFor(
-      cell.gap,
-      through * cell.gap,
-      widthOf(draftRef.current[draggingRef.current])
-    )
+    const option = sizeAcross(cell.gap, through)
 
     return option ? option.span : 0
   }
@@ -730,6 +903,13 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
    * Towards the end of the row it widens, into whatever the row has spare
    * straight after it; back towards the start it narrows, down to a third.
    *
+   * Only a field at the END of its row. The card grows and shrinks as it is
+   * sized, so the columns it gives up or takes have to come from somewhere, and
+   * the space after it is the only somewhere there is — a field in the middle
+   * of a row would push its neighbours about instead. That leaves the case this
+   * gesture exists for, a field whose row has nothing spare, exactly as it was:
+   * a full-width field is always the last on its row.
+   *
    * @param {number} x
    * @return {number} Columns, or 0 when it cannot be resized here.
    */
@@ -737,8 +917,9 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
     const gesture = press.current
     const field = draftRef.current[draggingRef.current]
     const grid = canvas.current?.querySelector('[data-sp-grid]')
+    const after = cellsRef.current.find((cell) => cell.own)
 
-    if (!gesture || !field || !grid || columnOf(field, sidebarRef.current) !== 'main') {
+    if (!gesture || !field || !grid || !after || columnOf(field, sidebarRef.current) !== 'main') {
       return 0
     }
 
@@ -748,8 +929,7 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
     const moved =
       (getComputedStyle(grid).direction === 'rtl' ? gesture.anchor - x : x - gesture.anchor) / step
     const current = spanOf(field)
-    const room = current + (cellsRef.current.find((cell) => cell.own)?.gap || 0)
-    const option = sizeFor(room, current + moved, widthOf(field))
+    const option = sizeFor(current + after.gap, current + moved, widthOf(field))
 
     return option ? option.span : 0
   }
@@ -942,6 +1122,78 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   }
 
   /**
+   * Drops the dragged field beside another, the two of them sharing that
+   * card's row — and the row divided evenly between everything now on it.
+   *
+   * The row's fields are consecutive among the form's fields, so the flank
+   * decides a place in the list as well as a place on the row. Every one of
+   * them is rewritten, not only the arrival: they are all a third now because
+   * there are three.
+   *
+   * @param {Object} target {index, side}
+   * @return {void}
+   */
+  const dropBeside = (target) => {
+    const from = draggingRef.current
+    const sided = sidebarRef.current
+
+    if (from === -1) {
+      return
+    }
+
+    setDraft((current) => {
+      const row = (rowsOf(current, sided).find((one) => one.includes(target.index)) || []).filter(
+        (index) => index !== from
+      )
+      const width = evenWidth(current, sided, target.index, from)
+
+      if (!width || row.length === 0) {
+        return current
+      }
+
+      // read before the move, which shifts every index after it: who is on the
+      // row and in what order, by key, which a move does not change
+      const at = row.indexOf(target.index) + (target.side === 'end' ? 1 : 0)
+      const keys = [
+        ...row.slice(0, at).map((index) => current[index].key),
+        current[from].key,
+        ...row.slice(at).map((index) => current[index].key),
+      ]
+
+      // in front of whoever is there now, or after the last of them
+      const to = at < row.length ? row[at] : row[row.length - 1] + 1
+      // moving to a later index counts the field being moved, so its
+      // destination has already shifted up by one
+      const landed = move(current, from, to > from ? to - 1 : to)
+      const first = landed.find((field) => columnOf(field, sided) === 'main')
+
+      return landed.map((field) => {
+        if (!keys.includes(field.key)) {
+          return field
+        }
+
+        return {
+          ...field,
+          config: {
+            ...field.config,
+            width: width.value,
+            offset: 0,
+            // the row has to say where it begins. it is divided exactly, so
+            // there is nothing for the row above to flow down into — but the
+            // field that used to be above it may now have room to spare, and
+            // this row would rise into it. the form's first field cannot begin
+            // a row: there is none above it to end
+            new_row: field.key === keys[0] && first?.key !== keys[0],
+            region: 'main',
+          },
+        }
+      })
+    })
+
+    setDrag(-1)
+  }
+
+  /**
    * Drops the dragged field into a row's leftover space, at the width the
    * target was showing when it was let go.
    *
@@ -974,8 +1226,10 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       return
     }
 
-    // the width the pointer settled on. with no reading at all — a release
-    // without a move over the gap first — the widest that fits, as before
+    // what the target was showing, which for a row's leftover space is the
+    // width that fits it — so a field dropped into a row comes out sized to
+    // the room the row has, whatever it was before. the badge on the card is
+    // the way to a narrower one
     const width = WIDTHS.find((option) => option.span === fillRef.current) || fits(cell.gap)
 
     if (!width) {
@@ -1089,8 +1343,9 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       const under = document.elementFromPoint(event.clientX, event.clientY)
       const card = under && under.closest('[data-sp-card]')
 
-      // over a card the answer is already on screen: passing over one has
-      // swapped the two, so there is nothing to offer and nothing to draw
+      // over the middle of a card the answer is already on screen: passing
+      // over one has swapped the two, so there is nothing to offer and nothing
+      // to draw. the flanks are a different offer — see besideAt
       if (card) {
         const onto = Number(card.dataset.spCard)
 
@@ -1098,12 +1353,27 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
         // across it resizes it there, both ways — the one way to size a field
         // in a row with no space to spare, and a full-width one never has any
         if (onto === draggingRef.current) {
+          setBeside(null)
           setHover(OWN)
           setFill(resizeOf(event.clientX))
 
           return
         }
 
+        const side = besideAt(card, onto, event.clientX)
+
+        // held to one side of a card: the two will share that row, divided
+        // evenly. applied on release rather than on the way past, because
+        // resizing the card under the pointer moves the pointer off it
+        if (side) {
+          setBeside({ index: onto, side })
+          setHover(-1)
+          setFill(0)
+
+          return
+        }
+
+        setBeside(null)
         setHover(-1)
         setFill(0)
         dragOver(onto)
@@ -1113,6 +1383,8 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
 
         return
       }
+
+      setBeside(null)
 
       // NEAREST, not whatever the pointer is literally inside. a strip between
       // two rows is a dozen pixels tall and nobody lands on one on purpose;
@@ -1148,16 +1420,23 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       }
 
       const own = overRef.current === OWN
+      const sharing = besideRef.current
       const cell = overRef.current < 0 ? null : cellsRef.current[overRef.current]
 
       setHover(-1)
+      setBeside(null)
 
       // released over its own place, it keeps the width it was resized to
-      // there. over another card, or over nothing: the passing-over already
-      // put it where it is, so there is nothing left to apply
-      if (own) {
+      // there. over the middle of another card, or over nothing: the
+      // passing-over already put it where it is, so there is nothing left to
+      // apply
+      if (sharing) {
+        dropBeside(sharing)
+      } else if (own) {
         resizeInPlace()
-      } else if (cell && cell.gap) {
+      } else if (cell && (cell.gap || cell.own)) {
+        // `own` with nothing spare is still a target: the field narrowed, and
+        // the columns it gave back are what the pointer is standing in
         dropInGap(cell)
       } else {
         setDrag(-1)
@@ -1183,6 +1462,7 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       press.current = null
       setDraft(gesture.order)
       setHover(-1)
+      setBeside(null)
       setFill(0)
       setDrag(-1)
     }
@@ -1208,7 +1488,14 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
    */
   const persist = (list) => {
     setSaving(true)
-    Promise.resolve(onChange(list)).finally(() => setSaving(false))
+    Promise.resolve(onChange(list))
+      .then(() => {
+        // down before the next render rather than at it: the fields come back
+        // from the server through a prop, and between the save landing and
+        // that arriving the guard would still be saying there is work to lose
+        clearUnsaved()
+      })
+      .finally(() => setSaving(false))
   }
 
   if (fields.length === 0) {
@@ -1232,6 +1519,10 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   // is on its own place, or in the space straight after it
   const resizing = over === OWN || Boolean(cells[over]?.own)
 
+  // the width everything on the offered row would come out at, drawn on the
+  // card whose row it is
+  const sharing = beside ? evenWidth(draft, sidebar, beside.index, dragging) : null
+
   const card = (cell) => (
     <FieldCard
       field={cell.field}
@@ -1240,6 +1531,8 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
       regions={sidebar}
       dragging={dragging === cell.index}
       resize={dragging === cell.index && resizing ? fill : 0}
+      beside={sharing && beside.index === cell.index ? beside.side : null}
+      sharing={sharing?.label}
       onPointerDown={(event) => beginPress(cell.index, event)}
       onWidth={(width) => setWidth(cell.index, width)}
       onRequired={(required) => setRequired(cell.index, required)}
@@ -1364,17 +1657,13 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
   return (
     <div className="flex flex-col gap-3">
       <Alert variant="info">
-        {__(
-          'Drag a field onto another to reorder, into a row’s spare space, or onto a New row strip to give it a row of its own — the further across you take it, the wider it comes out. Holding it, move across its own place to resize it where it stands.',
-          'schemapress'
-        )}{' '}
+        {__('Drop a card on the side of another to share its row.', 'schemapress')}{' '}
         {sidebar
-          ? __('Drag it into the sidebar to sit beside the entry’s status.', 'schemapress') + ' '
-          : null}
-        {__(
-          'Click a card for its placeholder, help text and whether it is required.',
-          'schemapress'
-        )}
+          ? __(
+              'Drag one to the sidebar to move it there. Click one for its settings.',
+              'schemapress'
+            )
+          : __('Click one for its settings.', 'schemapress')}
       </Alert>
 
       <div ref={canvas} className={sidebar ? columnsClass() : undefined}>
@@ -1423,12 +1712,11 @@ export function FormTab({ fields, onChange, sidebar = false, drafts = true }) {
  * would shift the row underneath, moving the target away from the pointer, which
  * un-picks it — and the two states flicker against each other forever.
  *
- * A leftover shows the field it would hold, at the width the pointer has reached
- * across it — see `sizeFor` — inside an outline of the whole space, so it is
- * plain how much more there is to take. The preview is drawn inside the target
- * rather than by resizing it, for the reason above. A boundary makes no such
- * bargain, so its label is drawn out of the flow and a strip a dozen pixels tall
- * can carry a word without becoming a box.
+ * A leftover shows the field it would hold at the width that fits the space —
+ * see `reachOf` — drawn inside the target rather than by resizing it, for the
+ * reason above. A boundary makes no such bargain, so its label is drawn out of
+ * the flow and a strip a dozen pixels tall can carry a word without becoming a
+ * box.
  *
  * @param {Object} props
  * @return {JSX.Element|null} The target.
@@ -1481,25 +1769,22 @@ function Gap({ at, span, start, newRow, own, base, dragging, over, fill }) {
     )
   }
 
-  // straight after the held field: it is widening, and this draws the part of
-  // it that reaches in here. the field's own card carries the label
+  // straight after the held field, which is being resized where it stands: the
+  // card itself grows and shrinks, so this is whatever is left of the row once
+  // it has. It draws nothing — the dashed border on the card is the preview,
+  // and this is only the room it has not taken.
+  //
+  // Which is why it exists even when there is none to begin with: a full-width
+  // field narrowed to a third gives back eight columns, and with nowhere for
+  // them to go the row below would rise into them mid-drag.
   if (own) {
-    const reach = Math.min(span, Math.max(0, fill - base))
+    const left = Math.max(0, base + span - (fill || base))
 
-    return (
-      <div
-        data-sp-gap={at}
-        className={cn('relative flex', SPANS[span], start > 0 && STARTS[start + 1])}
-      >
-        {over && reach > 0 ? (
-          <span
-            aria-hidden="true"
-            className="rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-[width] duration-100"
-            style={{ width: share(reach, span) }}
-          />
-        ) : null}
-      </div>
-    )
+    if (left === 0) {
+      return null
+    }
+
+    return <div data-sp-gap={at} className={cn('relative flex', SPANS[left])} />
   }
 
   const chosen = WIDTHS.find((option) => option.span === fill) || width
@@ -1508,27 +1793,29 @@ function Gap({ at, span, start, newRow, own, base, dragging, over, fill }) {
     <div
       data-sp-gap={at}
       // no border or padding of its own, lit or not: the box has to be the same
-      // size either way, and the preview measures its width against it
-      className={cn('relative flex', SPANS[span], start > 0 && STARTS[start + 1])}
+      // size either way, and the preview measures its width against it. what is
+      // left over past the preview — a space no width divides evenly — is a
+      // wash rather than a second outline: one dashed shape on the screen, and
+      // it is the one saying where the field lands
+      className={cn(
+        'relative flex rounded-lg transition-colors',
+        SPANS[span],
+        start > 0 && STARTS[start + 1],
+        over && 'bg-primary/5'
+      )}
     >
       {over ? (
-        <>
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 rounded-lg border-2 border-dashed border-primary/30"
-          />
-
-          {/* flush to where the row starts, which is where the field lands —
-              the right-hand end in a right-to-left admin, which flex does on
-              its own */}
-          <span
-            className="relative flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary bg-primary/10 text-[12px] font-medium text-primary transition-[width] duration-100"
-            style={{ width: share(chosen.span, span) }}
-          >
-            {chosen.span === span ? <span>{__('Fill this space', 'schemapress')}</span> : null}
-            <Badge variant="outline">{chosen.label}</Badge>
-          </span>
-        </>
+        // flush to where the row starts, which is where the field lands — the
+        // right-hand end in a right-to-left admin, which flex does on its own
+        <span
+          className="relative flex items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-lg border-2 border-dashed border-primary bg-primary/10 px-2 text-[12px] font-medium text-primary transition-[width] duration-100"
+          style={{ width: share(chosen.span, span) }}
+        >
+          {chosen.span === span ? (
+            <span className="truncate">{__('Fill this space', 'schemapress')}</span>
+          ) : null}
+          <Badge variant="outline">{chosen.label}</Badge>
+        </span>
       ) : null}
     </div>
   )
@@ -1553,11 +1840,13 @@ function SideGap({ at, edge, dragging, over }) {
       <div
         data-sp-gap={at}
         className={cn(
-          // one border and one sentence either way, so lighting up moves nothing
-          'flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center text-[12px] font-medium transition-colors',
+          // one border and one sentence either way, so lighting up moves
+          // nothing — and it dashes only once it is the target, because a
+          // dashed box on this screen means the field is about to land in it
+          'flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 px-4 py-6 text-center text-[12px] font-medium transition-colors',
           dragging && over
-            ? 'border-primary bg-primary/10 text-primary'
-            : 'border-border text-muted-foreground'
+            ? 'border-dashed border-primary bg-primary/10 text-primary'
+            : 'border-border/60 text-muted-foreground'
         )}
       >
         <PanelRight className="size-4" aria-hidden="true" />
@@ -1594,9 +1883,14 @@ function SideGap({ at, edge, dragging, over }) {
 /**
  * A card the entry screen always shows in the sidebar, drawn as a silhouette of
  * itself. The canvas is the screen it arranges, so they hold their places — and
- * nothing on this tab moves them, which is why they are dashed and have nothing
- * in them to press. Hidden from assistive technology: the note above the canvas
- * says what the sidebar is for, and a list of disabled buttons would not.
+ * nothing on this tab moves them, which is why they are washed out and have
+ * nothing in them to press. Hidden from assistive technology: the note above
+ * the canvas says what the sidebar is for, and a list of disabled buttons would
+ * not.
+ *
+ * Their outlines are solid, faint as they are. Four dashed boxes standing in
+ * the sidebar the whole time is most of the dashing on this screen, and it says
+ * "drop here" when nothing can be dropped on them.
  *
  * @param {Object} props
  * @return {JSX.Element} The silhouette.
@@ -1605,7 +1899,7 @@ function Silhouette({ label, children }) {
   return (
     <div
       aria-hidden="true"
-      className="flex select-none flex-col gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-4"
+      className="flex select-none flex-col gap-2 rounded-lg border border-border/60 bg-muted/40 p-4"
     >
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
         {label}
@@ -1729,6 +2023,8 @@ function FieldCard({
   regions,
   dragging,
   resize,
+  beside,
+  sharing,
   onPointerDown,
   onWidth,
   onRequired,
@@ -1754,19 +2050,58 @@ function FieldCard({
         // column and over the top of its neighbor; select-none so pressing on
         // the label starts the drag rather than a text selection
         'group relative flex min-w-0 cursor-grab select-none flex-col overflow-hidden rounded-lg bg-background p-3 shadow-sm transition-colors',
-        !aside && SPANS[option.span],
+        // while it is being resized where it stands the card IS the preview:
+        // it takes the width it is being given, so the dashed border around it
+        // is the size the field will come out at. The space after it gives up
+        // exactly what the card takes (see Gap), so the row does not re-wrap
+        // under the pointer
+        !aside && SPANS[resize || option.span],
         dragging
-          ? // the card being dragged reads as the gap it left behind, so the
+          ? // the card being dragged reads as the hole it left behind, so the
             // destination is a shape on screen rather than a guess. thicker
-            // than a resting card on purpose: it is a target now, not content
-            'cursor-grabbing border-2 border-dashed border-ring/60 bg-accent/40'
+            // than a resting card on purpose: it is a target now, not content.
+            //
+            // ONE outline, and it is this one. Resizing the field used to draw
+            // a second dashed ring inside this one and then tint the space
+            // past it — two borders on a card that was not changing size. Now
+            // the card changes size and this border is the answer
+            'cursor-grabbing border-2 border-dashed border-primary/60 bg-primary/5'
           : 'border border-border hover:border-primary/40'
       )}
     >
+      {/* the offer to sit beside this card: which flank, and what everything
+          on the row comes out at once this field joins it. a bar, because it
+          is a position rather than a space — and no outline of its own, so the
+          card it is on keeps the one border it had */}
+      {beside ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-y-1 z-10 flex w-1.5 items-center rounded-full bg-primary',
+            beside === 'start' ? 'start-1' : 'end-1'
+          )}
+        >
+          <span
+            className={cn(
+              'absolute whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium leading-tight text-primary-foreground',
+              beside === 'start' ? 'start-0' : 'end-0'
+            )}
+          >
+            {sprintf(
+              /* translators: %s: a width, such as ½ or ⅓ */
+              __('Share row · %s', 'schemapress'),
+              sharing
+            )}
+          </span>
+        </span>
+      ) : null}
+
       {/* while it is being dragged the card IS a drop target — put it back
           here — so it says so, like every other target on the screen. hiding
-          its contents and leaving a blank dashed box was the one unlabeled
-          shape in a row of labeled ones.
+          its contents and leaving a blank box was the one unlabeled shape in a
+          row of labeled ones. while it is being resized the card is the width
+          it will come out at, so the badge is the whole answer and the
+          sentence would be untrue besides.
 
           laid over the card, with what it covers made invisible rather than
           removed: the card keeps its height. collapsing it the moment a drag
@@ -1774,21 +2109,8 @@ function FieldCard({
           column that put a different card under the pointer, which hovering
           then swapped with */}
       {dragging ? (
-        <span
-          className={cn(
-            'absolute inset-y-0 start-0 flex items-center justify-center gap-1.5 text-[12px] font-medium transition-[width] duration-100',
-            // being resized: the width it will come out at, drawn from where
-            // it starts — narrower than the card, or all of it and on into the
-            // space after, which draws the rest
-            target
-              ? 'rounded-md bg-primary/10 text-primary outline-dashed outline-2 -outline-offset-2 outline-primary'
-              : 'text-muted-foreground'
-          )}
-          style={{
-            width: target ? share(Math.min(target.span, option.span), option.span) : '100%',
-          }}
-        >
-          {__('Fill this space', 'schemapress')}
+        <span className="absolute inset-0 flex items-center justify-center gap-1.5 text-[12px] font-medium text-primary">
+          {target ? null : __('Drop back here', 'schemapress')}
           {aside ? null : <Badge variant="outline">{(target || option).label}</Badge>}
         </span>
       ) : null}

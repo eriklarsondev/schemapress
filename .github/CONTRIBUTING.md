@@ -24,7 +24,7 @@ into.
 git clone https://github.com/eriklarsondev/schemapress.git wp-content/plugins/schemapress
 cd wp-content/plugins/schemapress
 
-composer install     # the Markdown parser, plus the linters and Timber for development
+composer install     # the Markdown parser, plus the linters and formatters
 npm install          # the admin's toolchain, and the pre-commit hook
 npm run build
 ```
@@ -72,20 +72,27 @@ The one thing this changes: installing straight from a git clone now needs
 `composer install`. Without it the plugin still runs, but the documentation screen renders
 as plain text, because CommonMark is not there to parse it.
 
-### Timber is optional, and is not installed here
+### There is no Timber integration, on purpose
 
-`timber/timber` is a `require-dev` dependency and a `suggest`, never a hard requirement.
-The Twig functions are registered only when Timber is already loaded —
-`Timber::available()` is a `class_exists` check, and `class-docs.php` has a branch that
-says so on the Documentation screen. The PHP and HTTP APIs work without it.
+This plugin knows nothing about Twig. A query is built in PHP and the result is handed to
+whatever renders the page, and an `Entry` answers an array key, a property and a method —
+so `person.full_name` resolves in a Twig template with nothing registered for it.
 
-**If you use Timber, it belongs in your theme.** Shipping a copy inside this plugin would
-put a second Timber on the autoloader beside the theme's, and since a class already
-declared is never asked for again, which one wins comes down to load order. Dropping it
-also took the shipped `vendor/` from 4.5 MB to 2.1 MB.
+It used to register four Twig functions so a template could query on its own. They are
+gone. A template that fetches its own data puts the page's data layer in two places, and
+the function names had to be `sp_`-prefixed to reach Twig, which collided with the name
+this plugin had already abandoned everywhere else for being SportsPress's.
 
-It is in `require-dev` so that `composer install` gives you a Timber to exercise the Twig
-functions against locally. `npm run package` builds with `--no-dev`, so it never ships.
+### WPGraphQL is optional, and is not installed here
+
+`classes/class-graphql.php` registers on `graphql_register_types` and is guarded by a
+`function_exists()` check, so it costs one call per request when WPGraphQL is absent.
+Shipping a copy would put a second one on the autoloader beside the site's, and a class
+already declared is never asked for again — so load order would decide which version the
+schema was built against.
+
+The suite stubs the `register_graphql_*` functions and asserts the schema this plugin
+registers, which is what can be checked without a WPGraphQL to register against.
 
 ### `config.platform` is pinned to PHP 8.2
 

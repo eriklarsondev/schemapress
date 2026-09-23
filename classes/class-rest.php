@@ -1118,9 +1118,9 @@ class Rest
     }
 
     /**
-     * Where a collection's own `editRoles` is enforced. `edit_post` on the schema
-     * post would only answer "may this person edit content at all" — the same
-     * answer for every collection on the site.
+     * Whether the current user may edit the entries of a collection — and
+     * whether the id names a collection at all, which is the part `edit_post`
+     * on the schema post would not answer.
      *
      * @param \WP_REST_Request $request
      *
@@ -1128,9 +1128,7 @@ class Rest
      */
     public function canEditType($request)
     {
-        $id = absint($request['id']);
-
-        return get_post_type($id) === Schema::POST_TYPE && Capabilities::canEditCollection($id);
+        return get_post_type(absint($request['id'])) === Schema::POST_TYPE && Capabilities::canEdit();
     }
 
     /**

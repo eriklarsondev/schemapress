@@ -559,13 +559,10 @@ class Portability
     /**
      * The settings a collection ends up with.
      *
-     * The file may set anything about the SHAPE of the collection. Two settings
-     * are about this site and a file does not get to decide them:
-     *
-     *   publicApi   an import is not a decision to publish somebody else's
-     *               content; a collection an import creates starts closed
-     *   editRoles   or importing a schema could open a restricted collection to
-     *               every editor, or lock out the team that owns it
+     * The file may set anything about the SHAPE of the collection. One setting
+     * is about this site and a file does not get to decide it: `publicApi`, as
+     * an import is not a decision to publish somebody else's content — so a
+     * collection an import creates starts closed.
      *
      * Merge also keeps whether the collection has drafts, because turning that
      * off changes what every future save does to a live site.
@@ -580,16 +577,10 @@ class Portability
     private static function settings($stored, array $incoming, $replace)
     {
         if (!$stored) {
-            // editRoles from the file is kept: a role this site does not have
-            // matches nobody, which fails closed, and that is the right way for
-            // an imported restriction to fail
             return array_merge($incoming, ['publicApi' => ['list' => false, 'single' => false]]);
         }
 
-        $kept = [
-            'publicApi' => $stored['settings']['publicApi'],
-            'editRoles' => $stored['settings']['editRoles'],
-        ];
+        $kept = ['publicApi' => $stored['settings']['publicApi']];
 
         if (!$replace) {
             $kept['draftAndPublish'] = $stored['settings']['draftAndPublish'];

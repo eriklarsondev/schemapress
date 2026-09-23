@@ -38,7 +38,12 @@ under **Settings** in the sidebar before hunting for a typo.
 :::
 
 :::note A 404 on a single entry can mean the id is a post id
-`/{collection}/{id}` takes the uuid the API reports and nothing else. A WordPress post id
-is refused rather than resolved, so a `404` on an entry you can see in the admin usually
-means an internal id got as far as the URL.
+`/{collection}/{id}` takes the uuid the API reports or the entry's slug — see
+**Endpoints**. A WordPress post id is neither, and is refused rather than resolved, so a
+`404` on an entry you can see in the admin usually means an internal id got as far as the
+URL.
+
+The other way to get one is an entry that exists but is not **published**. Unpublished is
+`404` rather than `403` on purpose: to this API a draft does not exist, and saying "not
+authorized" would confirm that something is there.
 :::

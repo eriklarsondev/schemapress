@@ -78,11 +78,12 @@ class Plugin
             // reads an entry: it is what stops a public GET minting identifiers
             'Upgrade' => Upgrade::class,
 
-            // reading: Twig functions for themes that use Timber, and the
-            // content API for everyone else. both read the same Collection, so
-            // a filter means the same thing over HTTP as it does in a template
-            'Timber' => Timber::class,
+            // reading. the PHP API needs no service: it is static, and a theme
+            // reaches it through the global alias. these two are the ways OUT
+            // of this site, and both read the same Collection — so a filter
+            // means the same thing over HTTP as it does in a template
             'Api' => Api::class,
+            'Graphql' => Graphql::class,
 
             // admin: screens and transport
             'Rest' => Rest::class,

@@ -239,6 +239,10 @@ export function JsonField({ field, value, onChange }) {
       label={field.label}
       help={field.help}
       required={field.required}
+      // beside the label, because nobody presses Tab in a textarea on the
+      // chance that it does something: the one place it says so is the one
+      // place it will be read
+      hint={__('Tab walks the pairs', 'schemapress')}
       error={
         invalid
           ? __('That is not valid JSON, so it has not been stored.', 'schemapress')
@@ -305,6 +309,10 @@ function JsonEditor({
   )
 
   const empty = text.trim() === ''
+  // whether Escape has released the next Tab to leave the editor — see
+  // `complete`. a ref and not state: it is read and cleared by the very next
+  // keystroke, and nothing on screen depends on it
+  const loose = useRef(false)
 
   return (
     <div className={cn('sp-json', invalid && 'is-invalid', preview && 'is-split')}>
@@ -380,7 +388,7 @@ function JsonEditor({
           placeholder={'{\n  "key": "value"\n}'}
           className="sp-json-layer"
           onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => complete(event, onChange)}
+          onKeyDown={(event) => complete(event, onChange, loose)}
           onPaste={onPaste}
           onBlur={onBlur}
         />
@@ -626,6 +634,135 @@ function opensKey(before) {
 }
 
 /**
+ * The innermost member of an object or array the caret sits in.
+ *
+ * A member is one `"key": value` of an object, or one element of an array: from
+ * just past the brace or the comma that began it, to the comma or brace that
+ * ends it. That and where its colon is are everything Tab needs — where the key
+ * ends, where the value begins, and where the next pair would go.
+ *
+ * A full scan from the top, for the same reason opensKey() does one: `{` and
+ * `[` read identically from where the caret is, and only the structure above it
+ * says which one you are in. Members close from the inside out, so the first
+ * one found to hold the caret is the innermost — which is the one being typed.
+ *
+ * @param {string} text
+ * @param {number} caret
+ * @return {Object|null} {container, start, end, colon}, or null outside any.
+ */
+function memberAt(text, caret) {
+  const stack = []
+  let quoted = false
+  let found = null
+
+  /**
+   * Takes a frame's current member, if it holds the caret.
+   *
+   * @param {Object} frame
+   * @param {number} end
+   * @return {void}
+   */
+  const close = (frame, end) => {
+    if (!found && frame.start <= caret && caret <= end) {
+      found = { container: frame.type, start: frame.start, end, colon: frame.colon }
+    }
+  }
+
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index]
+
+    if (quoted) {
+      // an escaped character cannot close the string, whatever it is
+      if (character === '\\') {
+        index++
+      } else if (character === '"') {
+        quoted = false
+      }
+
+      continue
+    }
+
+    const frame = stack[stack.length - 1]
+
+    if (character === '"') {
+      quoted = true
+    } else if (character === '{' || character === '[') {
+      stack.push({ type: character, start: index + 1, colon: -1 })
+    } else if ((character === '}' || character === ']') && frame) {
+      close(frame, index)
+      stack.pop()
+    } else if (character === ',' && frame) {
+      close(frame, index)
+      frame.start = index + 1
+      frame.colon = -1
+    } else if (character === ':' && frame && frame.colon === -1) {
+      frame.colon = index
+    }
+  }
+
+  // half-written JSON leaves its braces open, and the caret is still in there
+  for (let index = stack.length - 1; index >= 0 && !found; index--) {
+    close(stack[index], text.length)
+  }
+
+  return found
+}
+
+/**
+ * A span of text without the whitespace at either end.
+ *
+ * @param {string} text
+ * @param {number} from
+ * @param {number} to
+ * @return {Array<number>} The start and end.
+ */
+function edges(text, from, to) {
+  let head = from
+  let tail = to
+
+  while (head < tail && /\s/.test(text[head])) {
+    head++
+  }
+
+  while (tail > head && /\s/.test(text[tail - 1])) {
+    tail--
+  }
+
+  return [head, tail]
+}
+
+/**
+ * An empty value of the same kind as the one given, to open the next pair with.
+ *
+ * A list of settings is a list of strings and a list of counts is a list of
+ * numbers: whatever the last value was, the next one usually is too. Every one
+ * of these parses on its own, so the field is never left holding text it
+ * refuses to store while the key is being typed.
+ *
+ * @param {string} value The value just written, as text.
+ * @return {string} The placeholder.
+ */
+function likeIt(value) {
+  if (value.startsWith('"')) {
+    return '""'
+  }
+
+  if (value.startsWith('{')) {
+    return '{}'
+  }
+
+  if (value.startsWith('[')) {
+    return '[]'
+  }
+
+  if (value === 'true' || value === 'false') {
+    return 'false'
+  }
+
+  return value === 'null' ? 'null' : '0'
+}
+
+/**
  * Replaces a range of a textarea's text, keeping the browser's undo history.
  *
  * Setting the value directly wipes the undo stack, which would make a completed
@@ -652,6 +789,101 @@ function replace(el, from, to, text, commit) {
 }
 
 /**
+ * Tab, walking an object or an array: a key to its value, a value to the next
+ * pair.
+ *
+ * From a key it selects the value, so typing replaces it. From a value it
+ * writes the next pair — with an empty value of the same kind as the one just
+ * written (see likeIt), the caret in the new key, and the indentation of the
+ * line the last pair was on. So a table of settings is typed straight through:
+ * name, Tab, value, Tab, name, Tab, value.
+ *
+ * Only inside a `{}` or a `[]`. Outside one, and in an empty field, Tab does
+ * what Tab does — as does Shift+Tab anywhere, and Tab straight after Escape.
+ * See `complete`.
+ *
+ * @param {KeyboardEvent} event
+ * @param {Function}      commit
+ * @return {void}
+ */
+function walk(event, commit) {
+  const el = event.currentTarget
+  const text = el.value
+  const caret = el.selectionStart
+  const member = memberAt(text, caret)
+
+  if (!member) {
+    return
+  }
+
+  const [head, tail] = edges(text, member.start, member.end)
+
+  // nothing there at all: `{|}`. the first pair, written the way typing a
+  // quote there would write it — a key to fill in and a string to put in it
+  if (head === tail) {
+    if (member.container !== '{') {
+      return
+    }
+
+    event.preventDefault()
+    replace(el, head, tail, '"": ""', commit)
+    el.setSelectionRange(head + 1, head + 1)
+
+    return
+  }
+
+  // in the key, with a value to move along to
+  if (member.container === '{' && member.colon !== -1 && caret <= member.colon) {
+    const [from, to] = edges(text, member.colon + 1, member.end)
+
+    event.preventDefault()
+
+    if (text[from] === '"' && to > from + 1) {
+      // inside the quotes, and over what is already between them
+      el.setSelectionRange(from + 1, to - 1)
+    } else if (text[from] === '{' || text[from] === '[') {
+      // inside the brace, where the next Tab finds the first pair
+      el.setSelectionRange(from + 1, from + 1)
+    } else {
+      el.setSelectionRange(from, to)
+    }
+
+    return
+  }
+
+  // a key with no colon yet is half-typed, and there is nowhere to go from it
+  if (member.container === '{' && member.colon === -1) {
+    return
+  }
+
+  // in the value — or anywhere in an array, where the member IS the value
+  const [from, to] =
+    member.container === '{' ? edges(text, member.colon + 1, member.end) : [head, tail]
+  const empty = likeIt(text.slice(from, to))
+
+  // where the line this pair is on begins is where the next one begins too.
+  // unless the object was written on one line, in which case the pair being
+  // added goes on it rather than breaking it open
+  const line = text.lastIndexOf('\n', head - 1) + 1
+  const lead = text.slice(line, head)
+  const between = lead.trim() === '' ? `,\n${lead}` : ', '
+  const pair = member.container === '{' ? `"": ${empty}` : empty
+
+  event.preventDefault()
+  replace(el, to, to, `${between}${pair}`, commit)
+
+  const at = to + between.length
+
+  // the caret goes where the typing goes: into the new key, or — in an array,
+  // which has no key — into the value itself
+  if (member.container === '{' || empty.length === 2) {
+    el.setSelectionRange(at + 1, at + 1)
+  } else {
+    el.setSelectionRange(at, at + empty.length)
+  }
+}
+
+/**
  * Closes what was opened, the way a code editor does.
  *
  *   "           where a KEY begins, write the whole pair: `"": ""`
@@ -660,18 +892,42 @@ function replace(el, from, to, text, commit) {
  *   Enter       between a pair, open an indented line; anywhere else, keep
  *               the current line's indentation
  *   Backspace   between an empty pair, remove both halves
+ *   Tab         key to value, value to the next pair — see `walk`
  *
- * Tab is NOT taken. A textarea that swallows Tab traps a keyboard user in it
- * with no way out, and Enter already gives indentation for free.
+ * Tab is taken, and a textarea that swallows Tab is a trap, so there are three
+ * ways past it: Shift+Tab always moves back, Tab outside any braces moves on,
+ * and Escape releases the next Tab to move on from anywhere. The last is the
+ * convention for an editor that wants Tab for itself, and the reason `loose`
+ * is threaded through.
  *
  * @param {KeyboardEvent} event
  * @param {Function}      commit
+ * @param {Object}        loose  Ref: whether Escape has released the next Tab.
  * @return {void}
  */
-function complete(event, commit) {
+function complete(event, commit, loose) {
   // mid-composition the key is a candidate character, not the character; and a
   // modifier means a shortcut, which is not ours to interpret
   if (event.nativeEvent?.isComposing || event.metaKey || event.ctrlKey || event.altKey) {
+    return
+  }
+
+  if (event.key === 'Escape') {
+    loose.current = true
+
+    return
+  }
+
+  // one Tab's worth, and only the one straight after the Escape
+  const released = loose.current
+
+  loose.current = false
+
+  if (event.key === 'Tab') {
+    if (!event.shiftKey && !released) {
+      walk(event, commit)
+    }
+
     return
   }
 

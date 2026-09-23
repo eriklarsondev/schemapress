@@ -18,8 +18,12 @@ if (!defined('ABSPATH')) {
  * second one handed over the entire site's settings, users and plugins in order
  * to let somebody add a field.
  *
- * A collection may also name the roles allowed to edit its entries, so a Grants
- * collection can belong to finance and a News collection to comms.
+ * These two, granted to roles, are the whole of it. A collection used to be able
+ * to name the roles allowed to edit ITS entries on top — a Grants collection for
+ * finance, a News collection for comms — which was a second permission system
+ * beside WordPress's own, settable per collection, and one more place to look
+ * when somebody could not edit something. Who may edit is a question about a
+ * role, and WordPress already answers it: anyone with EDIT edits any collection.
  */
 class Capabilities
 {
@@ -122,73 +126,5 @@ class Capabilities
     public static function canManage()
     {
         return current_user_can(self::MANAGE);
-    }
-
-    /**
-     * Whether the current user may edit the entries of one collection.
-     *
-     * A collection naming no roles is open to everyone who may edit content.
-     * Naming some narrows it to those, plus anyone who may manage schemas —
-     * somebody who can delete the collection outright is not meaningfully kept
-     * out of its entries.
-     *
-     * @param integer $type_id
-     *
-     * @return boolean
-     */
-    public static function canEditCollection($type_id)
-    {
-        if (!self::canEdit()) {
-            return false;
-        }
-
-        $roles = self::rolesFor($type_id);
-
-        if ($roles === []) {
-            return true;
-        }
-
-        if (self::canManage()) {
-            return true;
-        }
-
-        $user = wp_get_current_user();
-
-        return (bool) array_intersect($roles, (array) ($user->roles ?? []));
-    }
-
-    /**
-     * The roles a collection restricts its entries to.
-     *
-     * @param integer $type_id
-     *
-     * @return string[] empty when the collection is open
-     */
-    public static function rolesFor($type_id)
-    {
-        $settings = SchemaRepository::definition($type_id)['settings'];
-
-        return isset($settings['editRoles']) && is_array($settings['editRoles'])
-            ? $settings['editRoles']
-            : [];
-    }
-
-    /**
-     * Every role a collection could be restricted to, for the settings dialog.
-     *
-     * @return array<array{value: string, label: string}>
-     */
-    public static function roles()
-    {
-        $roles = [];
-
-        foreach (wp_roles()->roles as $slug => $role) {
-            $roles[] = [
-                'value' => $slug,
-                'label' => translate_user_role($role['name']),
-            ];
-        }
-
-        return $roles;
     }
 }

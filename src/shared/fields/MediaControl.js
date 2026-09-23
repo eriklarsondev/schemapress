@@ -80,40 +80,51 @@ export function ImageField({ field, value, onChange }) {
     <Field label={field.label} help={field.help} required={field.required}>
       {value ? (
         <div className="group relative w-full overflow-hidden rounded-lg border border-border bg-muted/40">
-          {/* the same width the empty picker takes, which is the width the cell
-              was given on the Form tab. w-fit here meant a chosen image shrank
-              the control back to the picture's own size, so a field set to full
-              width stopped being full width the moment it had a value in it */}
-          {source ? (
-            <img
-              src={source}
-              alt={attachment?.alt || ''}
-              // its own proportions, so the space is the right shape while the
-              // file loads instead of jumping open when it arrives
-              width={size?.width || attachment?.width}
-              height={size?.height || attachment?.height}
-              className="block h-auto w-full"
-            />
-          ) : (
-            // the attachment is still being looked up
-            <div className="h-32 w-full" />
-          )}
+          {/* the picture is the control: clicking it opens the library again.
+              A Replace button said the same thing in words, in a strip over the
+              bottom of the image it was asking about. The ring is inset because
+              the container clips, so an offset one would be cut off */}
+          <button
+            type="button"
+            onClick={select}
+            aria-label={__('Replace image', 'schemapress')}
+            className="block w-full transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            {/* the same width the empty picker takes, which is the width the cell
+                was given on the Form tab. w-fit here meant a chosen image shrank
+                the control back to the picture's own size, so a field set to full
+                width stopped being full width the moment it had a value in it */}
+            {source ? (
+              <img
+                src={source}
+                alt={attachment?.alt || ''}
+                // its own proportions, so the space is the right shape while the
+                // file loads instead of jumping open when it arrives
+                width={size?.width || attachment?.width}
+                height={size?.height || attachment?.height}
+                className="block h-auto w-full"
+              />
+            ) : (
+              // the attachment is still being looked up
+              <div className="h-32 w-full" />
+            )}
+          </button>
 
-          {/* on focus as well as hover: tabbing onto Replace should not land on
-              a button nobody can see */}
-          <div className="absolute inset-x-0 bottom-0 flex gap-1 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-            <Button size="sm" variant="secondary" onClick={select}>
-              {__('Replace', 'schemapress')}
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              aria-label={__('Remove image', 'schemapress')}
-              onClick={() => onChange(null)}
-            >
-              <X />
-            </Button>
-          </div>
+          {/* outside the button above rather than inside it: a button within a
+              button is not valid, and the click would have to be stopped from
+              reaching the one that reopens the library.
+
+              On focus as well as hover, so tabbing onto it does not land on a
+              control nobody can see */}
+          <Button
+            size="icon-sm"
+            variant="secondary"
+            aria-label={__('Remove image', 'schemapress')}
+            onClick={() => onChange(null)}
+            className="absolute bottom-2 left-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+          >
+            <X />
+          </Button>
         </div>
       ) : (
         <button

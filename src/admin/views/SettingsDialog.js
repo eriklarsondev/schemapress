@@ -30,11 +30,10 @@ import {
   Alert,
   Select,
   Switch,
-  Checkbox,
   Copyable,
   ConfirmDialog,
 } from '../../ui'
-import { site, roles } from '../../shared/settings'
+import { site } from '../../shared/settings'
 
 /**
  * Field types that can name an entry — mirrors SchemaModel::TITLE_TYPES.
@@ -215,9 +214,6 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
   const [publicApi, setPublicApi] = useState(() => asPair(settings.publicApi))
   const [titleField, setTitleField] = useState(settings.titleField || '')
   const [slugField, setSlugField] = useState(settings.slugField || '')
-  const [editRoles, setEditRoles] = useState(() =>
-    Array.isArray(settings.editRoles) ? settings.editRoles : []
-  )
 
   // whether the URL is being built from a different field than the name. read
   // from what is stored rather than defaulted, so a collection somebody already
@@ -239,8 +235,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
     drafts !== (settings.draftAndPublish !== false) ||
     JSON.stringify(publicApi) !== JSON.stringify(asPair(settings.publicApi)) ||
     titleField !== (settings.titleField || '') ||
-    slugField !== (settings.slugField || '') ||
-    JSON.stringify(editRoles) !== JSON.stringify(settings.editRoles || [])
+    slugField !== (settings.slugField || '')
 
   /**
    * The slug field that follows a chosen name field.
@@ -300,7 +295,7 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
       onSave({
         title: name.trim() || type.label,
         description: description.trim(),
-        settings: { draftAndPublish: drafts, publicApi, titleField, slugField, editRoles },
+        settings: { draftAndPublish: drafts, publicApi, titleField, slugField },
       })
     )
       .then(onClose)
@@ -463,20 +458,35 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                 <SlugNote fields={fields} slugField={slugField} />
               </div>
 
+              {/* the name to type, on its own and first. it used to show the
+                  two underscore keys side by side under "What templates ask
+                  for" — which is true of both and says nothing about which to
+                  reach for, while the documentation teaches the third spelling
+                  neither of them was */}
               <div className="flex flex-col gap-1.5 border-t border-border pt-4">
                 <p className="text-[13px] font-medium leading-none">
-                  {__('Machine keys', 'schemapress')}
+                  {__('Ask for it by', 'schemapress')}
                 </p>
 
-                <p className="flex flex-wrap items-center gap-1.5">
+                <p>
+                  <Badge variant="mono">{type.apiSlug || type.plural || type.key}</Badge>
+                </p>
+
+                <p className="text-[12px] text-muted-foreground">
+                  {__(
+                    'The same name in a template, in Twig and in a URL. Fixed when the collection was made — it does not follow a rename.',
+                    'schemapress'
+                  )}
+                </p>
+
+                {/* still worth showing: the singular key is what the export
+                    format stores and what a group field points at */}
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
+                  {__('Also answers to', 'schemapress')}
                   <Badge variant="mono">{type.key}</Badge>
                   {type.plural && type.plural !== type.key ? (
                     <Badge variant="mono">{type.plural}</Badge>
                   ) : null}
-                </p>
-
-                <p className="text-[12px] text-muted-foreground">
-                  {__('What templates ask for. Fixed when the collection was made.', 'schemapress')}
                 </p>
               </div>
             </CardBody>
@@ -514,42 +524,6 @@ export function SettingsDialog({ type, fields = [], settings, onClose, onSave, o
                   aria-label={__('Draft and publish', 'schemapress')}
                   onChange={(next) => (next ? setDrafts(true) : setConfirming('drafts'))}
                 />
-              </div>
-
-              {/* who may work on this collection, which is a question about
-                  this collection rather than about the site — a Grants
-                  collection can belong to finance while News belongs to comms,
-                  and one capability covering every collection could not say so */}
-              <div className="border-t border-border pt-4">
-                <p className="text-[13px] font-medium">{__('Who can edit these', 'schemapress')}</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                  {editRoles.length === 0
-                    ? __(
-                        'Anyone who can edit content. Tick a role to narrow it to those people.',
-                        'schemapress'
-                      )
-                    : __(
-                        'Only these roles, plus anyone who can change the shape of content — somebody who can delete this collection is not meaningfully kept out of its entries.',
-                        'schemapress'
-                      )}
-                </p>
-
-                <div className="mt-2.5 flex flex-col gap-1.5">
-                  {roles.map((role) => (
-                    <Checkbox
-                      key={role.value}
-                      checked={editRoles.includes(role.value)}
-                      label={role.label}
-                      onChange={() =>
-                        setEditRoles((current) =>
-                          current.includes(role.value)
-                            ? current.filter((one) => one !== role.value)
-                            : [...current, role.value]
-                        )
-                      }
-                    />
-                  ))}
-                </div>
               </div>
 
               {/* the other decision about who sees this collection, so it sits

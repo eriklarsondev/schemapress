@@ -786,7 +786,6 @@ echo "\nA collection's own site settings survive an import\n";
 
 sp_test_reset();
 $owned = sp_test_type('Grant', [['label' => 'Title', 'type' => 'text']], [
-    'editRoles' => ['finance'],
     'draftAndPublish' => true,
 ]);
 
@@ -798,7 +797,6 @@ $loose = [
         'definition' => [
             'fields' => [['key' => 'title', 'label' => 'Title', 'type' => 'text']],
             'settings' => [
-                'editRoles' => [],
                 'draftAndPublish' => false,
                 'publicApi' => ['list' => true, 'single' => true],
             ],
@@ -809,15 +807,13 @@ $loose = [
 Portability::import($loose, ['mode' => 'merge']);
 $settings = SchemaRepository::definition($owned)['settings'];
 
-check('merge keeps who may edit it', ['finance'], $settings['editRoles']);
-check('and whether it has drafts', true, $settings['draftAndPublish']);
+check('merge keeps whether it has drafts', true, $settings['draftAndPublish']);
 check('and does not publish it', ['list' => false, 'single' => false], $settings['publicApi']);
 
 Portability::import($loose, ['mode' => 'replace']);
 $settings = SchemaRepository::definition($owned)['settings'];
 
-check('replace still keeps who may edit it', ['finance'], $settings['editRoles']);
-check('and still does not publish it', ['list' => false, 'single' => false], $settings['publicApi']);
+check('replace still does not publish it', ['list' => false, 'single' => false], $settings['publicApi']);
 
 echo "\nComponents with the same name\n";
 
@@ -1029,41 +1025,21 @@ check(
     strpos(Capabilities::MANAGE, 'schemapress_') === 0
 );
 
-echo "\nPer-collection access\n";
+echo "\nWho may edit entries\n";
 
 sp_test_reset();
-$open = lifecycle_type();
-$owned = sp_test_type('Grant', [
-    ['label' => 'Title', 'type' => 'text'],
-], ['editRoles' => ['finance']]);
 
-check('a collection is open by default', [], ContentType::get($open)['editRoles']);
-check('and can name who owns it', ['finance'], ContentType::get($owned)['editRoles']);
-
-// a role that does not exist on this site matches no user, which fails closed —
-// the right direction for an import from somewhere that had one
-check(
-    'a role the site has not created is kept rather than dropped',
-    ['finance'],
-    SchemaModel::normalize(['settings' => ['editRoles' => ['finance']]])['settings']['editRoles']
-);
-
-$GLOBALS['wp_current_roles'] = ['editor'];
+// one question, answered by the role — a collection has no say of its own. it
+// used to be able to name the roles that owned it, a second permission system
+// beside WordPress's own, and that is gone
 $GLOBALS['sp_test_caps'] = [Capabilities::EDIT => true];
 
-check('an editor may edit an open collection', true, Capabilities::canEditCollection($open));
-check('but not one owned by another role', false, Capabilities::canEditCollection($owned));
+check('a role granted the capability may edit', true, Capabilities::canEdit());
+check('and is not thereby allowed to reshape anything', false, Capabilities::canManage());
 
-$GLOBALS['wp_current_roles'] = ['finance'];
+$GLOBALS['sp_test_caps'] = [];
 
-check('the role that owns it may', true, Capabilities::canEditCollection($owned));
-
-// somebody who can delete the collection outright is not meaningfully kept out
-// of its entries
-$GLOBALS['wp_current_roles'] = ['administrator'];
-$GLOBALS['sp_test_caps'] = [Capabilities::EDIT => true, Capabilities::MANAGE => true];
-
-check('and so may anyone who can reshape it', true, Capabilities::canEditCollection($owned));
+check('a role without it may not', false, Capabilities::canEdit());
 
 $GLOBALS['sp_test_caps'] = null;
 $GLOBALS['wp_current_roles'] = null;

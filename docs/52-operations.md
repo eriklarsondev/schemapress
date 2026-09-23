@@ -35,12 +35,12 @@ wp schemapress jobs --run    # work through it now
 ```bash
 wp schemapress list                              # the collections on this site
 wp schemapress reindex                           # rebuild every filter index
-wp schemapress reindex --collection=team_member
+wp schemapress reindex --collection=team-members
 wp schemapress backfill                          # give old entries their identifiers
 wp schemapress jobs --run                        # drain the queue
 wp schemapress export > schema.json
 wp schemapress import schema.json
-wp schemapress trash --collection=team_member --yes   # empty one collection's trash
+wp schemapress trash --collection=team-members --yes   # empty one collection's trash
 ```
 
 `reindex` runs to **completion** rather than queuing, which is what makes it usable in a

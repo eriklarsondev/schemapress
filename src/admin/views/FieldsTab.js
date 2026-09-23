@@ -18,6 +18,7 @@ import { Save, Users } from 'lucide-react'
 import { Card, CardBody, Button, Alert } from '../../ui'
 import { FieldsEditor } from '../../shared/builder/FieldEditor'
 import { fieldTypes } from '../../shared/settings'
+import { clearUnsaved, useUnsavedGuard, PANEL } from '../../shared/unsaved'
 
 /**
  * The field definition editor.
@@ -37,6 +38,14 @@ export function FieldsTab({ fields, onChange }) {
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(fields)
 
+  // the draft lives here until Save fields, and leaving the tab unmounts it,
+  // so walking away is the one way to lose work on this screen
+  useUnsavedGuard(
+    dirty,
+    __('The schema has changes that have not been saved. Leaving loses them.', 'schemapress'),
+    PANEL
+  )
+
   /**
    * Stores the draft.
    *
@@ -44,7 +53,12 @@ export function FieldsTab({ fields, onChange }) {
    */
   const save = () => {
     setSaving(true)
-    Promise.resolve(onChange(draft)).finally(() => setSaving(false))
+    Promise.resolve(onChange(draft))
+      // down before the next render rather than at it: the fields come back
+      // through a prop, and until they do the guard would still be saying
+      // there is work to lose
+      .then(clearUnsaved)
+      .finally(() => setSaving(false))
   }
 
   return (

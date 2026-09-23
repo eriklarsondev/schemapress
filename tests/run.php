@@ -13,7 +13,7 @@
  * @package SchemaPress
  */
 
-$suites = ['collections', 'lifecycle'];
+$suites = ['collections', 'lifecycle', 'docs'];
 $failed = 0;
 $total = 0;
 

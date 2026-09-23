@@ -7,11 +7,12 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * A query against one collection, built by Content::collection().
+ * A query against one collection, built by this namespace's Content::collection()
+ * — which a theme reaches as `SchemaPress::collection()`.
  *
- * Iterable and countable, so Twig and foreach both treat it as the list it
- * represents. The query runs once, on first read, and is remembered — a template
- * that counts a collection and then loops it makes one query.
+ * Iterable and countable, so a foreach and a Twig `for` both treat it as the list
+ * it represents. The query runs once, on first read, and is remembered — counting
+ * a collection and then looping it makes one query.
  */
 class Collection implements \IteratorAggregate, \Countable
 {
@@ -75,6 +76,24 @@ class Collection implements \IteratorAggregate, \Countable
     public function page($page)
     {
         return $this->with(['page' => max(1, absint($page))]);
+    }
+
+    /**
+     * Skips a number of entries, counting entries rather than pages — the same
+     * window `?start=` opens over HTTP.
+     *
+     * An offset and a page are alternatives, not a pair: setting one means the
+     * other is not consulted. Reach for this when the window does not line up
+     * with a page — a "load 10 more" button, or a feature row above a grid that
+     * has to skip whatever the row already showed.
+     *
+     * @param integer $count
+     *
+     * @return Collection
+     */
+    public function offset($count)
+    {
+        return $this->with(['offset' => max(0, absint($count))]);
     }
 
     /**

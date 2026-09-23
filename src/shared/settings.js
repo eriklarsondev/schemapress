@@ -16,13 +16,6 @@ export const settings = window.SchemaPress || {}
 export const fieldTypes = settings.fieldTypes || []
 
 /**
- * The element palette: field types expressed as things an author recognizes.
- *
- * @type {Array<{id: string, label: string, icon: string, field: Object}>}
- */
-export const elements = settings.elements || []
-
-/**
  * Ready-made option lists a select can draw from. Sent with the page because they
  * are static, so a control renders without a request.
  *
@@ -74,14 +67,6 @@ function normalize(value) {
 export function site() {
   return siteSettings
 }
-
-/**
- * The site's own role list rather than a fixed one, so a role added by another
- * plugin is offered without this one knowing it exists.
- *
- * @type {Array<{value: string, label: string}>}
- */
-export const roles = settings.roles || []
 
 /**
  * Long-running work already in flight when the page loaded, so a reindex started

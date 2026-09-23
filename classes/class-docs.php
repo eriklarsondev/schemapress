@@ -11,11 +11,6 @@ if (!defined('ABSPATH')) {
  * compiled in filename order — so the same source reads well in the repository
  * and editing a paragraph does not mean editing PHP.
  *
- * One placeholder is filled in before rendering, so the page states what is true
- * of *this* install:
- *
- *   %%timber_status%%   whether the Twig functions are registered here
- *
  * Normally this is a screen inside the React app. When the bundle has not been
  * built there is no app to put it in, so the standalone page below renders it
  * server-side — that is exactly the state whose way out the documentation
@@ -95,6 +90,12 @@ class Docs
             // does only for tags already carrying one in the allow-list
             $allowed[$tag]['data-label'] = true;
         }
+
+        // a link off this site opens in its own tab — see links(). kses would
+        // otherwise strip the pair back off again, leaving the behavior in the
+        // compiler and absent from the page
+        $allowed['a']['target'] = true;
+        $allowed['a']['rel'] = true;
 
         return $allowed;
     }
@@ -209,9 +210,7 @@ class Docs
             // page and still enough to stop the title being found
             $body = preg_replace('/<!--\s*(?:group|description):.*?-->\s*/is', '', $markdown);
 
-            $html = self::anchors(self::parse(strtr($body, [
-                '%%timber_status%%' => self::timberStatus(),
-            ])));
+            $html = self::links(self::anchors(self::parse($body)));
 
             $name = preg_replace('/^\d+[-_]/', '', basename($path, '.md'));
             $id = sanitize_title($name);
@@ -386,9 +385,7 @@ class Docs
             }
         }
 
-        return strtr(implode("\n\n", $parts), [
-            '%%timber_status%%' => self::timberStatus(),
-        ]);
+        return implode("\n\n", $parts);
     }
 
     /**
@@ -404,7 +401,7 @@ class Docs
             return '<p>' . esc_html__('No documentation was found.', 'schemapress') . '</p>';
         }
 
-        return self::anchors(self::parse($markdown));
+        return self::links(self::anchors(self::parse($markdown)));
     }
 
     /**
@@ -497,8 +494,8 @@ class Docs
      * one operation shown the way each surface spells it:
      *
      *   :::tabs
-     *   ```php PHP
-     *   Content::collection('team_member')->get();
+     *   ```php In PHP
+     *   SchemaPress::collection('team-members')->get();
      *   ```
      *   :::
      *
@@ -641,6 +638,58 @@ class Docs
      *
      * @return string
      */
+    /**
+     * Sends every link that leaves this site to a tab of its own.
+     *
+     * Somebody following a link out of the documentation is mid-task — they are
+     * reading this *because* they are doing something with it — and taking the
+     * page away from them loses where they were. Worse here than on an ordinary
+     * page: this is a screen inside an app, so coming back is a reload of the
+     * admin rather than a back button.
+     *
+     * `rel` is not a separate decision. A tab opened with `target` can reach
+     * back through `window.opener` and navigate the page it came from, and no
+     * link in this documentation has any use for that.
+     *
+     * Done here rather than in the Markdown so that every link gets it — the one
+     * written today and the one somebody adds next year — and so the sources
+     * stay readable as Markdown on GitHub, where a raw anchor tag would not be.
+     *
+     * @param string $html
+     *
+     * @return string
+     */
+    private static function links($html)
+    {
+        $here = function_exists('home_url')
+            ? strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST))
+            : '';
+
+        return (string) preg_replace_callback(
+            '/<a\s+href="(https?:\/\/[^"]*)"([^>]*)>/i',
+            function ($match) use ($here) {
+                preg_match('#^https?://([^/?\#]+)#i', $match[1], $host);
+                $target = strtolower($host[1] ?? '');
+
+                // a link back to this site is navigation, not an errand, and
+                // one already carrying a target has said what it wants
+                if (
+                    ($here !== '' && $target === $here)
+                    || stripos($match[2], 'target=') !== false
+                ) {
+                    return $match[0];
+                }
+
+                return sprintf(
+                    '<a href="%s"%s target="_blank" rel="noopener noreferrer">',
+                    $match[1],
+                    $match[2]
+                );
+            },
+            $html
+        );
+    }
+
     private static function anchors($html)
     {
         // the docs are full of markup samples, and a sample containing an <h2>
@@ -811,50 +860,6 @@ class Docs
             headings.forEach(function (heading) { observer.observe(heading); });
         }());
         </script>";
-    }
-
-    // --- live values ---------------------------------------------------------
-
-    /**
-     * whether this install can render, as a callout.
-     *
-     * @return string
-     */
-    private static function timberStatus()
-    {
-        $major = Timber::major();
-
-        if (Timber::available()) {
-            return sprintf(
-                '<p class="sp-status sp-status--ok">%s</p>',
-                esc_html(sprintf(
-                    /* translators: %d: Timber major version */
-                    __('Timber %d is loaded. The Twig functions are available.', 'schemapress'),
-                    $major
-                ))
-            );
-        }
-
-        // not an error: the PHP API works either way. this only says which half
-        // of the reading surface this install has
-        if ($major > 0) {
-            $message = sprintf(
-                /* translators: 1: loaded major version, 2: required major version */
-                __(
-                    'Timber %1$d is loaded, but the Twig functions need Timber %2$d. The PHP API is unaffected.',
-                    'schemapress'
-                ),
-                $major,
-                Timber::REQUIRES
-            );
-        } else {
-            $message = __(
-                'Timber is not installed, so the Twig functions are not registered. The PHP API works without it.',
-                'schemapress'
-            );
-        }
-
-        return sprintf('<p class="sp-status sp-status--note">%s</p>', esc_html($message));
     }
 
     // --- presentation --------------------------------------------------------

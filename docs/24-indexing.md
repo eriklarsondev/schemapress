@@ -1,4 +1,4 @@
-<!-- group: Content API -->
+<!-- group: Querying content -->
 <!-- description: Which field types can be filtered and sorted, why the rest cannot, and keeping the index current. -->
 
 ## What can be queried

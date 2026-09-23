@@ -8,7 +8,98 @@ a minor bump may still change behavior, and the notes say when it does.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A field called `id` replaced the entry's own in the API response.** A collection with a
+  field labelled "ID" — an external reference, a SKU, a legacy number — keys it to `id`,
+  and the values were merged over the identifiers rather than under them. The document
+  came back reporting the field's value as its `id`, which `/{collection}/{id}` does not
+  answer to: the entry could not be fetched by the identifier it had just handed out.
+  `slug` had the same problem, and in GraphQL the field replaced one declared non-null
+  `ID`.
+
+  The entry's own names now win, on both surfaces, and the field **moves** rather than
+  going missing — `id_field` over REST, `idField` in GraphQL. Dropping it would have
+  traded a broken identifier for silently lost content. The five reserved names are `id`,
+  `slug`, `createdAt`, `updatedAt` and `publishedAt`.
+
+- **`sort=publishedAt` ordered by a value the response does not report.** `publishedAt` is
+  read from a meta row that moves forward every time the published copy does; the sort
+  ordered by `post_date`, which WordPress sets once and never moves. On a collection that
+  keeps no drafts every save republishes, so the two diverged after the first edit and a
+  list sorted by `publishedAt` came back in an order its own `publishedAt` values
+  contradicted. It now orders by the row the value is read from.
+
+  The cost is that `publishedAt` spends the single custom field WP_Query can order by, so
+  it cannot be combined with a sort on one of the collection's own fields. That is stated
+  in **Sorting & pagination** rather than left to be discovered.
+
+  The test suite could not have caught either of these: its WordPress had no `post_date`
+  at all and fell back to insertion order, which made `createdAt` and `publishedAt`
+  indistinguishable. The stub now models the column the way WordPress does — set once at
+  insert, never moved by an update — and the ordering tests fail without the fix.
+
 ### Added
+
+- **`createdAt` on every entry**, over REST and in GraphQL. It was already accepted as a
+  sort key and documented as one, but no surface returned it, so a client could order by
+  it and had nothing to show. It is when the entry was made and never moves again, which
+  is the question most people are actually asking when they reach for `publishedAt`.
+
+### Removed
+
+- **The element palette, which nothing had drawn for some time.** `Elements::all()` built
+  thirteen elements on every admin page load and put them on `window.SchemaPress`, and no
+  screen imported them — `fieldTypes` beside it had nineteen references and `datasets`
+  seven. The `schemapress/elements` filter was documented as adding to a palette that was
+  not there, so a site registering one got silence. `classes/class-elements.php`, the
+  bootstrapped `elements` payload and the filter are all gone.
+
+- **The documentation's code samples are checked, not proofread.** A third suite,
+  `tests/docs.php`, parses every fenced block with the real parser for its language —
+  `php -l`, `node --check`, `json_decode` — and checks the GraphQL ones for balanced
+  braces. It found two samples that could not run: a list of function signatures written
+  as though it were code, and a chained query with no opening tag and no semicolon.
+  Neither was visible in review, because a fenced block looks like code whether or not it
+  is one, and both were something a reader would have pasted into a theme.
+
+  It also checks what the compiler cannot complain about: every page declares its group
+  and description, opens with a heading, claims an id nothing else claims, closes every
+  `:::` block and code fence, and labels every pane of every tab group.
+
+- **Links out of the documentation open in their own tab.** Somebody following one is
+  mid-task, and this is a screen inside an app — taking the page away means coming back
+  through a reload of the admin rather than a back button. Applied in the compiler, so
+  every link gets it and the Markdown sources stay readable on GitHub; `rel="noopener"`
+  comes with it, since a tab opened this way can otherwise navigate the one it came from.
+  A link back to this site, and an in-page anchor, are left alone.
+
+- **A WPGraphQL integration.** Install [WPGraphQL](https://wordpress.org/plugins/wp-graphql/)
+  and every collection you have opened for reading joins the site's GraphQL schema, beside
+  its posts and pages — a type per collection, a list query and a single query, with the
+  same filter, sort and paging grammar as typed inputs. It is not bundled, for the reason
+  nothing else is: a site that wants GraphQL already runs it, and a second copy on the
+  autoloader would let load order decide which version the schema was built against.
+  Without it the file costs one `function_exists()` per request.
+
+  **It exposes exactly what REST exposes.** The site's Content API switch and each
+  collection's own Read many / Read one pair govern both, so a collection closed to REST is
+  *absent* from the schema rather than present and refusing — no type, no query, nothing to
+  introspect. Adding a query language must not widen what is public, and the only way to be
+  sure is to have one answer to "is this readable" rather than two.
+
+  GraphQL names cannot contain a dash, so this is the one surface that cannot take
+  `team-members`: the type is `TeamMember`, the queries are `teamMembers` and `teamMember`,
+  and `full_name` is `fullName`. Two keys that want one camelCase name are settled rather
+  than silently dropped — the first keeps it, the rest fall back to their key verbatim.
+  Lists return `nodes`, `total` and `count` rather than a Relay connection: a connection
+  needs a cursor, and this is a read API over content with no cursor to hand out.
+
+- **`offset()` on a collection query**, so PHP and Twig can open the same window `?start=`
+  opens over HTTP. Paging existed on all three surfaces; skipping existed only on the one
+  that leaves the server, which left a "load 10 more" button or a feature row above a grid
+  with no way to say what it meant. An offset and a page are alternatives — setting one
+  means the other is not consulted — and `total()` still counts everything that matched.
 
 - **Formatting, and a pre-commit hook that applies it.** Prettier for JavaScript and CSS,
   PHP-CS-Fixer for PHP, both wired into husky and lint-staged so staged files are
@@ -43,21 +134,93 @@ a minor bump may still change behavior, and the notes say when it does.
   **Move to the sidebar** under its width badge — which is also the way back, at whichever
   width. Stored as `config.region` (`main` or `sidebar`); only a collection's own fields
   can have one, since a field inside a group is drawn by the group and a component's are
-  drawn wherever it is used. The sidebar now scrolls on its own once it is taller than the
-  pane, so what is put in it is never stranded below the fold of a long form.
+  drawn wherever it is used.
 
 ### Changed
 
+- **`team-members` is the name you ask for a collection by, everywhere.** The plural,
+  hyphenated, the same string in a PHP file, a Twig template, a URL and on the command
+  line. It already worked in three of those four and the documentation only mentioned it
+  for URLs, so every template example printed `team_member` and a reader had no way to
+  know one name would do. Every example now uses it, the collection's Settings leads with
+  it under **Ask for it by** rather than showing two underscore keys as "what templates ask
+  for", and `wp schemapress list` reports it as the first column.
+
+  The three other spellings — `team_members`, `team-member`, `team_member` — still answer
+  and always will; a template that types one should not stop rendering.
+
+  **`wp schemapress --collection=` now accepts it too**, which it did not: the rule lived
+  in three places and had drifted, with the reading API reading hyphens and spaces, the
+  REST layer reading hyphens, and the CLI reading neither — so the one name the
+  documentation printed was refused by the one surface that cannot guess what you meant.
+  All three now call `ContentType::find()`.
+
+- **The documentation is grouped by job rather than by surface.** It used to have a
+  *Content API* section and an *In your theme* section, so the two questions a reader
+  actually arrives with were each answered in three separate places: "how do I filter?"
+  was in Filters, in the middle of the PHP page and in the middle of the Twig page, and
+  "what does an image field give me?" was in Response format, in the middle of the PHP
+  page and in the middle of the Twig page. Neither page said the other two existed.
+
+  There are now two groups, each covering all three surfaces. **Querying content** —
+  Querying, Querying over HTTP, Querying in PHP, Querying in Twig, Filters, Sorting &
+  pagination, What can be queried. **Displaying content** — Displaying values, Values in
+  JSON, Values in PHP, Values in Twig. Each group opens with a page showing the same
+  operation written three ways side by side: one query in all three surfaces, and one
+  table giving every field type's JSON, PHP and Twig form. *Content API* keeps the pages
+  that are about the transport itself — Endpoints, Errors, Writing a client, Caching.
+
+  Filters and Sorting & pagination now spell every example for all three surfaces rather
+  than for one with the others mentioned; a tab group in Filters that had been left
+  half-written, with an empty pane and prose stranded between two fences, is fixed.
+
+- **Leaving a tab with unsaved work asks first.** The Form tab and the Schema tab each
+  hold their arrangement until their own Save button, and a tab panel unmounts the moment
+  you leave it — so switching tabs threw the work away without a word. The tab strip now
+  asks, as the sidebar already did, and says which it is: the layout, the schema, or the
+  component. An unsaved layout also stops a reload and a move to another collection, which
+  it did not before. A component's own name and description are guarded too, but only
+  against navigating away — they are held by the view rather than by a panel, so changing
+  tabs does not lose them and does not ask.
+
+- **A card dropped on the flank of another shares its row.** Dragging onto a card only
+  ever swapped the two, so on a form of full-width fields — which is every form nobody has
+  arranged yet — there was no spare space anywhere and no width could be set by dragging
+  at all. The outer quarter of each side of a card is now an offer to join its row, and
+  the row divides evenly between everything on it: two across is a half each, three a
+  third each, and a fourth is refused because a quarter is narrower than any control is
+  drawn. The middle half of a card still swaps.
+- **A row's spare space divides between the widths that fit it.** It used to give each
+  width the part of the space its own span covered, so in six spare columns a half won
+  only the last sixth and a third had everything before it. Now the fitting widths share
+  the space equally — the near half of six columns is a third, the far half a half — and
+  the far end always fills what is there, whatever is free.
+- **Resizing a field in place resizes the card.** Holding a field over its own place and
+  moving across it used to tint the space past its border while the card stayed the size
+  it was. The card now takes the width it is being given, so its outline is the answer,
+  and the space after it gives up exactly what the card takes so the row never re-wraps
+  under the pointer. Only for a field at the end of its row, which is where the columns
+  can come from — and which a full-width field always is.
+- **One dashed outline per card while dragging.** A drag lit up seven or more dashed boxes
+  at once: the card being dragged, a second ring inside it for the resize preview, two
+  nested ones on whichever space was being aimed at, and the four sidebar silhouettes
+  standing there the whole time. Dashes now mean one thing — where the field is about to
+  land — and everything else is solid or a fill.
+- **The entry sidebar scrolls with the page.** It was sticky and capped to the height of
+  the pane with a scrollbar of its own, so the wheel did one thing over the form and
+  another over the sidebar. It is an ordinary column of cards now.
+- **Tab walks an object in a JSON field.** From a key it selects the value; from a value
+  it opens the next pair, with an empty value of the same kind as the one just written —
+  so a table of settings is typed straight through. Shift+Tab, Tab outside any braces, and
+  Escape-then-Tab all still leave the field.
 - **Widths are set by dragging, both ways and at every size.** Dropping into a row's
   spare space always widened a field to fill it, a New row strip always kept its width,
   and a full-width field in a form with no spare space could not be narrowed by dragging
-  at all. Now a row's spare space offers every width that fits it and a New row strip all
-  four, full included — the field stretches from where the row starts to the pointer, so
-  moving across runs through ⅓, ½, ⅔ and Full. Holding a field over its own place resizes
-  it where it stands: back towards the start of the row narrows it, on into any space
-  after it widens it, measured from where it was picked up so a wobble changes nothing,
-  and the fields around it stay where they were, as the width badge leaves them. Every
-  target is drawn at the width you will get; level between two, a field keeps its own.
+  at all. A New row strip now offers all four widths, full included, in equal quarters of
+  the row. Holding a field over its own place resizes it where it stands: back towards the
+  start of the row narrows it, on into any space after it widens it, measured from where
+  it was picked up so a wobble changes nothing, and the fields around it stay where they
+  were, as the width badge leaves them. Every target is drawn at the width you will get.
 - **An image field shows the whole picture**, at the full width of its cell and at its
   own height, from the large size rather than the 300px medium one. It was a 128px strip
   cropped across the middle, which said little about whether it was the right image.
@@ -110,6 +273,54 @@ a minor bump may still change behavior, and the notes say when it does.
 
 ### Removed
 
+- **The Twig query functions, and the Timber integration with them.** `sp_collection()`,
+  `sp_entry()`, `sp_collections()` and `sp_has_collection()` let a template fetch its own
+  data. **A query now lives in the PHP file — native theme or Timber — and the result is
+  handed to the template.** A page whose data layer is split between a PHP file and the
+  templates it renders has two places to look when something is missing.
+
+  The name was its own argument: `sp_collection()` was documented as *removed* (it was the
+  old PHP function, dropped because SportsPress owns `sp_`) and as *current* (it was still
+  the live Twig function), so the same string meant two opposite things depending on which
+  page you were reading.
+
+  Nothing is lost in rendering. This plugin never needed a Twig integration — an `Entry`
+  answers an array key, a property and a method on its own, so `person.full_name` resolves
+  in a template with nothing registered for it. `classes/class-timber.php`, the
+  `%%timber_status%%` placeholder and the `timber/timber` dev dependency are all gone.
+
+  **To migrate:** move the query into the PHP file that renders the template and pass the
+  result into the context.
+
+  ```php
+  // page-team.php
+  $context = Timber::context();
+  $context['team'] = SchemaPress::collection('team-members')->sort('full_name')->get();
+
+  Timber::render('team.twig', $context);
+  ```
+
+  ```twig
+  {# team.twig — was: {% for person in sp_collection('team_members') %} #}
+  {% for person in team %}
+  ```
+
+- **The querying reference is four pages, not seven.** *Querying over HTTP*, *Querying in
+  PHP* and *Querying in Twig* each repeated the same operations for one surface. They are
+  gone, folded into **Querying** and **The query object**, where every operation is shown
+  for all three surfaces in one tabbed block — one operation, one place. The methods PHP
+  and Twig share are documented once rather than twice, since it is the same object.
+
+- **Per-collection edit roles.** A collection could name the roles allowed to edit its
+  entries, under **Who can edit these** in its settings dialog. It was a second permission
+  system beside WordPress's own, settable in a different place for every collection, and
+  one more thing to check when somebody could not edit something. Who may edit is a
+  question about a role and WordPress already answers it: anyone with
+  `schemapress_edit_content` now edits every collection. `Capabilities::canEditCollection()`,
+  `Capabilities::rolesFor()` and `Capabilities::roles()` are gone with it, and the
+  `editRoles` setting is dropped from a collection the next time it is saved. **A site
+  that had restricted a collection to a role opens it to everyone with the capability**;
+  draw the division with roles and capabilities instead.
 - **Four unused public members.** None is referenced anywhere in the plugin, its tests or
   its documentation, but all four were `public`, so a theme could in principle have
   reached them: `Schema::META_TEMPLATES` (left over from the page-template era),
@@ -119,6 +330,26 @@ a minor bump may still change behavior, and the notes say when it does.
   of `Capabilities::MANAGE`).
 
 ### Fixed
+
+- **`$or` gave the wrong answer, two ways.** It takes a list of filter objects, and the
+  list was merged into a single flat object before being read. So
+  `$or: [{role: Engineer}, {role: Designer}]` **lost a branch outright** — merging two
+  objects that name the same field keeps one of them, and the query answered as though
+  only the second had been asked. And `$or: [{a, b}, {c}]` came out as `a OR b OR c`
+  rather than `(a AND b) OR c`, which is a strictly wider question than the one asked.
+
+  Both failed by returning **more** than was wanted, which is the one direction a filter
+  on a published collection must never fail in — a listing that quietly includes entries
+  the filter was there to exclude looks like it is working. Each entry of the list is now
+  a query in its own right, with its own conditions joined by and, and `$and` nests inside
+  `$or` the same way. Affects all three surfaces: the REST bracket form, `filter()` in PHP
+  and `.filter()` in Twig.
+
+- **`?filters[role]=Engineer` was ignored.** The long form without an operator, and a list
+  under `?filters[role][]=`, were both dropped — and a dropped filter widens the result.
+  Strapi wants an operator there; a filter that names a real field and gives it a real
+  value has said plainly what it means, so the first is read as `$eq` and the second as
+  `$in`, exactly as the short form already read them.
 
 - **The sidebar scrolled away whenever WordPress showed a notice.** The shell was sized to
   `100vh - 32px` — the window less the admin bar — on the assumption that nothing else sat

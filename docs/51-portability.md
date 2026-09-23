@@ -91,13 +91,9 @@ refused:
 
 ### What a file does not get to decide
 
-Two settings describe **this site** rather than the collection's shape, and are always kept
-as the destination has them:
-
-- **Public API.** An import is not a decision to publish. A collection the import creates
-  arrives with both switches off.
-- **Who can edit these.** A file cannot open a restricted collection to every editor, or lock
-  out the team that owns it.
+One setting describes **this site** rather than the collection's shape, and is always kept
+as the destination has it: the **Public API**. An import is not a decision to publish, so a
+collection the import creates arrives with both switches off.
 
 Merge also keeps whether the collection has **drafts**. Replace takes the file's answer.
 
@@ -148,7 +144,7 @@ mean guessing which of them were meant to move.
 wp schemapress export > schema.json
 
 # one collection, with its content
-wp schemapress export --collection=team_member --entries > team.json
+wp schemapress export --collection=team-members --entries > team.json
 
 # read one back
 wp schemapress import schema.json

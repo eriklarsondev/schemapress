@@ -15,12 +15,13 @@
 import { useCallback, useEffect, useState } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { Save, Wrench, LayoutList, SlidersHorizontal } from 'lucide-react'
-import { Card, CardBody, Loading, Alert, Button, Tabs, TabPanel } from '../../ui'
+import { Card, CardBody, Loading, Alert, Button, Tabs, TabPanel, ConfirmDialog } from '../../ui'
 import { FieldsEditor } from '../../shared/builder/FieldEditor'
 import { FormTab } from './FormTab'
 import { ComponentSettingsDialog } from './ComponentSettingsDialog'
 import { fieldTypes } from '../../shared/settings'
 import { api } from '../../shared/api'
+import { hasUnsavedPanel, unsavedMessage, useUnsavedGuard, PANEL } from '../../shared/unsaved'
 
 /**
  * The component editor.
@@ -35,6 +36,9 @@ export function ComponentView({ id, onChanged, onDeleted }) {
   const [saving, setSaving] = useState(false)
   const [configuring, setConfiguring] = useState(false)
   const [tab, setTab] = useState('schema')
+  // the tab somebody is trying to reach with work unsaved on the one they are
+  // on, held until they say whether to lose it
+  const [leaving, setLeaving] = useState('')
 
   const load = useCallback(() => {
     setComponent(null)
@@ -53,6 +57,15 @@ export function ComponentView({ id, onChanged, onDeleted }) {
     load()
   }, [load])
 
+  // ABOVE the early returns, and it has to be: a component being fetched is
+  // null until it arrives, so a hook after them would run on one render and not
+  // the next, which React refuses outright. Nothing is loaded yet at that
+  // point, so nothing is unsaved either
+  useUnsavedGuard(
+    Boolean(component) && Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(component),
+    __('This component has changes that have not been saved. Leaving loses them.', 'schemapress')
+  )
+
   if (error) {
     return (
       <div className="flex flex-col gap-3">
@@ -70,6 +83,9 @@ export function ComponentView({ id, onChanged, onDeleted }) {
     return <Loading label={__('Loading…', 'schemapress')} />
   }
 
+  // this draft outlives a tab change — it is held here rather than in a panel —
+  // but not a move to another component in the sidebar, or a reload. registered
+  // above, where the hook rules put it
   const dirty = JSON.stringify(draft) !== JSON.stringify(component)
 
   /**
@@ -148,7 +164,9 @@ export function ComponentView({ id, onChanged, onDeleted }) {
           { value: 'form', label: __('Form', 'schemapress'), icon: LayoutList },
         ]}
         value={tab}
-        onValueChange={setTab}
+        // a panel unmounts when you leave it, so the Form tab's arrangement is
+        // gone before anything else could ask about it
+        onValueChange={(next) => (hasUnsavedPanel() ? setLeaving(next) : setTab(next))}
       >
         <TabPanel value="schema">
           <div className="flex flex-col gap-3">
@@ -184,6 +202,23 @@ export function ComponentView({ id, onChanged, onDeleted }) {
           <FormTab fields={draft.fields} onChange={persist} />
         </TabPanel>
       </Tabs>
+
+      {leaving ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(next) => !next && setLeaving('')}
+          title={__('Leave without saving?', 'schemapress')}
+          description={unsavedMessage(PANEL)}
+          confirmLabel={__('Leave', 'schemapress')}
+          onConfirm={() => {
+            // nothing to clear by hand: the panel unmounts on the way out and
+            // takes its registration with it. this view's own draft is NOT
+            // lost by changing tabs, and must keep its guard
+            setTab(leaving)
+            setLeaving('')
+          }}
+        />
+      ) : null}
 
       {configuring ? (
         <ComponentSettingsDialog

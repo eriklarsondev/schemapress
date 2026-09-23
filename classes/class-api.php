@@ -242,9 +242,10 @@ class Api
     }
 
     /**
-     * Resolves a URL segment to a collection id, matching both machine names.
-     * Hyphens read as underscores: `team-members` is what a URL wants and
-     * `team_members` is what the key is.
+     * Resolves a URL segment to a collection id. The same lookup the reading
+     * API and the CLI use — `team-members` is what a URL wants, and it reaches
+     * the collection here exactly as it does in a template. See
+     * ContentType::find().
      *
      * @param string $name
      *
@@ -252,15 +253,7 @@ class Api
      */
     private function idFor($name)
     {
-        $name = sanitize_key(str_replace('-', '_', (string) $name));
-
-        foreach (ContentType::collections() as $type) {
-            if ($type['key'] === $name || $type['plural'] === $name) {
-                return $type['id'];
-            }
-        }
-
-        return 0;
+        return ContentType::idFor($name);
     }
 
     /**
@@ -284,11 +277,40 @@ class Api
         // named no field to title by — an artifact of storage, not content.
         // `slug` is always here, because it is how a front end addresses an
         // entry and one that sometimes had one would be a routing bug.
-        $shaped = ['id' => $entry['id'], 'slug' => $entry['slug']];
-
-        return array_merge($shaped, $data, [
+        //
+        $identity = [
+            'id' => $entry['id'],
+            'slug' => $entry['slug'],
+            'createdAt' => $entry['createdAt'],
             'updatedAt' => $entry['modified'],
             'publishedAt' => $entry['publishedAt'],
-        ]);
+        ];
+
+        // A field labelled "ID" — an external reference, a SKU, a legacy number —
+        // keys to `id`, and delivering it under that name replaced the uuid: the
+        // entry advertised an identifier /{collection}/{id} does not answer to,
+        // so a client could not fetch it by the id it had just been handed.
+        //
+        // The entry's own name wins, and the field moves rather than going
+        // missing — the same rule and the same reason as in class-graphql.php.
+        foreach ($identity as $reserved => $ignored) {
+            if (!array_key_exists($reserved, $data)) {
+                continue;
+            }
+
+            $moved = $reserved . '_field';
+
+            while (array_key_exists($moved, $data) || isset($identity[$moved])) {
+                $moved .= '_field';
+            }
+
+            $data[$moved] = $data[$reserved];
+            unset($data[$reserved]);
+        }
+
+        // the leading pair is position only — array_merge keeps the place a key
+        // first appeared at — so id and slug head the document as they always
+        // have, while $identity last is what makes them authoritative
+        return array_merge(['id' => $entry['id'], 'slug' => $entry['slug']], $data, $identity);
     }
 }

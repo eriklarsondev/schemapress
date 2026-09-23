@@ -62,6 +62,10 @@ class Cli
 
         foreach (ContentType::all() as $type) {
             $rows[] = [
+                // first, because it is the answer to what somebody running this
+                // is about to ask: the name to type — at a URL, in a template
+                // and in --collection below
+                'name' => $type['apiSlug'],
                 'key' => $type['key'],
                 'label' => $type['label'],
                 'entries' => $type['entries'],
@@ -80,7 +84,7 @@ class Cli
         \WP_CLI\Utils\format_items(
             $options['format'] ?? 'table',
             $rows,
-            ['key', 'label', 'entries', 'fields', 'api']
+            ['name', 'key', 'label', 'entries', 'fields', 'api']
         );
     }
 
@@ -91,13 +95,14 @@ class Cli
      *
      * ## OPTIONS
      *
-     * [--collection=<key>]
-     * : The machine key of one collection. Omit for every collection.
+     * [--collection=<name>]
+     * : One collection, by the plural-hyphenated name `wp schemapress list`
+     * reports. Omit for every collection.
      *
      * ## EXAMPLES
      *
      *     wp schemapress reindex
-     *     wp schemapress reindex --collection=team_member
+     *     wp schemapress reindex --collection=team-members
      *
      * @param array $args
      * @param array $options
@@ -132,8 +137,9 @@ class Cli
      *
      * ## OPTIONS
      *
-     * [--collection=<key>]
-     * : The machine key of one collection. Omit for every collection.
+     * [--collection=<name>]
+     * : One collection, by the plural-hyphenated name `wp schemapress list`
+     * reports. Omit for every collection.
      *
      * @param array $args
      * @param array $options
@@ -202,8 +208,9 @@ class Cli
      *
      * ## OPTIONS
      *
-     * [--collection=<key>]
-     * : Export one collection rather than all of them.
+     * [--collection=<name>]
+     * : Export one collection rather than all of them, by the
+     * plural-hyphenated name `wp schemapress list` reports.
      *
      * [--entries]
      * : Include the content, not only the shape of it.
@@ -211,7 +218,7 @@ class Cli
      * ## EXAMPLES
      *
      *     wp schemapress export > schema.json
-     *     wp schemapress export --collection=team_member --entries > team.json
+     *     wp schemapress export --collection=team-members --entries > team.json
      *
      * @param array $args
      * @param array $options
@@ -361,16 +368,19 @@ class Cli
      */
     private static function chosen(array $options)
     {
-        $key = isset($options['collection']) ? sanitize_key($options['collection']) : '';
+        $key = isset($options['collection']) ? trim((string) $options['collection']) : '';
 
         if ($key === '') {
             return ContentType::all();
         }
 
-        foreach (ContentType::all() as $type) {
-            if ($type['key'] === $key || $type['plural'] === $key) {
-                return [$type];
-            }
+        // the same lookup a URL and a template get, so `--collection=team-members`
+        // — the form the documentation prints — is not refused by the one
+        // surface that cannot guess what was meant. See ContentType::find()
+        $type = ContentType::find($key);
+
+        if ($type) {
+            return [$type];
         }
 
         \WP_CLI::error(sprintf('No collection called %s.', $key));

@@ -110,6 +110,13 @@ class Entries
             ? Query::args($args['spec'], $definition['fields'], $view === self::DRAFT)
             : [];
 
+        // an offset counts entries rather than pages, and WP_Query ignores
+        // `paged` whenever one is set — so the two are alternatives and saying
+        // so here beats leaving a caller to find out that page() did nothing
+        $window = isset($args['offset'])
+            ? ['offset' => max(0, (int) $args['offset'])]
+            : ['paged' => $page];
+
         $query = new \WP_Query(array_merge([
             'post_type' => $type['postType'],
             // reading the published view means published posts only. a template
@@ -117,14 +124,13 @@ class Entries
             // unfinished work by omission
             'post_status' => $view === self::DRAFT ? ['publish', 'draft'] : ['publish'],
             'posts_per_page' => $perPage,
-            'paged' => $page,
             's' => isset($args['search']) ? sanitize_text_field($args['search']) : '',
             'orderby' => in_array($args['orderby'] ?? '', ['title', 'date', 'modified'], true)
                 ? $args['orderby']
                 : 'modified',
             'order' => strtoupper($args['order'] ?? '') === 'ASC' ? 'ASC' : 'DESC',
             'suppress_filters' => false,
-        ], $spec));
+        ], $window, $spec));
 
         $entries = [];
 
@@ -1184,6 +1190,15 @@ class Entries
             // ISO-8601, so a client can read them. see Dates::iso — these are
             // instants, unlike a date FIELD, which is a wall clock
             'modified' => Dates::iso($post->post_modified_gmt),
+            // the post row's own date, which WordPress sets once and does not
+            // move again. distinct from publishedAt below, which moves every
+            // time the published copy does — see the note there.
+            //
+            // the fallback is for a draft: WordPress leaves post_date_gmt zeroed
+            // until something is published, so reading only that would report a
+            // never-published entry as having never been created either
+            'createdAt' => Dates::iso($post->post_date_gmt ?? '')
+                ?: Dates::iso($post->post_date ?? ''),
             'publishedAt' => $published
                 ? Dates::iso(get_post_meta($post->ID, self::META_PUBLISHED_AT, true))
                 : '',

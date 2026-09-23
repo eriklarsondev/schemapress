@@ -3,8 +3,8 @@
 
 ## Endpoints
 
-The addresses, and what may be asked of them. **Response format** covers what comes
-back; **Filters** and **Sorting & pagination** cover the parameters.
+The addresses themselves, and switching them on. **Querying** covers what to ask
+them for; **Values in JSON** covers what comes back.
 
 The API is modeled on Strapi, deliberately and down to the parameter names, so a client
 written against one reads against the other.
@@ -34,14 +34,16 @@ Every collection is one resource, with two routes:
 Read-only. There is no `POST`, `PUT` or `DELETE` — writing is the admin's job, and the
 builder's own transport is a separate, capability-checked namespace.
 
-The `{collection}` segment accepts either machine name and reads hyphens as underscores, so
-all of these reach the same resource:
+The `{collection}` segment is **the plural, hyphenated** — `/team-members`. It is the same
+string PHP and Twig take, so one name works everywhere:
 
 ```http
-/team-members     /team_members     /team_member
+/team-members
 ```
 
-Use the plural-hyphen form. It is the one that reads like a URL.
+Three other spellings reach the same resource and always will — `/team_members`,
+`/team-member`, `/team_member` — but the hyphenated plural is the one to publish. See
+**Querying**.
 
 ### Enabling a resource
 
@@ -84,9 +86,10 @@ content type. The reasoning is the same: a switch that makes content world-reada
 never be the default.
 
 :::note The master switch is the content API only
-It does not touch PHP or Twig. `SchemaPress::collection()` and `sp_collection()` run on the
-server and never go over HTTP, so a page your theme renders is unaffected either way. Nor
-does it touch the builder's own transport, which is how the admin screens load at all.
+It does not touch PHP. `SchemaPress::collection()` runs on the server and never goes over
+HTTP, so a page your theme renders is unaffected either way. It does take the GraphQL
+schema down with it, because that is also this site serving content over HTTP. Nor does it
+touch the builder's own transport, which is how the admin screens load at all.
 :::
 
 ### Authentication

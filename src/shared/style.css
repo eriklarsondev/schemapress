@@ -659,9 +659,10 @@ body.toplevel_page_schemapress #wpfooter {
   cursor: pointer;
 }
 
-/* the Text tab is a real textarea, and the control surface every other field
-   wears is wrong on it: it sits inside the editor's own frame, which is already
-   drawing the border and the fill */
+/* the textarea behind the editor. TinyMCE hides it, so this is what shows if it
+   fails to initialize — and the control surface every other field wears is
+   wrong on it either way, because it sits inside a frame already drawing the
+   border and the fill */
 .schemapress .schemapress-rte textarea {
   min-height: 0;
   border: 0;
@@ -1237,13 +1238,23 @@ body.toplevel_page_schemapress #wpfooter {
 
 /* --- rich text ----------------------------------------------------------- */
 
-/* TinyMCE renders its own chrome; only the container border is ours */
-.schemapress .wp-editor-container {
+/* TinyMCE renders its own chrome; only the outer border is ours.
+
+   It hangs on `.schemapress-rte` — the element this app renders — rather than
+   on `.wp-editor-container`, which core builds only when the editor has both a
+   Visual and a Code mode to wrap. This one has neither, so that container is
+   never created and a border hung on it drew nothing: the field sat with no
+   outline in a column of outlined ones. See RichTextControl.js. */
+.schemapress .schemapress-rte {
   border: 1px solid hsl(var(--sp-input));
   border-radius: calc(var(--sp-radius) - 2px);
   overflow: hidden;
 }
 
-.schemapress .wp-editor-tabs {
-  margin-bottom: -1px;
+/* and TinyMCE's own outermost one, so the frame is a single line rather than
+   two a pixel apart. Only the outer container — the toolbar keeps the rule
+   under it, which is the skin's own separator */
+.schemapress .schemapress-rte .mce-tinymce {
+  border: 0;
+  box-shadow: none;
 }

@@ -194,14 +194,18 @@ export function columnsClass() {
 }
 
 /**
- * The sidebar column. Sticky, so it stays beside a long form — and scrolling on
- * its own once it is taller than the pane, or a field put in it could sit below
- * the fold until the end of the form was reached. The height is the pane's: the
- * screen less wp-admin's bar (see `--sp-admin-bar` in style.css), less the room
- * kept above and below it.
+ * The sidebar column. An ordinary column of cards: the page scrolls and this
+ * goes with it.
+ *
+ * It was sticky, and capped to the height of the pane with a scrollbar of its
+ * own so that a sidebar taller than the window could still be read. Both are
+ * gone. A scroll container inside a scrolling page means the wheel does one
+ * thing over the form and another over the sidebar, and sticking the column
+ * puts its foot below the fold the moment it is taller than the window — which
+ * is the problem the inner scrollbar was there to paper over.
  *
  * @return {string} A class string.
  */
 export function sidebarClass() {
-  return 'flex flex-col gap-3 lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_var(--sp-admin-bar,32px)_-_3rem)] lg:self-start lg:overflow-y-auto'
+  return 'flex flex-col gap-3'
 }

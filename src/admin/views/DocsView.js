@@ -35,6 +35,8 @@ import {
   Plug,
   Code2,
   Braces,
+  Search,
+  Eye,
 } from 'lucide-react'
 import { Alert, Empty, cn, copyText } from '../../ui'
 import Prism from '../../shared/prism'
@@ -185,15 +187,25 @@ const ICONS = {
   introduction: Shapes,
   installation: Plug,
   'quick-start': Rocket,
-  endpoints: Cable,
-  'response-format': Braces,
-  errors: Filter,
+
+  // asking for content — the surfaces sit side by side inside these rather
+  // than as a page each, so one operation is one place
+  querying: Search,
+  'the-query-object': Code2,
   filters: Filter,
   'sorting-pagination': Filter,
   'what-can-be-queried': Shapes,
+  graphql: Braces,
+
+  // and rendering what comes back, on the same three
+  'displaying-values': Eye,
+  'values-in-json': Cable,
+  'values-in-php': Code2,
+  'values-in-twig': Braces,
+
+  endpoints: Cable,
+  errors: Filter,
   'writing-a-client': Plug,
-  php: Code2,
-  'twig-timber': Braces,
 }
 
 /**

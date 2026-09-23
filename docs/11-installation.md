@@ -30,7 +30,7 @@ npm install && npm run build
 compiles the admin screens.
 
 It does **not** install Timber, and neither does the release. Timber is optional here and
-belongs in your theme — see **Twig & Timber**.
+belongs in your theme — see **The query object**, under *Reaching it from Twig*.
 
 :::note Working from a release
 A packaged release ships with `vendor/` and `build/` already in it — the zip is built with

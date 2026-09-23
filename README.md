@@ -46,10 +46,12 @@ publishes. Administrators get both, editors the first. A collection may also nam
 roles allowed to edit its entries, so a Grants collection can belong to finance and a News
 collection to comms.
 
-**Reading.** Three surfaces over one query grammar — PHP, Twig and HTTP — so a filter means
-the same thing in all three. The HTTP API is Strapi-shaped down to the parameter names and
-the `data`/`meta` envelope, publishes nothing until a collection opts in, and carries an
-ETag on every response with an optional `max-age` above it.
+**Reading.** Three query surfaces over one grammar — PHP, REST and GraphQL — so a filter
+means the same thing in all three. The HTTP API is Strapi-shaped down to the parameter
+names and the `data`/`meta` envelope, publishes nothing until a collection opts in, and
+carries an ETag on every response with an optional `max-age` above it. GraphQL joins the
+site's WPGraphQL schema when that plugin is installed, behind the same switches. Twig
+renders what the PHP file handed it and queries nothing itself.
 
 **Operating it.** Rebuilding an index after a field change, deleting a collection and
 backfilling identifiers are resumable jobs on anything over 200 entries, with progress in
@@ -65,7 +67,8 @@ that on in advance.
 | WordPress | 6.2+ |
 | PHP | 8.2+ (enforced in the plugin header) |
 | Node | 18+ for the build |
-| Timber | Optional, 2.x, only for the Twig functions — install it in your **theme**, not here |
+| WPGraphQL | Optional — install it and open collections join the site's GraphQL schema |
+| Timber | Optional, 2.x, only if your theme renders through Twig — install it in your **theme**, not here |
 
 ## Getting set up
 
@@ -73,7 +76,7 @@ that on in advance.
 git clone https://github.com/eriklarsondev/schemapress.git wp-content/plugins/schemapress
 cd wp-content/plugins/schemapress
 
-composer install          # the Markdown parser, plus the linters and Timber for dev
+composer install          # the Markdown parser, plus the linters and formatters
 npm install && npm run build
 ```
 
@@ -134,14 +137,18 @@ rebuilt from it on every publish.
 
 | | |
 | --- | --- |
-| `class-content.php` | `SchemaPress::collection('team_member')` — aliased globally for themes |
-| `class-timber.php` | `sp_collection()` and friends, registered on Twig |
+| `class-content.php` | `SchemaPress::collection('team-members')` — aliased globally for themes |
 | `class-api.php` | the public REST API, off until a collection opts in |
+| `class-graphql.php` | the same collections as WPGraphQL types, behind the same switches |
 
-`class-query.php` is the shared query grammar, so a filter means the same thing in a Twig
-template as it does in a URL. `class-rest.php` is a **separate** transport for the admin
-app — every route on it is capability-checked. Keeping the two apart means a change to the
-editor's transport cannot widen what the public can read.
+`class-query.php` is the shared query grammar, so a filter means the same thing in a theme
+file as it does in a URL or a GraphQL argument. `class-rest.php` is a **separate** transport
+for the admin app — every route on it is capability-checked. Keeping the two apart means a
+change to the editor's transport cannot widen what the public can read.
+
+There is no Twig integration. A query is built in PHP and the result handed to whatever
+renders the page; an `Entry` answers an array key, a property and a method, so
+`person.full_name` resolves in a template with nothing registered for it.
 
 Four supporting pieces sit beside those:
 
@@ -196,6 +203,16 @@ record the ratio and why it was chosen. If you change one, measure it. Body text
 Documentation screen and readable as-is on GitHub. Numeric prefixes order it; a
 `<!-- group: -->` and `<!-- description: -->` comment on the first two lines place it in
 the sidebar. Add a file and it appears — there is no list to update.
+
+The reference half is grouped by **job, not by surface**: *Querying content* is how to ask
+for entries — PHP, REST and GraphQL side by side — and *Displaying content* is what comes
+back, in JSON, PHP and Twig. A page about one surface belongs in whichever of those two
+answers it; grouping by surface meant "how do I filter?" was answered in three places and
+none of them said so.
+
+The two halves list different surfaces because Twig does not query and GraphQL is not a
+template language. That asymmetry is the point of splitting on the job rather than the
+surface.
 
 ## Contributing
 
