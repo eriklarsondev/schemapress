@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useRef } from '@wordpress/element'
 import { __, _n, sprintf } from '@wordpress/i18n'
 import { X, Braces, ChevronDown, ChevronRight } from 'lucide-react'
-import { Field, Input, Button, Tooltip, cn } from '../../ui'
+import { Field, Input, Button, Tooltip, ConfirmDialog, cn } from '../../ui'
 import { useUnsaveable } from '../unsaveable'
 import { widthOf } from '../layout'
 // already in the bundle for the documentation screen, and already carrying the
@@ -56,6 +56,7 @@ export function ColorField({ field, value, onChange }) {
   // would mean "#ff" is stored as nothing on the way to "#ff0000", and the
   // swatch flickers back to empty between the two
   const [text, setText] = useState(value || '')
+  const [clearing, setClearing] = useState(false)
 
   useEffect(() => setText(value || ''), [value])
 
@@ -112,10 +113,7 @@ export function ColorField({ field, value, onChange }) {
                 size="icon-sm"
                 variant="destructive-ghost"
                 aria-label={__('Clear color', 'schemapress')}
-                onClick={() => {
-                  setText('')
-                  onChange('')
-                }}
+                onClick={() => setClearing(true)}
               >
                 <X />
               </Button>
@@ -154,6 +152,28 @@ export function ColorField({ field, value, onChange }) {
               />
             ))}
           </div>
+
+          {/* the X sits between the hex field and the swatches, close enough to
+              both to be hit on the way to either. Typing the field empty is the
+              deliberate way to clear it and is left alone — this guards the
+              one-click path, not the value */}
+          {clearing ? (
+            <ConfirmDialog
+              open
+              onOpenChange={(next) => !next && setClearing(false)}
+              title={__('Clear this color?', 'schemapress')}
+              description={sprintf(
+                /* translators: %s: a hex color, like #3b82f6 */
+                __('%s will be removed and the field left empty.', 'schemapress'),
+                value
+              )}
+              confirmLabel={__('Clear', 'schemapress')}
+              onConfirm={() => {
+                setText('')
+                onChange('')
+              }}
+            />
+          ) : null}
         </div>
       )}
     </Field>

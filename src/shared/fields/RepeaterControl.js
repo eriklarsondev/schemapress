@@ -8,7 +8,7 @@
 import { useState } from '@wordpress/element'
 import { __, sprintf } from '@wordpress/i18n'
 import { ChevronRight, Trash2, Plus } from 'lucide-react'
-import { Field, Button, cn } from '../../ui'
+import { Field, Button, ConfirmDialog, cn } from '../../ui'
 import { nodeId, move, removeAt, replaceAt, emptyValues } from '../utils'
 import { FieldList } from './index'
 
@@ -70,6 +70,9 @@ export function RepeaterField({ field, value, onChange, context }) {
 
   const [open, setOpen] = useState(() => new Set())
   const [dragging, setDragging] = useState(-1)
+  // the row pending removal, as {id, label} — by id rather than index, because
+  // an index is a position and the thing being confirmed is a row
+  const [removing, setRemoving] = useState(null)
 
   const max = field.config?.max || 0
   const min = field.config?.min || 0
@@ -118,6 +121,23 @@ export function RepeaterField({ field, value, onChange, context }) {
         values: { ...rows[index].values, [key]: next },
       })
     )
+
+  /**
+   * Drops the row the confirmation was asked about.
+   *
+   * Looked up again rather than captured: the row is identified by id, so a
+   * list that changed under the dialog removes the row somebody agreed to
+   * rather than whatever has since moved into its place.
+   *
+   * @return {void}
+   */
+  const removeRow = () => {
+    const index = rows.findIndex((row) => row.id === removing?.id)
+
+    if (index !== -1) {
+      onChange(removeAt(rows, index))
+    }
+  }
 
   /**
    * Reorders as a dragged row passes over another.
@@ -200,7 +220,7 @@ export function RepeaterField({ field, value, onChange, context }) {
                     size="icon-sm"
                     variant="destructive-ghost"
                     aria-label={__('Remove row', 'schemapress')}
-                    onClick={() => onChange(removeAt(rows, index))}
+                    onClick={() => setRemoving({ id: row.id, label: rowLabel(field, row, index) })}
                   >
                     <Trash2 />
                   </Button>
@@ -240,6 +260,24 @@ export function RepeaterField({ field, value, onChange, context }) {
             {field.config?.button_label || __('Add row', 'schemapress')}
           </Button>
         </div>
+
+        {/* a collapsed row shows only its heading, so what the trash icon is
+            about to take is mostly out of sight — the row is named here rather
+            than called "this one" for that reason */}
+        {removing ? (
+          <ConfirmDialog
+            open
+            onOpenChange={(next) => !next && setRemoving(null)}
+            title={__('Remove this row?', 'schemapress')}
+            description={sprintf(
+              /* translators: %s: the row's heading */
+              __('“%s” and everything in it will be taken out of this field.', 'schemapress'),
+              removing.label
+            )}
+            confirmLabel={__('Remove', 'schemapress')}
+            onConfirm={removeRow}
+          />
+        ) : null}
       </div>
     </Field>
   )

@@ -9,7 +9,7 @@
 import { useState, useEffect } from '@wordpress/element'
 import { __ } from '@wordpress/i18n'
 import { ImagePlus, Paperclip, X } from 'lucide-react'
-import { Field, Button } from '../../ui'
+import { Field, Button, ConfirmDialog } from '../../ui'
 
 /**
  * Opens the media modal and resolves with the chosen attachment.
@@ -68,6 +68,7 @@ function useAttachment(id) {
  */
 export function ImageField({ field, value, onChange }) {
   const attachment = useAttachment(value)
+  const [removing, setRemoving] = useState(false)
   // big enough for the widest cell the form draws. medium is 300px at most, and
   // a full-width cell stretched it into a blur
   const size = attachment?.sizes?.large || attachment?.sizes?.full || null
@@ -79,53 +80,72 @@ export function ImageField({ field, value, onChange }) {
   return (
     <Field label={field.label} help={field.help} required={field.required}>
       {value ? (
-        <div className="group relative w-full overflow-hidden rounded-lg border border-border bg-muted/40">
-          {/* the picture is the control: clicking it opens the library again.
+        <>
+          <div className="group relative w-full overflow-hidden rounded-lg border border-border bg-muted/40">
+            {/* the picture is the control: clicking it opens the library again.
               A Replace button said the same thing in words, in a strip over the
               bottom of the image it was asking about. The ring is inset because
               the container clips, so an offset one would be cut off */}
-          <button
-            type="button"
-            onClick={select}
-            aria-label={__('Replace image', 'schemapress')}
-            className="block w-full transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            {/* the same width the empty picker takes, which is the width the cell
+            <button
+              type="button"
+              onClick={select}
+              aria-label={__('Replace image', 'schemapress')}
+              className="block w-full transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              {/* the same width the empty picker takes, which is the width the cell
                 was given on the Form tab. w-fit here meant a chosen image shrank
                 the control back to the picture's own size, so a field set to full
                 width stopped being full width the moment it had a value in it */}
-            {source ? (
-              <img
-                src={source}
-                alt={attachment?.alt || ''}
-                // its own proportions, so the space is the right shape while the
-                // file loads instead of jumping open when it arrives
-                width={size?.width || attachment?.width}
-                height={size?.height || attachment?.height}
-                className="block h-auto w-full"
-              />
-            ) : (
-              // the attachment is still being looked up
-              <div className="h-32 w-full" />
-            )}
-          </button>
+              {source ? (
+                <img
+                  src={source}
+                  alt={attachment?.alt || ''}
+                  // its own proportions, so the space is the right shape while the
+                  // file loads instead of jumping open when it arrives
+                  width={size?.width || attachment?.width}
+                  height={size?.height || attachment?.height}
+                  className="block h-auto w-full"
+                />
+              ) : (
+                // the attachment is still being looked up
+                <div className="h-32 w-full" />
+              )}
+            </button>
 
-          {/* outside the button above rather than inside it: a button within a
+            {/* outside the button above rather than inside it: a button within a
               button is not valid, and the click would have to be stopped from
               reaching the one that reopens the library.
 
               On focus as well as hover, so tabbing onto it does not land on a
               control nobody can see */}
-          <Button
-            size="icon-sm"
-            variant="secondary"
-            aria-label={__('Remove image', 'schemapress')}
-            onClick={() => onChange(null)}
-            className="absolute bottom-2 left-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-          >
-            <X />
-          </Button>
-        </div>
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              aria-label={__('Remove image', 'schemapress')}
+              onClick={() => setRemoving(true)}
+              className="absolute bottom-2 left-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <X />
+            </Button>
+          </div>
+
+          {/* the X sits over the thing it removes and appears under the cursor,
+              which is exactly the shape of an accidental click. Asking is cheap;
+              finding the right picture again is not */}
+          {removing ? (
+            <ConfirmDialog
+              open
+              onOpenChange={(next) => !next && setRemoving(false)}
+              title={__('Remove this image?', 'schemapress')}
+              description={__(
+                'The field will be empty until you choose another. The image itself stays in the media library.',
+                'schemapress'
+              )}
+              confirmLabel={__('Remove', 'schemapress')}
+              onConfirm={() => onChange(null)}
+            />
+          ) : null}
+        </>
       ) : (
         <button
           type="button"
