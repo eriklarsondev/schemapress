@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Source for banner-772x250.png and banner-1544x500.png.
+
+      Rendered by assets/src/build.sh at 1x and 2x. The geometry below is in
+      CSS pixels at the 772x250 size; the 1544x500 banner is the same document
+      at --force-device-scale-factor=2, so there is one layout to keep right
+      rather than two.
+
+      The colours are the admin's own: --sp-appbar 223 47% 14% is the tile and
+      the background, --sp-primary 224 71% 45% is the accent. A banner that
+      matches the screens below it is doing its job.
+    -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 772px;
+        height: 250px;
+        overflow: hidden;
+      }
+
+      /*
+        The width budget, which is the whole of this layout: 772 total, less
+        2x44 padding and 2x26 gaps, less the 76 mark and the 232 card, leaves
+        324 for the lockup. "SchemaPress" at 40px sets about 245 of that, so
+        the name never wraps and neither tagline line has to.
+      */
+      body {
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        padding: 0 44px;
+        background:
+          radial-gradient(900px 320px at 78% 8%, rgba(63, 111, 224, 0.3), transparent 62%),
+          linear-gradient(145deg, #1b2748 0%, #101932 48%, #0b1120 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* the same mark as icon.svg, drawn at banner scale */
+      .mark {
+        flex: none;
+        width: 76px;
+        height: 76px;
+      }
+
+      .lockup {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .name {
+        font-size: 40px;
+        font-weight: 700;
+        letter-spacing: -0.022em;
+        color: #fff;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .tagline {
+        margin-top: 13px;
+        font-size: 15.5px;
+        font-weight: 500;
+        line-height: 1.5;
+        letter-spacing: -0.004em;
+        color: #aebadb;
+        white-space: nowrap;
+      }
+
+      .tagline b {
+        font-weight: 600;
+        color: #e8edf9;
+      }
+
+      /* a collection, the way the Schema tab shows one */
+      .card {
+        flex: none;
+        width: 232px;
+        padding: 16px;
+        border: 1px solid rgba(154, 176, 226, 0.22);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.055);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .row + .row {
+        margin-top: 11px;
+        padding-top: 11px;
+        border-top: 1px solid rgba(154, 176, 226, 0.13);
+      }
+
+      .chip {
+        flex: none;
+        width: 17px;
+        height: 17px;
+        border-radius: 5px;
+        background: #46577f;
+      }
+
+      .row.head .chip {
+        background: #3f6fe0;
+      }
+
+      .key {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: -0.003em;
+        color: #c3cdea;
+        white-space: nowrap;
+      }
+
+      .row.head .key {
+        font-weight: 650;
+        color: #fff;
+      }
+
+      .type {
+        margin-left: auto;
+        padding-left: 10px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: #8d9bc2;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="mark" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#26355c" />
+          <stop offset="1" stop-color="#141e38" />
+        </linearGradient>
+      </defs>
+      <rect width="256" height="256" rx="56" fill="url(#tile)" />
+      <rect width="256" height="256" rx="56" fill="none" stroke="rgba(154,176,226,0.22)" stroke-width="2" />
+      <rect x="48" y="69" width="26" height="26" rx="8" fill="#3f6fe0" />
+      <rect x="86" y="69" width="122" height="26" rx="8" fill="#ffffff" fill-opacity="0.95" />
+      <rect x="48" y="115" width="26" height="26" rx="8" fill="#4a5a85" />
+      <rect x="86" y="115" width="64" height="26" rx="8" fill="#ffffff" fill-opacity="0.62" />
+      <rect x="48" y="161" width="26" height="26" rx="8" fill="#4a5a85" />
+      <rect x="86" y="161" width="26" height="26" rx="8" fill="#ffffff" fill-opacity="0.42" />
+      <rect x="124" y="161" width="26" height="26" rx="8" fill="#ffffff" fill-opacity="0.42" />
+    </svg>
+
+    <div class="lockup">
+      <div class="name">SchemaPress</div>
+      <div class="tagline">
+        <b>Structured content for WordPress.</b><br />
+        Typed fields, an admin, and a REST API.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row head">
+        <span class="chip"></span>
+        <span class="key">Team Members</span>
+        <span class="type">COLLECTION</span>
+      </div>
+      <div class="row">
+        <span class="chip"></span>
+        <span class="key">full_name</span>
+        <span class="type">TEXT</span>
+      </div>
+      <div class="row">
+        <span class="chip"></span>
+        <span class="key">role</span>
+        <span class="type">DROPDOWN</span>
+      </div>
+      <div class="row">
+        <span class="chip"></span>
+        <span class="key">headshot</span>
+        <span class="type">IMAGE</span>
+      </div>
+    </div>
+  </body>
+</html>

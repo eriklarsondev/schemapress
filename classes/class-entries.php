@@ -297,7 +297,7 @@ class Entries
         // the slug settles while the entry is unpublished and freezes once it
         // is live. a published address is something somebody has linked to, and
         // renaming an entry should not move it out from under them — which is
-        // also how WordPress treats post_name and how Strapi treats a uid field
+        // also how WordPress treats post_name, and how a uid field behaves
         self::reslug($id, $values, $definition, $uid, $live);
 
         self::write($id, self::META_DRAFT, $values);

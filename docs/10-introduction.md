@@ -1,5 +1,5 @@
 <!-- group: Get started -->
-<!-- description: Structured content for WordPress, modeled the way Strapi does it — the concepts, and what this is not. -->
+<!-- description: Structured content for WordPress — the concepts, the vocabulary, and what this is not. -->
 
 ## Introduction
 
@@ -7,22 +7,23 @@ SchemaPress is a **structured content system for WordPress**. You define a conte
 a named shape with typed fields — and it gives you an admin for filling it in and an API
 for reading it back.
 
-If you have used **Strapi**, you already know the model. It is the same idea, living inside
-WordPress instead of beside it:
+The vocabulary is small, and the admin is laid out along it:
 
-| Strapi | SchemaPress |
+| Term | What it is |
 | --- | --- |
-| Collection type | **Collection type** |
-| Field | **Field** |
-| Entry / document | **Entry** |
-| Content-Type Builder | The **Schema** tab |
-| Content Manager | The **Entries** tab |
-| REST API + Users & Permissions | **Public API** — read many and read one per collection, behind one master switch |
-| `GET /api/:pluralApiId` | `GET /wp-json/schemapress/api/:collection` |
+| **Collection type** | A named shape with typed fields — Team Members, Grants, News Articles |
+| **Field** | One typed value on that shape, with its own rules |
+| **Entry** | One filled-in instance of a collection type |
+| **Component** | A group of fields defined once and imported into as many collections as you like |
+| The **Schema** tab | Where you decide what an entry is |
+| The **Entries** tab | Where you fill entries in |
+| **Public API** | Read many and read one, per collection, behind one master switch |
 
-Filtering, sorting and paging work the same way, and Strapi's own `filters[…]` bracket
-syntax is accepted as well — so a client written against one reads against the other. The
-form to reach for here is plainer: `?role=Engineer&sort=-full_name&limit=50`.
+One collection answers on one address: `GET /wp-json/schemapress/api/:collection`.
+Filtering, sorting and paging are query-string parameters, and the plain form is the one to
+reach for: `?role=Engineer&sort=-full_name&limit=50`. A bracketed long form —
+`?filters[headcount][$gte]=10` — is accepted as well, for clients that build queries that
+way.
 
 ### Why not just custom post types
 

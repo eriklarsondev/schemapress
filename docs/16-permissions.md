@@ -42,8 +42,8 @@ Renaming a field orphans every value stored under it. Deleting a collection dele
 entry in it, permanently. Turning on the content API publishes to the internet. None of
 those is a thing somebody should do by accident on their way to fixing a typo in a bio.
 
-This mirrors Strapi, where the Content-Type Builder and the Content Manager are separate
-permissions for the same reason.
+Deciding what an entry is and filling one in are different jobs, so they are different
+permissions.
 :::
 
 ### Changing the bar

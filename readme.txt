@@ -1,10 +1,10 @@
 === SchemaPress ===
-Contributors: eriklarson
+Contributors: eriklarsondev
 Tags: custom fields, structured content, headless, rest api, content types
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,10 +12,10 @@ Define a collection type — a named shape with typed fields — and get an admi
 
 == Description ==
 
-SchemaPress is a structured content system for WordPress, modeled on Strapi. You
-define a **collection type** — Team Members, Grants, News Articles — as a named
-shape with typed fields. It gives you an admin for filling it in and a read-only
-REST API for reading it back.
+SchemaPress is a structured content system for WordPress. You define a
+**collection type** — Team Members, Grants, News Articles — as a named shape
+with typed fields. It gives you an admin for filling it in and a read-only REST
+API for reading it back.
 
 Underneath it is still WordPress. Entries are posts, so your existing queries,
 capabilities, search and backups keep working.
@@ -33,9 +33,10 @@ three:
 * **REST** — `GET /wp-json/schemapress/api/team-members?role=Engineer&sort=name`
 * **GraphQL** — `teamMembers(where: { role: { eq: "Engineer" } })`, with WPGraphQL
 
-The HTTP API is Strapi-shaped, down to the parameter names and the `data`/`meta`
-envelope, so a client written against one reads against the other. GraphQL exposes
-exactly what REST exposes, behind the same switches.
+The HTTP API follows the conventions headless content APIs have settled on, down to
+the parameter names and the `data`/`meta` envelope, so a client written against one
+of those needs very little changing. GraphQL exposes exactly what REST exposes,
+behind the same switches.
 
 Twig is not a fourth surface: the PHP file queries and the template renders what it
 was handed. Entries read as plain properties, so `person.full_name` resolves with
@@ -51,15 +52,15 @@ refuse.
 = Field types =
 
 Text, Textarea, Rich Text, Email, URL, Phone, Number, Date, Date and time, Time,
-Toggle, Dropdown (with built-in datasets for countries, states, provinces and
-months), Image, Gallery, File, Color, JSON, Link, Group and Repeater.
+Toggle, Dropdown (with built-in datasets for countries, US states, Canadian
+provinces, Australian states, months and weekdays), Image, Gallery, File, Color,
+JSON, Link, Group and Repeater.
 
 = Rules and reuse =
 
-A field can be required, bounded by length or range, matched against a pattern,
-or made unique across the collection — enforced when the entry is saved and not
-only in the form. A field can also be shown or hidden based on another field's
-value.
+A field can be required, bounded by length or by range, or made unique across
+the collection — enforced when the entry is saved and not only in the form. A
+field can also be shown or hidden based on another field's value.
 
 A **component** is a named group of fields — an address, a call to action —
 defined once and imported into as many collections as you like. Importing copies
@@ -139,8 +140,9 @@ That is the default. `schemapress_edit_content` lets somebody fill entries in;
 `schemapress_manage_schema` lets them decide what an entry is and what the site
 publishes. Editors get the first, administrators get both.
 
-A collection can also name the roles allowed to edit its entries, so a Grants
-collection can belong to finance and a News collection to comms.
+There is nothing per collection: anyone with `schemapress_edit_content` edits
+every collection. If you want that division, draw it with roles — give the team
+a role of their own and grant it that capability.
 
 = What happens on a very large collection? =
 
@@ -151,15 +153,36 @@ now if you would rather not wait for cron.
 
 = Are there relations between collections? =
 
-Not yet. It is the largest remaining gap against Strapi and the next feature in.
+Not yet. It is the largest remaining gap in the plugin and the next feature in.
 
 == Changelog ==
+
+= 0.3.0 =
+* Added: a WPGraphQL integration. Every collection open for reading joins the site's GraphQL schema, behind the same switches REST uses.
+* Added: `createdAt` on every entry, over REST and in GraphQL.
+* Added: a sidebar on the entry screen, for the fields that describe an entry rather than fill it in.
+* Added: `offset()` on a collection query, so PHP matches what `?start=` already did.
+* Changed: `team-members` is the name a collection is asked for by, everywhere — URL, template and command line.
+* Changed: the documentation is grouped by job rather than by surface, and its code samples are checked rather than proofread.
+* Changed: leaving a tab with unsaved work asks first.
+* Changed: the form layout editor — dragging, widths and resizing all behave.
+* Removed: the Twig query functions `sp_collection()`, `sp_entry()`, `sp_collections()` and `sp_has_collection()`, and the Timber integration with them. A query now lives in the PHP file and the result is handed to the template; nothing is lost in rendering.
+* Removed: per-collection edit roles. Anyone with `schemapress_edit_content` edits every collection — draw the division with roles instead. **A site that had restricted a collection to a role opens it to everyone with the capability.**
+* Removed: the element palette, which nothing had drawn for some time.
+* Fixed: a field called `id` replaced the entry's own in the API response.
+* Fixed: `sort=publishedAt` ordered by a value the response does not report.
+* Fixed: `$or` gave the wrong answer, two ways.
+* Fixed: `?filters[role]=Engineer` was ignored — and an ignored filter widens the result.
+* Fixed: every collection reported zero entries.
+* Fixed: the upgrade lock could leak and was not atomic.
+* Fixed: the documentation screen did not run through `wp_kses`.
+* Fixed: the release archive shipped untracked local files.
 
 = 0.2.0 =
 * Added: trash, restore and permanent delete for entries.
 * Added: schema export and import, in the admin and on the command line.
 * Added: conflict detection on entry and schema saves.
-* Added: the plugin's own capabilities, and per-collection permissions.
+* Added: the plugin's own capabilities.
 * Added: bulk actions and duplicate.
 * Added: Gallery, Color and JSON field types.
 * Added: ETag and Cache-Control on the public API.
@@ -172,6 +195,13 @@ Not yet. It is the largest remaining gap against Strapi and the next feature in.
 * First release.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Adds a WPGraphQL integration and an entry sidebar. Two removals need reading
+first: the Twig query functions are gone — move the query into the PHP file and
+pass the result to the template — and per-collection edit roles are gone, so a
+collection restricted to one role opens to everyone holding
+`schemapress_edit_content`.
 
 = 0.2.0 =
 Adds a trash you can restore from, schema export/import, and conflict detection

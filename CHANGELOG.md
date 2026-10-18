@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [semantic versioning](https://semver.org/) — while this is `0.x`,
 a minor bump may still change behavior, and the notes say when it does.
 
-## [Unreleased]
+## [0.3.0] — 2026-10-17
 
 ### Fixed
 
@@ -347,7 +347,7 @@ a minor bump may still change behavior, and the notes say when it does.
 
 - **`?filters[role]=Engineer` was ignored.** The long form without an operator, and a list
   under `?filters[role][]=`, were both dropped — and a dropped filter widens the result.
-  Strapi wants an operator there; a filter that names a real field and gives it a real
+  The long form wants an operator there; a filter that names a real field and gives it a real
   value has said plainly what it means, so the first is read as `$eq` and the second as
   `$in`, exactly as the short form already read them.
 

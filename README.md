@@ -4,16 +4,16 @@ A structured content system for WordPress. You define a **collection type** — 
 with typed fields — and it gives you an admin for filling it in and a REST API for reading
 it back.
 
-If you know **Strapi**, you know the model. Same idea, living inside WordPress instead of
-beside it:
+It is the headless-CMS model, living inside WordPress instead of beside it:
 
-| Strapi | SchemaPress |
+| Term | Where it lives |
 | --- | --- |
-| Collection type | Collection type |
-| Content-Type Builder | The **Schema** tab |
-| Content Manager | The **Entries** tab |
-| REST API + Users & Permissions | **Public API** — read many and read one per collection, behind one master switch |
-| `GET /api/:pluralApiId` | `GET /wp-json/schemapress/api/:collection` |
+| **Collection type** | A named shape with typed fields |
+| **Entry** | One filled-in instance of it |
+| The **Schema** tab | Where you decide what an entry is |
+| The **Entries** tab | Where you fill entries in |
+| **Public API** | Read many and read one per collection, behind one master switch |
+| `GET /wp-json/schemapress/api/:collection` | One address per collection |
 
 Underneath it is still WordPress. Entries are posts, so existing queries, capabilities and
 backups keep working.
@@ -24,9 +24,10 @@ like* is your theme's business. That one line explains most of the design decisi
 ## What it does
 
 **Modeling.** Twenty field types — text, rich text, the contact types, numbers, dates,
-dropdowns (with built-in datasets for countries, states, provinces, months), image,
-gallery, file, color, JSON, link, group and repeater. Fields carry rules — required,
-length, range, pattern, unique — enforced on the server as well as in the form, and
+dropdowns (with built-in datasets for countries, US states, Canadian provinces,
+Australian states, months and weekdays), image, gallery, file, color, JSON, link, group
+and repeater. Fields carry rules — required, max length, range, unique — enforced on the
+server as well as in the form, and
 conditions that show one field based on another's value. A **component** is a named group
 of fields defined once and imported into as many collections as you like; importing copies
 it rather than pointing at it, so deleting the original cannot take content down with it.
@@ -42,13 +43,14 @@ the other.
 
 **Permissions.** Two capabilities of the plugin's own — `schemapress_edit_content` to fill
 entries in, `schemapress_manage_schema` to decide what an entry *is* and what the site
-publishes. Administrators get both, editors the first. A collection may also name the
-roles allowed to edit its entries, so a Grants collection can belong to finance and a News
-collection to comms.
+publishes. Administrators get both, editors the first. There is nothing per collection:
+anyone with `schemapress_edit_content` edits every collection, and a division between
+teams is drawn with roles rather than beside them.
 
 **Reading.** Three query surfaces over one grammar — PHP, REST and GraphQL — so a filter
-means the same thing in all three. The HTTP API is Strapi-shaped down to the parameter
-names and the `data`/`meta` envelope, publishes nothing until a collection opts in, and
+means the same thing in all three. The HTTP API follows the conventions headless content
+APIs have settled on, down to the parameter names and the `data`/`meta` envelope. It
+publishes nothing until a collection opts in, and
 carries an ETag on every response with an optional `max-age` above it. GraphQL joins the
 site's WPGraphQL schema when that plugin is installed, behind the same switches. Twig
 renders what the PHP file handed it and queries nothing itself.
@@ -242,7 +244,7 @@ not the issue tracker.
 ## Known rough edges
 
 - **No relations.** A collection cannot point at another one, which is the largest single
-  gap against Strapi and the next feature in.
+  gap in the plugin and the next feature in.
 - The content API is **read-only and unauthenticated**. There are no API tokens, so access
   is per collection rather than per consumer.
 - No single types. An entry is addressed by its slug or its uuid.

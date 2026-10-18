@@ -1776,7 +1776,7 @@ check(
     sp_test_query(['sort' => 'name:asc', 'pagination' => ['page' => 2, 'pageSize' => 2]])
 );
 
-// Strapi's other spelling, for a client that counts in offsets
+// the other spelling, for a client that counts in offsets
 check(
     'pages by offset',
     ['Barbara', 'Grace'],

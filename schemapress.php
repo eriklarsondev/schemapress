@@ -4,7 +4,7 @@
  * Plugin Name:       SchemaPress
  * Plugin URI:        https://github.com/eriklarsondev/schemapress
  * Description:       Define a collection type — a named shape with typed fields — and get an admin for filling it in and a REST API for reading it back.
- * Version:           0.2.0
+ * Version:           0.3.0
  * Author:            Erik Larson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('SCHEMAPRESS_VERSION', '0.2.0');
+define('SCHEMAPRESS_VERSION', '0.3.0');
 define('SCHEMAPRESS_FILE', __FILE__);
 define('SCHEMAPRESS_PATH', plugin_dir_path(__FILE__));
 define('SCHEMAPRESS_URL', plugin_dir_url(__FILE__));

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: SchemaPress\n"
 "Report-Msgid-Bugs-To: https://github.com/eriklarsondev/schemapress/issues\n"
-"POT-Creation-Date: 2026-09-23 02:27+0000\n"
+"POT-Creation-Date: 2026-10-17 16:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1137,7 +1137,7 @@ msgstr ""
 msgid "No changes to save"
 msgstr ""
 
-#: classes/class-api.php:218
+#: classes/class-api.php:219
 msgid "No collection with that name."
 msgstr ""
 
@@ -1185,7 +1185,7 @@ msgstr ""
 msgid "No name"
 msgstr ""
 
-#: classes/class-api.php:137
+#: classes/class-api.php:138
 msgid "No published entry with that id."
 msgstr ""
 
@@ -1812,11 +1812,11 @@ msgstr ""
 msgid "These fields shape every entry in this collection. Removing one stops its saved values being delivered."
 msgstr ""
 
-#: classes/class-api.php:229
+#: classes/class-api.php:230
 msgid "This collection does not answer as a list. Turn on Read many in its Settings."
 msgstr ""
 
-#: classes/class-api.php:233
+#: classes/class-api.php:234
 msgid "This collection does not serve single entries. Turn on Read one in its Settings."
 msgstr ""
 

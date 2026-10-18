@@ -73,9 +73,9 @@ editor build schemas was to grant them `manage_options`, which is the entire sit
 administrator leaves the rest of their administration intact.
 :::
 
-A collection can also name the **roles** allowed to edit its entries, in its Settings
-dialog. Empty means anyone who can edit content, which is what every collection is until
-you say otherwise.
+There is nothing per collection. Anyone holding `schemapress_edit_content` edits the
+entries of every collection on the site. To give one team their own content, give them a
+role of their own and grant it that capability — see **Permissions**.
 
 ### Deleting the plugin
 

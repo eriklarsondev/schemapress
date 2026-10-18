@@ -67,8 +67,8 @@ both.
 
 ### The shapes a URL accepts
 
-Over HTTP the same filter can be written several ways, because a client written against
-Strapi and a link typed by hand want different things. All of these are read:
+Over HTTP the same filter can be written several ways, because a generated client and a
+link typed by hand want different things. All of these are read:
 
 | | |
 | --- | --- |
@@ -76,13 +76,14 @@ Strapi and a link typed by hand want different things. All of these are read:
 | `?role=Design,Engineering` | any of them — a comma is the only punctuation a value carries |
 | `?role[]=Design&role[]=Engineering` | the same, for a client that builds arrays |
 | `?headcount[$gte]=10` | an operator, without the `filters` wrapper |
-| `?filters[headcount][$gte]=10` | Strapi's long form, which wins where both name one field |
+| `?filters[headcount][$gte]=10` | the long form, which wins where both name one field |
 | `?filters[role]=Engineer` | the long form with the operator left off, read as equals |
 
 A parameter naming something that is not a field is ignored, so an analytics tag or a
-cache-buster on the URL cannot filter anything. Strapi's `fields`, `populate`, `status` and
-`locale` are recognised and ignored rather than read as filters — this API resolves values
-and serves published content, so there is nothing for them to ask for.
+cache-buster on the URL cannot filter anything. The conventional `fields`, `populate`,
+`status` and `locale` parameters are recognised and ignored rather than read as filters —
+this API resolves values and serves published content, so there is nothing for them to ask
+for.
 
 There is no `?headcount_gte=10`: a parameter *name* should say which field it is about and
 nothing else, which is why a comparison goes in brackets.
@@ -128,8 +129,8 @@ query Comparisons {
 ```
 :::
 
-The bracket form is Strapi's, and is accepted in full — so a client written against Strapi
-runs unchanged, and the harder questions stay askable over HTTP. For plain equality, a
+The bracket form is the conventional one and is accepted in full, so a generated client
+runs unchanged and the harder questions stay askable over HTTP. For plain equality, a
 bare `?field=value` is the shorter and better-behaved way to ask.
 
 ### Operator reference
@@ -153,8 +154,9 @@ parameter names.
 | `$null` | empty | |
 | `$notNull` | not empty | |
 
-`$containsi` and `$notContainsi` are accepted as aliases so a query written for Strapi
-still runs. WordPress's database collation is case-insensitive, so they behave identically
+`$containsi` and `$notContainsi` are accepted as aliases so a query that spells the
+case-insensitive comparison explicitly still runs. WordPress's database collation is
+case-insensitive, so they behave identically
 to `$contains` — as, in practice, do all the string comparisons. `$startsWith=z` matches
 `Zaha`.
 

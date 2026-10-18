@@ -143,7 +143,8 @@ class Collection implements \IteratorAggregate, \Countable
      *   ->where('age', '>=', 30)
      *   ->where('role', '$in', ['Design', 'Eng'])
      *
-     * The operators are Strapi's; the plain comparisons are aliases, because
+     * The `$`-prefixed operators are the canonical spelling; the plain
+     * comparisons are aliases, because
      * `>=` is what a PHP author reaches for first.
      *
      * @param string $field

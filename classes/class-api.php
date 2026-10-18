@@ -7,8 +7,9 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * The public content API, modeled on Strapi down to the URLs and the parameter
- * names, so a client written against one reads against the other:
+ * The public content API. The URLs and the parameter names follow the convention
+ * headless content APIs have settled on, so a client written against one of
+ * those needs very little changing:
  *
  *   GET /wp-json/schemapress/api/team-members
  *   GET /wp-json/schemapress/api/team-members/9f2c…
@@ -26,7 +27,7 @@ if (!defined('ABSPATH')) {
 class Api
 {
     /**
-     * As close to Strapi's /api/team-members as a WordPress namespace gets.
+     * As close to a bare /api/team-members as a WordPress namespace gets.
      */
     public const NAMESPACE = 'schemapress/api';
 
@@ -257,9 +258,9 @@ class Api
     }
 
     /**
-     * One entry as the API presents it: flat, the way Strapi v5 returns a
-     * document, with resolved values so a client never holds an id it has to
-     * spend another request on.
+     * One entry as the API presents it: flat rather than nested under an
+     * attributes block, with resolved values so a client never holds an id it
+     * has to spend another request on.
      *
      * `values`, `state` and `ahead` are absent — they describe the editing of an
      * entry, which is the builder's business and not the public's.

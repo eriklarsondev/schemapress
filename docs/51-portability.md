@@ -11,9 +11,10 @@ not be committed, moved from staging to production, or used to seed a fresh chec
 script.
 
 :::note The file is an export, not the source of truth
-Strapi keeps content types as files in the repository. This does not, for a reason: these
-definitions are edited through a UI, by people who do not have the repository. The database
-stays authoritative and this is how a copy of it travels.
+Some systems keep content types as files in the repository and treat those as canonical.
+This does not, for a reason: these definitions are edited through a UI, by people who do
+not have the repository. The database stays authoritative and this is how a copy of it
+travels.
 :::
 
 ### What is in the file

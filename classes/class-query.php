@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Strapi's query grammar, translated to WP_Query. One parser, three surfaces:
+ * The query grammar, translated to WP_Query. One parser, three surfaces:
  * the REST endpoints hand it `$_GET`, and Collection::where() and ::sort() build
  * the same structures by hand.
  *
@@ -33,11 +33,11 @@ class Query
     public const MAX_PAGE_SIZE = 100;
 
     /**
-     * Strapi's operators, and the SQL comparison each becomes.
+     * The operators, and the SQL comparison each becomes.
      *
      * $contains and $containsi are both LIKE: WordPress's collation is
      * case-insensitive, so the two are the same here. Both are accepted so a
-     * query written against Strapi still runs.
+     * query that spells the case-insensitive form out still runs.
      *
      * @var array<string, string>
      */
@@ -118,7 +118,7 @@ class Query
      *   ?role[]=Design&role[]=Eng         filters[role][$in][…]
      *   ?headcount[$gte]=10               filters[headcount][$gte]=10
      *
-     * The long form still wins, so a client written against Strapi is unaffected.
+     * The long form still wins, so a client that builds it is unaffected.
      * A parameter naming something that is not a field is dropped downstream, so
      * a cache-buster or an analytics tag cannot filter anything.
      *
@@ -230,7 +230,7 @@ class Query
 
     /**
      * `pagination[page]` + `[pageSize]`, or `pagination[start]` + `[limit]` —
-     * both of Strapi's styles, so a client that counts in offsets does not have
+     * both conventional styles, so a client that counts in offsets does not have
      * to convert to pages.
      *
      * @param array $params the request's parameters
@@ -433,14 +433,14 @@ class Query
      *
      * Three shapes reach here and all three mean something:
      *
-     *   ['$gte' => 10]     what Strapi writes, and what where() builds
+     *   ['$gte' => 10]     the long form, and what where() builds
      *   'Engineer'         `filters[role]=Engineer`, with the operator left off
      *   ['a', 'b']         `filters[role][]=a&filters[role][]=b`
      *
      * The last two used to be dropped, so a filter that named a real field and
      * gave it a real value was ignored — and an ignored filter WIDENS the
-     * result. Strapi wants an operator there; a reader who leaves it off has
-     * still said plainly what they meant.
+     * result. The long form wants an operator there; a reader who leaves it off
+     * has still said plainly what they meant.
      *
      * @param mixed $value
      *
@@ -683,7 +683,7 @@ class Query
     }
 
     /**
-     * The meta block a list response carries, in Strapi's shape.
+     * The meta block a list response carries, in the conventional shape.
      *
      * @param array   $pagination
      * @param integer $total

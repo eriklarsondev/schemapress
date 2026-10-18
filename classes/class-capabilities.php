@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
  *   schemapress_edit_content    fill entries in
  *   schemapress_manage_schema   decide what an entry IS, and what is published
  *
- * The split is Strapi's — filling in a Team Member and deciding what a Team
+ * The split is the point — filling in a Team Member and deciding what a Team
  * Member is are different jobs at different blast radii. These used to be
  * `edit_pages` and `manage_options` borrowed wholesale, which meant widening the
  * second one handed over the entire site's settings, users and plugins in order

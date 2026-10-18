@@ -6,8 +6,9 @@
 The addresses themselves, and switching them on. **Querying** covers what to ask
 them for; **Values in JSON** covers what comes back.
 
-The API is modeled on Strapi, deliberately and down to the parameter names, so a client
-written against one reads against the other.
+The shape of it — the parameter names, the operator spellings, the `data`/`meta` envelope —
+follows the convention headless content APIs have settled on, so a client written against
+one of those needs very little changing to read against this.
 
 ### Base URL
 
@@ -15,9 +16,9 @@ written against one reads against the other.
 https://your-site.example/wp-json/schemapress/api
 ```
 
-`schemapress/api` is a WordPress REST namespace, which is why the address reads
-`/wp-json/schemapress/api/…` rather than Strapi's bare `/api/…`. Everything after that
-segment is the same.
+`schemapress/api` is a WordPress REST namespace, which is why the address is prefixed with
+`/wp-json/` rather than being a bare `/api/…` at the root. Everything after that segment is
+the collection and its query.
 
 There is no version in the path. The namespace is the version; a breaking change would
 arrive as a new one.
@@ -81,9 +82,8 @@ holds an entry's id — from a webhook, a link, a build step — needs only *Rea
 leaving *Read many* off means nobody can walk the collection to find out what else is in
 it. Ids are random uuids, so they cannot be guessed or counted through.
 
-This mirrors Strapi, where the Public role has to be granted `find` and `findOne` per
-content type. The reasoning is the same: a switch that makes content world-readable should
-never be the default.
+Both switches start off, and that is the point: a switch that makes content world-readable
+should never be the default.
 
 :::note The master switch is the content API only
 It does not touch PHP. `SchemaPress::collection()` runs on the server and never goes over

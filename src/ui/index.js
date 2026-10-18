@@ -5,6 +5,7 @@
  */
 
 export { cn, portalContainer } from './utils'
+export { Mark } from './mark'
 export { Button, buttonVariants } from './button'
 export { Card, CardBody, Heading, Badge, Alert, Spinner, Loading, Empty } from './primitives'
 export { Field, Input, Textarea } from './field'
