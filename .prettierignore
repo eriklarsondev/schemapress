@@ -1,8 +1,9 @@
 # What Prettier must not touch.
 #
-# Two categories. Things nobody wrote — dependencies, lockfiles, compiled
-# output — and things written as prose, where a formatter reflowing a paragraph
-# is a worse diff than the one it fixed.
+# Three categories. Things nobody wrote — dependencies, lockfiles, compiled
+# output — things written as prose, where a formatter reflowing a paragraph is a
+# worse diff than the one it fixed, and the one document whose formatting IS its
+# content.
 
 # --- not written here -------------------------------------------------------
 
@@ -31,3 +32,12 @@ readme.txt
 # Twig, and PHP-CS-Fixer's business.
 *.twig
 *.php
+
+# --- laid out on purpose ----------------------------------------------------
+
+# The banner's source, where one <rect> per line IS the drawing: the squares
+# read as the grid they render as, the same way the menu mark does in
+# class-admin.php. Prettier breaks the long rect across eight lines and joins
+# the layered `background` onto one, and the geometry stops being legible at a
+# glance — which is the only thing anybody opens this file to check.
+assets/src/banner.html

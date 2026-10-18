@@ -532,12 +532,16 @@ class Graphql
             return ['type' => self::PREFIX . 'Link', 'resolve' => $read];
         }
 
-        if ($type === 'group' || $type === 'repeater') {
+        // by capability rather than by name, so a nesting type registered
+        // through schemapress/field_types gets a type of its own here the way
+        // the built-in pair does — the same branch ContentSanitizer, Resolver
+        // and Validator take
+        if (FieldTypes::hasChildren($type)) {
             $nested = $owner . ucfirst($field_name);
 
             self::objectType($nested, $field['fields'] ?? [], $field['label'] ?? '', 'bag');
 
-            if ($type === 'group') {
+            if (!FieldTypes::isRepeatable($type)) {
                 return ['type' => $nested, 'resolve' => $read];
             }
 
@@ -775,7 +779,18 @@ class Graphql
             'search' => isset($args['search']) ? (string) $args['search'] : '',
         ];
 
-        $read = ['view' => Entries::PUBLISHED, 'spec' => $spec];
+        // Query::PAGE_SIZE and not Entries::PER_PAGE, which is what leaving
+        // this unset falls through to. The two defaults are different on
+        // purpose — a template that loops a collection without asking for a
+        // size gets ten, a client that asked for a page gets twenty-five — and
+        // this is a client. A query with no `limit` was answering with the
+        // template's ten, which is the one number on this surface that did not
+        // match what the same read returns over HTTP.
+        $read = [
+            'view' => Entries::PUBLISHED,
+            'spec' => $spec,
+            'perPage' => Query::PAGE_SIZE,
+        ];
 
         if (isset($args['limit'])) {
             $read['perPage'] = (int) $args['limit'];

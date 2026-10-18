@@ -27,7 +27,7 @@ Everything above, plus the things that change what content *is*:
 
 - Creating, renaming and deleting collection types
 - Editing a collection's fields, and its form layout
-- A collection's settings — drafts, the title field, who can edit it, its Public API switches
+- A collection's settings — drafts, the title field, the slug field, its Public API switches
 - Creating, editing and deleting components
 - Erasing trashed entries permanently, and emptying a trash
 - Exporting and importing schemas

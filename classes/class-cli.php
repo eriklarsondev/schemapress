@@ -45,9 +45,25 @@ class Cli
     /**
      * Lists the collections on this site.
      *
+     * ## OPTIONS
+     *
+     * [--format=<format>]
+     * : How to print it. `json` is the one a script wants — `wp schemapress
+     * list --format=json | jq`.
+     * ---
+     * default: table
+     * options:
+     *   - table
+     *   - csv
+     *   - json
+     *   - yaml
+     *   - count
+     * ---
+     *
      * ## EXAMPLES
      *
      *     wp schemapress list
+     *     wp schemapress list --format=json
      *
      * @subcommand list
      *

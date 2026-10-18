@@ -8,7 +8,7 @@ WordPress's standard error shape, with the status in the body as well as in the 
 ```json
 {
   "code": "schemapress_api_disabled",
-  "message": "This collection is not published to the API. Turn on Public API in its Settings.",
+  "message": "This collection does not answer as a list. Turn on Read many in its Settings.",
   "data": {
     "status": 403
   }
@@ -26,7 +26,9 @@ collection you can see in the admin, and "not found" would send you hunting for 
 is not there.
 
 `schemapress_api_disabled` means this collection's own **Read many** or **Read one** is off,
-under Public API in its Settings.
+under Public API in its Settings. The message names which of the two it was — "does not
+answer as a list" for the collection route, "does not serve single entries" for one
+entry — so the sentence says which switch to go and find.
 
 :::caution A 404 on every address means the API is switched off
 There is no error code for the master switch, because with it off there is nothing left to

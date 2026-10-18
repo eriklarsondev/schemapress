@@ -98,9 +98,17 @@ A link field is `['url', 'label', 'target']` or `null`:
 
 ```twig
 {% for link in person.rows('links') %}
-  <a href="{{ link.get('url.url') }}">{{ link.get('label') }}</a>
+  <a href="{{ link.url.url }}">{{ link.get('label') }}</a>
 {% endfor %}
 ```
+
+:::note A dot path inside `get()` descends through groups, not through composite values
+`get('address.city')` works because a Group is made of *fields* and `city` is one of them.
+A Link, an Image and a File are single values that happen to be arrays — nothing is
+declared inside them — so `get('url.url')` finds nothing at the second step and returns
+the default. In Twig, read the field and walk the array with a dot, as above:
+`link.url.url`. In `get()` it is `get('url')['url']`.
+:::
 
 ### Including a partial per entry
 

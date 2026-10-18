@@ -10,6 +10,89 @@ a minor bump may still change behavior, and the notes say when it does.
 
 ### Fixed
 
+- **Deleting a large collection could hang the queue forever.** The queued purge read the
+  front of the entry list, deleted what it read, and reported how many it had *read*
+  rather than how many went. `wp_delete_post()` returns false whenever another plugin
+  vetoes `pre_delete_post`, so a page nothing could delete was read again, vetoed again,
+  and counted again: cron escaped on its time budget and rescheduled at zero progress
+  forever, and `Batch::finish()` — which `wp schemapress jobs --run` calls and which has no
+  budget — did not return at all.
+
+  It now reports what was erased, so a pass that moved nothing ends the job. This is the
+  bug `Entries::emptyTrash()` already guarded against; the queued half had the same shape
+  and no guard. A collection it could not empty is **left in place** rather than having its
+  definition deleted out from under the entries that survived.
+
+- **A GraphQL query with no `limit` returned ten entries, not twenty-five.** The default
+  fell through to the PHP API's page size instead of the one `?limit=` uses over HTTP —
+  the single number where the two surfaces disagreed, and the documentation stated the
+  REST figure for both. GraphQL now pages exactly as REST does.
+
+- **An import re-dated every entry it restored.** `publishedAt` has been in the export
+  format since it was written and nothing read it back, so saving an entry stamped it with
+  the moment of the import. A restored archive came back claiming every entry went live the
+  same afternoon — in an order its own values contradicted, and `publishedAt` is what an
+  archive is almost always sorted by. The file's date is now kept. An entry the file had as
+  a draft still gets none, having no published copy to date.
+
+- **Queued work was stranded by deactivating.** A job is a cursor in an option row and
+  survives the request that made it; the cron event that advances it does not. Deactivating
+  cleared the event and nothing put it back, so an interrupted reindex sat in the queue at
+  its last cursor forever with the admin's banner reporting it as work in flight.
+  Activation now schedules it again and it carries on from where it stopped.
+
+- **The job lock was not atomic.** Two cron runs arriving together could both read "no
+  lock" and both advance the same cursor. It takes the lock with `add_option()` now, the
+  way the upgrade lock already did.
+
+- **Saving part of the site settings reset the rest.** A payload naming one setting had the
+  others defaulted rather than left alone — and `restApi` defaults to on, so a caller that
+  posted only `deleteDataOnUninstall` switched the content API back on without ever naming
+  it. A save is a patch now. The Settings screen always sent all three, so this was only
+  ever reachable from a script.
+
+- **A repeater could be configured to contradict itself.** `min` 5 with `max` 2 was stored
+  as given; rows are truncated at the max and then padded up to the min, so the padding won
+  and produced a list the field's own ceiling said was impossible. A max below the min is
+  read as the min.
+
+- **A field type added through `schemapress/field_types` could not nest or be filtered.**
+  Sanitizing asked the registry whether a type was repeatable, but validating, resolving,
+  searching and the GraphQL schema all tested for the literal names `group` and `repeater`
+  — so a custom nesting type was *stored* as rows and then validated as though the list of
+  rows were a single value bag, which found no fields in it and passed every required field
+  inside without looking. All of them ask the registry now, and `repeatable` implies
+  `children`. A type can also declare `index` as `CHAR` or `NUMERIC` to be filterable and
+  sortable, which is what the documentation had been describing: the instruction before
+  this was "add it to `Index::TYPES`", a constant no plugin on the other side of a filter
+  can reach.
+
+- **`wp schemapress list --format=json` was rejected.** The command read the option and its
+  synopsis never declared it, so WP-CLI refused the flag as unknown.
+
+- **The documentation described an operator syntax this API does not accept.** *Writing a
+  client* said an operator was a suffix on the parameter name — `role_ne`,
+  `headcount_gte`, `full_name_startsWith` — which *Filters* contradicts in as many words
+  ("there is no `?headcount_gte=10`"). A name that is not a field is read as a filter on a
+  field that does not exist and **dropped**, so a client built on that spelling got the
+  whole collection back and looked like it was working. Every filter on this API fails
+  wide, which is the one direction worth being loud about. The page now shows the bracket
+  form and says what happens when a name does not match.
+
+  Six more corrections where the prose had drifted from the code: the sample entry carried
+  a `title` key the API has never sent and the page implied it appeared when a title field
+  was nominated; *Writing a client* said responses carry no cache headers, which is what
+  the whole of *Caching* is about; both display pages reached a link inside a repeater with
+  `get('url.url')`, which returns the default because a dot path descends through a group's
+  *fields* and a link has none; *Errors* quoted a message replaced when Read many and Read
+  one were split; *Permissions* listed a per-collection setting the same page says was
+  removed; and *Running it* counted three kinds of queued work where there are four.
+
+  Smaller: `step` was listed as enforced on save and is not, the `weekdays` dataset was
+  undocumented, Date and time was missing from the types a uniqueness rule is offered for,
+  and "an empty text field is `""`" is true of JSON but not of PHP, where `get()` returns
+  the default.
+
 - **A field called `id` replaced the entry's own in the API response.** A collection with a
   field labelled "ID" — an external reference, a SKU, a legacy number — keys it to `id`,
   and the values were merged over the identifiers rather than under them. The document
@@ -57,11 +140,18 @@ a minor bump may still change behavior, and the notes say when it does.
 
 - **The documentation's code samples are checked, not proofread.** A third suite,
   `tests/docs.php`, parses every fenced block with the real parser for its language —
-  `php -l`, `node --check`, `json_decode` — and checks the GraphQL ones for balanced
-  braces. It found two samples that could not run: a list of function signatures written
-  as though it were code, and a chained query with no opening tag and no semicolon.
-  Neither was visible in review, because a fenced block looks like code whether or not it
-  is one, and both were something a reader would have pasted into a theme.
+  `php -l`, `node --check`, `json_decode`, Twig's own compiler, `bash -n` — and checks the
+  GraphQL ones for balanced braces. It found two samples that could not run: a list of
+  function signatures written as though it were code, and a chained query with no opening
+  tag and no semicolon. Neither was visible in review, because a fenced block looks like
+  code whether or not it is one, and both were something a reader would have pasted into a
+  theme.
+
+  Twig and shell are checked for the same reason and were the two languages going
+  unchecked: fourteen Twig samples and six shell ones shipped on the strength of looking
+  right, and an unclosed `{% for %}` is a white screen rather than a mis-rendered block.
+  Twig is a dev dependency for this and nothing else — the plugin has no Twig integration
+  to ship.
 
   It also checks what the compiler cannot complain about: every page declares its group
   and description, opens with a heading, claims an id nothing else claims, closes every

@@ -14,10 +14,17 @@ direct call to the admin route stored whatever it was given.
 | Rule | Set on | Means |
 | --- | --- | --- |
 | **Required** | any field | Must be answered before the entry can be saved |
-| **Must be unique** | Text, Textarea, Email, URL, Phone, Number, Date, Time | No two entries in the collection may hold the same value |
+| **Must be unique** | Text, Textarea, Email, URL, Phone, Number, Date, Date and time, Time | No two entries in the collection may hold the same value |
 | **Max length** | Text, Textarea, Email, URL, Phone | At most this many characters |
 | **Min** / **Max** | Number | Within these bounds, inclusive |
 | **Min rows** / **Max rows** | Repeater | How many rows the list may hold |
+
+:::note The row counts shape the value rather than refusing it
+Every rule above refuses the write and stores nothing — except **Min rows** and **Max
+rows**, which are applied on the way in: rows past the maximum are dropped, and a list short
+of the minimum is padded with empty ones so a template can rely on the count. A max below
+the min is read as the min, since padding would otherwise have to break one of the two.
+:::
 
 ### What counts as answered
 

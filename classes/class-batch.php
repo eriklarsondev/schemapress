@@ -9,11 +9,12 @@ if (!defined('ABSPATH')) {
 /**
  * Long work, done in pieces.
  *
- * Three operations walk every entry of a collection: rebuilding the index after a
- * field changes, deleting a collection, and minting identifiers. Done inside the
- * request that asked for them, a collection of ten thousand entries does not
- * finish — and half-finishes, leaving the index rebuilt for the entries it got
- * through and stale for the rest with nothing recording where it stopped.
+ * Four operations walk every entry of a collection: rebuilding the index after a
+ * field changes, deleting a collection, re-addressing entries after the slug
+ * field changes, and minting identifiers. Done inside the request that asked for
+ * them, a collection of ten thousand entries does not finish — and
+ * half-finishes, leaving the index rebuilt for the entries it got through and
+ * stale for the rest with nothing recording where it stopped.
  *
  * So the work is a job: it knows how far it has got, and it survives the request
  * that started it. WP-Cron carries on from the cursor, the admin sees progress,
@@ -77,7 +78,7 @@ class Batch
      * queued: reindexing twice produces the same index as reindexing once, and the
      * second request is usually somebody saving the schema again.
      *
-     * @param string $job  reindex, purge or backfill
+     * @param string $job  reindex, purge, reslug or backfill
      * @param array  $args job-specific, always including type_id
      *
      * @return string the job's id
@@ -93,7 +94,7 @@ class Batch
             'args' => $args,
             'cursor' => 0,
             'done' => 0,
-            'total' => self::total($job, $args),
+            'total' => self::total($args),
             'queued' => time(),
         ];
 
@@ -153,6 +154,15 @@ class Batch
      * Runs one job to completion, ignoring the budget — what WP-CLI and the tests
      * call, since neither wants to wait for cron.
      *
+     * There is no time limit here on purpose, which makes "every step either
+     * advances or retires the job" a thing this method depends on rather than
+     * merely expects. step() keeps a job only when a full chunk was handled, so
+     * a pass that handled nothing ends it — but a job type that reported work
+     * it had not done would spin here with nothing to escape on, which is
+     * precisely what purge() used to do. So the invariant is checked rather
+     * than trusted: a pass that leaves the job in place without handling
+     * anything stops, and says so where somebody running this can see it.
+     *
      * @param string $id
      *
      * @return integer how many entries were handled
@@ -168,8 +178,51 @@ class Batch
                 return $ran;
             }
 
-            $ran += self::step($jobs[$id]);
+            $handled = self::step($jobs[$id]);
+            $ran += $handled;
+
+            if ($handled < 1 && isset(self::all()[$id])) {
+                self::abandon($id);
+
+                return $ran;
+            }
         }
+    }
+
+    /**
+     * Drops a job that cannot make progress, so it stops being offered as work
+     * in flight.
+     *
+     * A job nothing can advance is worse than no job: the admin's banner reads
+     * it as something still running, and every drain picks it up again. Taking
+     * it off the queue is the honest state — the work did not finish, and the
+     * next save or `wp schemapress reindex` queues it afresh from a clean
+     * cursor.
+     *
+     * @param string $id
+     *
+     * @return void
+     */
+    private static function abandon($id)
+    {
+        $jobs = self::all();
+
+        if (!isset($jobs[$id])) {
+            return;
+        }
+
+        $job = $jobs[$id];
+        unset($jobs[$id]);
+        self::store($jobs);
+
+        /**
+         * Fires when a job is dropped without finishing, having stopped making
+         * progress — something is refusing the work it is trying to do.
+         *
+         * @param string $id
+         * @param array  $job the job as it was abandoned, cursor included
+         */
+        do_action('schemapress/job_abandoned', $id, $job);
     }
 
     /**
@@ -192,6 +245,34 @@ class Batch
         }
 
         return $status;
+    }
+
+    /**
+     * Asks cron to carry on with whatever is still queued.
+     *
+     * For activation. A job is deliberately durable — it is a cursor in an
+     * option row, which is what lets it survive the request that queued it —
+     * but the cron event that advances it is not: deactivating clears it, and
+     * nothing put it back. So a reindex interrupted by a deactivate/reactivate
+     * cycle sat in the queue at its last cursor forever, with the admin's
+     * banner reporting it as work in flight and nothing on the site able to
+     * advance it.
+     *
+     * Resuming rather than discarding, because the cursor is the useful half: a
+     * half-rebuilt index is stale for the entries the job has not reached, and
+     * throwing the job away would leave that with nothing recording it.
+     *
+     * @return boolean whether there was anything to carry on with
+     */
+    public static function resume()
+    {
+        if (!self::all()) {
+            return false;
+        }
+
+        self::schedule();
+
+        return true;
     }
 
     // --- the steps -----------------------------------------------------------
@@ -281,28 +362,53 @@ class Batch
     /**
      * Permanently deletes a chunk of a collection's entries.
      *
+     * Reports what was ERASED rather than what was read, and the difference is
+     * what makes this terminate. This method deletes the front of the list and
+     * never advances a cursor — see step() — so a page that survives its own
+     * deletion is read again on the next pass. wp_delete_post() refuses
+     * whenever another plugin vetoes `pre_delete_post`, so reporting the read
+     * kept a full page of undeletable entries alive as a job forever: cron
+     * escaped on its budget and rescheduled at zero progress, and
+     * Batch::finish() — which WP-CLI calls and which has no budget — did not
+     * return at all.
+     *
+     * Entries::emptyTrash() stops on this same signal, for this same reason.
+     *
      * @param array $job
      *
-     * @return integer
+     * @return integer how many were actually erased
      */
     private static function purge(array $job)
     {
         $type_id = absint($job['args']['type_id'] ?? 0);
         $ids = self::page($type_id, 0);
+        $erased = 0;
 
         foreach ($ids as $id) {
-            wp_delete_post($id, true);
+            if (wp_delete_post($id, true)) {
+                $erased++;
+            }
         }
 
-        // the collection itself goes with the last of its entries, so a purge
+        // The collection itself goes with the last of its entries, so a purge
         // that was interrupted leaves the definition behind to be finished from
-        // rather than a collection with no record of what its entries were
-        if (count($ids) < self::CHUNK && !empty($job['args']['delete_type'])) {
+        // rather than a collection with no record of what its entries were.
+        //
+        // Only once a short page came back AND all of it went. An entry that
+        // survived its own deletion is still an entry, and dropping the
+        // definition out from under it is exactly the orphaning this guards
+        // against — the collection stays, and `wp schemapress list` still names
+        // what is left behind.
+        if (
+            $erased === count($ids)
+            && count($ids) < self::CHUNK
+            && !empty($job['args']['delete_type'])
+        ) {
             wp_delete_post($type_id, true);
             ContentType::flush();
         }
 
-        return count($ids);
+        return $erased;
     }
 
     /**
@@ -377,12 +483,15 @@ class Batch
     /**
      * How many entries a job has to get through, for the progress display.
      *
-     * @param string $job
-     * @param array  $args
+     * Every job walks the whole collection, trash included, so the answer does
+     * not depend on which job it is — and counting the trash matters because
+     * purge and backfill both reach into it.
+     *
+     * @param array $args
      *
      * @return integer
      */
-    private static function total($job, array $args)
+    private static function total(array $args)
     {
         return Entries::count(absint($args['type_id'] ?? 0), true);
     }
@@ -448,12 +557,25 @@ class Batch
     }
 
     /**
-     * takes the lock, unless a run that has not gone stale already holds it.
+     * Takes the lock, unless a run that has not gone stale already holds it.
+     *
+     * add_option rather than get-then-update, for the reason Upgrade::lock()
+     * spells out: the option name is unique, so the insert either wins or
+     * fails, and two cron runs arriving together cannot both read "no lock" and
+     * both proceed onto the same cursor. Reading first and writing second is
+     * two statements with a gap in the middle, and cron is exactly where two
+     * requests arrive at once.
      *
      * @return boolean
      */
     private static function lock()
     {
+        if (add_option(self::LOCK, time(), '', false)) {
+            return true;
+        }
+
+        // an existing row is either a run in flight or one that died without
+        // reaching its unlock — after the TTL, assume the latter
         $held = (int) get_option(self::LOCK, 0);
 
         if ($held && (time() - $held) < self::LOCK_TTL) {

@@ -38,10 +38,13 @@ if (!function_exists('schemapress_collection')) {
 
 if (!function_exists('schemapress_entry')) {
     /**
-     * one entry of a collection, by id.
+     * One entry of a collection, by the uuid the API reports or by its slug —
+     * never by a WordPress post id. See Entries::resolve().
      *
-     * @param string  $key
-     * @param integer $id
+     *   schemapress_entry('team-members', get_query_var('person'));
+     *
+     * @param string $key
+     * @param string $id  the entry's uuid, or its slug
      *
      * @return \SchemaPress\Entry|null
      */

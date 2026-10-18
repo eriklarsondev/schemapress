@@ -169,6 +169,16 @@ Not yet. It is the largest remaining gap in the plugin and the next feature in.
 * Removed: the Twig query functions `sp_collection()`, `sp_entry()`, `sp_collections()` and `sp_has_collection()`, and the Timber integration with them. A query now lives in the PHP file and the result is handed to the template; nothing is lost in rendering.
 * Removed: per-collection edit roles. Anyone with `schemapress_edit_content` edits every collection — draw the division with roles instead. **A site that had restricted a collection to a role opens it to everyone with the capability.**
 * Removed: the element palette, which nothing had drawn for some time.
+* Fixed: deleting a large collection could hang the job queue forever when another plugin vetoed a deletion.
+* Fixed: a GraphQL query with no `limit` returned ten entries instead of the twenty-five REST returns.
+* Fixed: an import re-dated every entry it restored — `publishedAt` is now kept.
+* Fixed: queued work was stranded by deactivating, and the job lock was not atomic.
+* Fixed: saving part of the site settings reset the rest, which could switch the content API back on.
+* Fixed: a repeater could be configured with a maximum below its minimum.
+* Fixed: a field type added through `schemapress/field_types` could not nest or be filtered. A type can now declare `index`.
+* Fixed: `wp schemapress list --format=json` was rejected as an unknown flag.
+* Fixed: the documentation described an operator syntax the API does not accept — a filter written that way silently returned everything.
+* Fixed: a dozen smaller documentation errors, and Twig and shell samples are now checked by the suite like every other language.
 * Fixed: a field called `id` replaced the entry's own in the API response.
 * Fixed: `sort=publishedAt` ordered by a value the response does not report.
 * Fixed: `$or` gave the wrong answer, two ways.

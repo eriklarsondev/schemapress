@@ -54,9 +54,6 @@ class Entries
     public const META_UID = '_schemapress_uid';
 
     /**
-     * the field key a collection uses to name its entries, when it declares one.
-     */
-    /**
      * The field a collection names its entries by, or '' when it names none.
      *
      * @param integer $type_id
@@ -1400,21 +1397,30 @@ class Entries
 
         foreach ($fields as $field) {
             $value = $values[$field['key']] ?? null;
+            $nested = isset($field['fields']) ? $field['fields'] : [];
+
+            // the nesting types by capability rather than by name, and
+            // repeatable first, for the reason Resolver::value gives: a
+            // repeater has children too, and the other order would read its
+            // list of rows as one row's values
+            if (FieldTypes::isRepeatable($field['type'])) {
+                foreach (is_array($value) ? $value : [] as $row) {
+                    $parts[] = self::searchText(
+                        isset($row['values']) && is_array($row['values']) ? $row['values'] : [],
+                        $nested
+                    );
+                }
+
+                continue;
+            }
+
+            if (FieldTypes::hasChildren($field['type'])) {
+                $parts[] = self::searchText(is_array($value) ? $value : [], $nested);
+
+                continue;
+            }
 
             switch ($field['type']) {
-                case 'group':
-                    $parts[] = self::searchText(is_array($value) ? $value : [], $field['fields']);
-                    break;
-
-                case 'repeater':
-                    foreach (is_array($value) ? $value : [] as $row) {
-                        $parts[] = self::searchText(
-                            isset($row['values']) && is_array($row['values']) ? $row['values'] : [],
-                            $field['fields']
-                        );
-                    }
-                    break;
-
                 case 'link':
                     // the label is the words; the url is an address, and
                     // matching one on a search for "about" is noise

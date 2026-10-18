@@ -301,6 +301,13 @@ class FieldTypes
     /**
      * Whether a type nests child fields (group, repeater).
      *
+     * `repeatable` implies it: a type holding an ordered list of rows holds the
+     * fields those rows are made of, and there is no such thing as one without
+     * them. The built-in repeater declares both, so this changes nothing for
+     * it — it is for a type registered through `schemapress/field_types` that
+     * declares only `repeatable`, which used to be sanitized as rows against a
+     * child field list SchemaModel::normalizeField had never given it.
+     *
      * @param string $type
      *
      * @return boolean
@@ -309,7 +316,7 @@ class FieldTypes
     {
         $definition = self::get($type);
 
-        return !empty($definition['children']);
+        return !empty($definition['children']) || !empty($definition['repeatable']);
     }
 
     /**

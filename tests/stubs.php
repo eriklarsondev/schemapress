@@ -26,10 +26,16 @@ if (!defined('SCHEMAPRESS_VERSION')) {
 
 // --- the store ---------------------------------------------------------------
 
+// every one of these is also reset by sp_test_reset(), and they are declared
+// here as well because a suite is free to write before it resets — which is
+// what left sp_test_stamp() reading an undefined $wp_next_stamp and warning on
+// the first insert of any suite that did
 $GLOBALS['wp_posts'] = [];
 $GLOBALS['wp_meta'] = [];
 $GLOBALS['wp_post_types'] = ['page' => true, 'attachment' => true];
 $GLOBALS['wp_next_id'] = 100;
+$GLOBALS['wp_next_stamp'] = 0;
+$GLOBALS['sp_test_undeletable'] = [];
 $GLOBALS['wp_filters'] = [];
 $GLOBALS['wp_actions'] = [];
 $GLOBALS['wp_options'] = [];

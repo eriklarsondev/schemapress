@@ -76,7 +76,15 @@ class Validator
             $value = array_key_exists($key, $values) ? $values[$key] : null;
             $label = $path === '' ? $field['label'] : $path . ' → ' . $field['label'];
 
-            if ($field['type'] === 'repeater') {
+            // by capability rather than by name, and the order matters: a
+            // repeater also has children, so asking that first would walk its
+            // list of rows as though the list were one row's value bag — which
+            // found no fields in it and passed every required field inside
+            // silently. ContentSanitizer and Portability already branch this
+            // way; this used to test for the literal string `repeater`, so a
+            // type registered through schemapress/field_types was stored as
+            // rows and then validated as a group
+            if (FieldTypes::isRepeatable($field['type'])) {
                 $problems = array_merge($problems, self::rows($value, $field, $label, $context));
 
                 continue;

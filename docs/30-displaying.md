@@ -26,7 +26,7 @@ trip over, on any of the three surfaces.
 | Image, File | an object, or `null` | `$e->avatar['url']` | `{{ e.avatar.url }}` |
 | Link | `{ url, label, target }` | `$e->site['url']` | `{{ e.site.url }}` |
 | Group | a nested object | `$e->get('address.city')` | `{{ e.get('address.city') }}` |
-| Repeater | `[{ id, data }]` | `$e->rows('links')` | `{{ e.rows('links') }}` |
+| Repeater | `[{ id, data }]` | `$e->rows('links')` | `{% for r in e.rows('links') %}` |
 
 PHP and Twig are reading the same resolved data; the difference is only that PHP hands you
 arrays and Twig lets you walk them with a dot. **Values in JSON**, **Values in PHP** and
@@ -64,9 +64,13 @@ if (person.avatar) {
 ```
 :::
 
-A text field that is empty is `""` rather than `null`, and a number that is empty is `null`
-rather than `0` — a blank is not a zero, and a template that prints a total should be able
-to tell the difference.
+In JSON a text field that is empty is `""` rather than `null`, and a number that is empty is
+`null` rather than `0` — a blank is not a zero, and a client that prints a total should be
+able to tell the difference.
+
+In PHP and Twig an empty text field reads as `null` too, because `get()` returns the default
+for anything empty and the default is `null` unless you pass one. `get('bio', '')` is how
+you ask for the empty string back. The raw stored bag, `""` and all, is `all()`.
 
 ### Escaping is not the same on all three
 
@@ -87,9 +91,14 @@ whatever an editor typed into it.
 
 ### The entry itself
 
-Five names belong to the entry rather than to your fields, and they win over a field of the
-same name: `id`, `title`, `slug`, `state`, `rows`. If your collection has its own field
-called `title`, reach it explicitly with `get('title')`.
+Some names belong to the entry rather than to your fields, and **which ones, and what
+happens when a field wants one, differs by surface** — so each page says it for its own:
+
+| | |
+| --- | --- |
+| **In JSON** | `id`, `slug`, `createdAt`, `updatedAt`, `publishedAt`. A field wanting one of those is delivered with `_field` on the end — see **Values in JSON** |
+| **In PHP** | Nothing collides. The entry's names are *methods*, so `$e->title` is your field and `$e->title()` is the entry's — see **Values in PHP** |
+| **In Twig** | The entry wins, and the rule covers everything it answers as a method — `id`, `title`, `slug`, `state`, `modified`, `isPublished`, `rows`, `get`, `has` and the rest. Reach your own field with `get('title')` — see **Values in Twig** |
 
 `id` is a generated uuid, not a row number. Putting it in a URL or a data attribute says
 nothing about how many entries exist or what order they were created in, and it stays

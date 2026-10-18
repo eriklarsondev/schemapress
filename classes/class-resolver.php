@@ -53,13 +53,27 @@ class Resolver
      */
     public static function value($value, array $field, $depth = 0)
     {
+        // The nesting types are asked by capability rather than by name, so a
+        // type registered through schemapress/field_types that declares
+        // `repeatable` or `children` is walked into the way the built-in pair
+        // is — ContentSanitizer already stores one that way, and reading it
+        // back by name left a custom nesting type delivered as its raw bag.
+        //
+        // Repeatable first: a repeater has children too, and the other order
+        // would read its list of rows as a single row.
+        if (FieldTypes::isRepeatable($field['type'])) {
+            return self::rows($value, $field, $depth);
+        }
+
+        if (FieldTypes::hasChildren($field['type'])) {
+            return self::values(
+                is_array($value) ? $value : [],
+                isset($field['fields']) ? $field['fields'] : [],
+                $depth
+            );
+        }
+
         switch ($field['type']) {
-            case 'repeater':
-                return self::rows($value, $field, $depth);
-
-            case 'group':
-                return self::values(is_array($value) ? $value : [], $field['fields'], $depth);
-
             case 'wysiwyg':
                 return self::richText($value);
 
@@ -91,12 +105,14 @@ class Resolver
     {
         $rows = [];
 
+        $fields = isset($field['fields']) ? $field['fields'] : [];
+
         foreach (is_array($value) ? $value : [] as $row) {
             $values = isset($row['values']) && is_array($row['values']) ? $row['values'] : [];
 
             $rows[] = [
                 'id' => isset($row['id']) ? $row['id'] : ContentSanitizer::id(),
-                'data' => self::values($values, $field['fields'], $depth),
+                'data' => self::values($values, $fields, $depth),
             ];
         }
 

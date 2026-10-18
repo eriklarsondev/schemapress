@@ -828,6 +828,15 @@ class Portability
                 self::adoptUid($type_id, $saved['id'], $uid);
             }
 
+            // after the line above, which may have just renamed it: the entry
+            // answers to the file's identifier wherever the file had one, and to
+            // the one save() minted only when it did not
+            self::adoptPublishedAt(
+                $type_id,
+                $uid !== '' ? $uid : $saved['id'],
+                $entry['publishedAt'] ?? ''
+            );
+
             $written++;
         }
 
@@ -855,6 +864,56 @@ class Portability
             'meta_value' => $uid,
             'suppress_filters' => false,
         ]);
+    }
+
+    /**
+     * Restores when an entry was published, rather than letting the import be
+     * the answer.
+     *
+     * Saving an entry publishes it, and publishing stamps `publishedAt` with
+     * the moment it happened — which for an import is the moment of the import.
+     * So a restored news archive came back claiming every story was published
+     * the same afternoon, in an order its own values contradicted. That is the
+     * one date an archive is almost always sorted by.
+     *
+     * The export has carried this since the format was written; nothing read it
+     * back. Only forward over an entry that is actually published: an entry the
+     * file had as a draft has no published copy here to date.
+     *
+     * @param integer $type_id
+     * @param string  $uid     the entry's identifier, as it now stands
+     * @param mixed   $stamp   what the file said, ISO-8601
+     *
+     * @return void
+     */
+    private static function adoptPublishedAt($type_id, $uid, $stamp)
+    {
+        $iso = Dates::iso(is_string($stamp) ? $stamp : '');
+
+        if ($iso === '') {
+            return;
+        }
+
+        $type = ContentType::get($type_id);
+
+        if (!$type) {
+            return;
+        }
+
+        $found = get_posts([
+            'post_type' => $type['postType'],
+            // published only. an unpublished entry reports no publishedAt at
+            // all, and writing one would be a date for a copy that is not live
+            'post_status' => 'publish',
+            'numberposts' => 1,
+            'meta_key' => Entries::META_UID,
+            'meta_value' => (string) $uid,
+            'suppress_filters' => false,
+        ]);
+
+        if (isset($found[0])) {
+            update_post_meta($found[0]->ID, Entries::META_PUBLISHED_AT, $iso);
+        }
     }
 
     /**

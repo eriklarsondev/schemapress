@@ -96,24 +96,36 @@ add_action('init', function () {
  * holds one, nobody can open the menu. An upgrade that never deactivates does
  * not reach this, which is why class-upgrade.php grants them again.
  *
+ * Long work is picked back up rather than left where deactivating dropped it.
+ * The job itself survives — it is a cursor in an option row — but the cron
+ * event that advances it does not, so without this a reindex interrupted by a
+ * deactivate/reactivate cycle stayed in the queue forever at its last cursor.
+ * See Batch::resume().
+ *
  * @return void
  */
 register_activation_hook(__FILE__, function () {
     require_once SCHEMAPRESS_PATH . 'classes/class-schema.php';
     require_once SCHEMAPRESS_PATH . 'classes/class-capabilities.php';
+    require_once SCHEMAPRESS_PATH . 'classes/class-batch.php';
 
     (new Schema())->registerPostType();
     Capabilities::grant();
+    Batch::resume();
     flush_rewrite_rules();
 });
 
 /**
  * Puts the site back as it was, keeping every trace of the content.
  *
- * Queued jobs go, because a cron event pointing at a hook nothing listens on
- * would sit in the schedule failing quietly. The capabilities stay until
- * uninstall — revoking them on deactivation would lose the site's own grants,
- * including ones added by hand.
+ * The cron event goes, because one pointing at a hook nothing listens on would
+ * sit in the schedule failing quietly. What is QUEUED stays: a job is a cursor
+ * into a collection, a half-rebuilt index is stale for the entries it has not
+ * reached, and discarding the cursor would leave that with nothing recording
+ * it. Activation schedules it again — see the hook above.
+ *
+ * The capabilities stay until uninstall too — revoking them on deactivation
+ * would lose the site's own grants, including ones added by hand.
  *
  * @return void
  */

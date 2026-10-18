@@ -12,7 +12,8 @@
     "squizlabs/php_codesniffer": "^3.13",
     "wp-coding-standards/wpcs": "^3.1",
     "phpcompatibility/phpcompatibility-wp": "^2.1",
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "twig/twig": "^3.27"
   },
   "config": {
     "allow-plugins": {

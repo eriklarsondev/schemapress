@@ -55,7 +55,6 @@ Fields sit **beside** the identifiers rather than under an `attributes` envelope
 ```json
 {
   "id": "86a8d140-4ecb-442f-b9e9-debfc82404a3",
-  "title": "Ada Lovelace",
   "slug": "ada-lovelace",
   "full_name": "Ada Lovelace",
   "role": "Engineer",
@@ -109,9 +108,11 @@ is a repair, not a convention to build on.
 Two separate settings, under a collection's **Settings** button.
 
 **Shown as** picks the field an entry is named by. Its value is written straight to the
-WordPress title, in full rather than summarized, so the two cannot disagree. Leave it as
-**No name** and `title` does not appear — the right answer for a collection you would never
-list by name, a set of settings or a group of link rows.
+WordPress title, in full rather than summarized, so the two cannot disagree — and it is
+delivered **under its own field key**, never as a separate `title`. There is no `title` in
+an API response at all; see the caution below. Leave it as **No name** and the admin falls
+back to a derived label, which the response does not carry either — the right answer for a
+collection you would never list by name, a set of settings or a group of link rows.
 
 **Addressed by** picks the field the `slug` is built from. Unlike the title, **`slug` is
 always in the response**: an entry that sometimes had an address would be a routing bug, so
@@ -124,11 +125,18 @@ GET /wp-json/schemapress/api/team-members/ada-lovelace
 Both the slug and the `id` reach an entry, so a front end that holds one of them never has
 to list the collection to find the other.
 
-:::caution The title is not always in the response
+:::caution There is no `title` key in a response, ever
 WordPress needs a title for every row it stores, so one is derived even when no field is
 nominated — from whichever text field happens to come first in the schema. Reorder the
 fields and every entry silently gets a new one. That is an artifact of how entries are
-stored rather than something the content says, so it is kept out of the API.
+stored rather than something the content says, so it is kept out of the API entirely —
+including when **Shown as** does nominate a field, because then the value is already in the
+response under that field's own key and a second copy under `title` would be one more thing
+that could disagree.
+
+The name of an entry is therefore whichever field you nominated. A client that wants it
+without knowing which field that is should read the collection's definition once, not look
+for `title`.
 :::
 
 :::note A slug is settled once, on first publish

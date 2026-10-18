@@ -104,13 +104,25 @@ class Settings
     /**
      * Stores the settings and returns what was actually stored.
      *
+     * A PATCH rather than a replace: a key the payload does not mention keeps
+     * the value it has. normalize() defaults an absent key, which is the right
+     * answer when reading a row written by an older version and the wrong one
+     * for a write — `restApi` defaults to ON, so a caller that posted only
+     * `{ "deleteDataOnUninstall": true }` switched the content API back on
+     * without ever naming it, and one that posted only `{ "restApi": false }`
+     * silently cleared the uninstall setting.
+     *
+     * The Settings screen always sends all three together, so this is about
+     * every other caller: a deploy script, a WP-CLI wrapper, a migration.
+     *
      * @param mixed $settings
      *
      * @return array
      */
     public static function save($settings)
     {
-        $normalized = self::normalize($settings);
+        $settings = is_array($settings) ? $settings : [];
+        $normalized = self::normalize(array_merge(self::all(), $settings));
 
         update_option(self::OPTION, $normalized);
         self::$cache = $normalized;

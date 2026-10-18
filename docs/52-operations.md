@@ -5,8 +5,9 @@
 
 ### Work that does not fit in a request
 
-Three things walk every entry of a collection: rebuilding the filter index after a field
-changes, deleting a collection, and minting identifiers for entries that predate having any.
+Four things walk every entry of a collection: rebuilding the filter index after a field
+changes, deleting a collection, re-addressing entries after the slug field changes, and
+minting identifiers for entries that predate having any.
 
 On a collection you are still building, that is instant. On one with fifty thousand rows it
 is a request that does not finish — and worse, one that half-finishes, leaving the index
@@ -79,8 +80,13 @@ role of their own and grant it that capability — see **Permissions**.
 
 ### Deleting the plugin
 
-Deactivating changes nothing about your content. It clears the job queue — there is nothing
-listening to run it — and leaves every collection, entry and setting where it is.
+Deactivating changes nothing about your content. It leaves every collection, entry and
+setting where it is, and takes the plugin's cron event out of the schedule — one pointing at
+a hook nothing listens on would sit there failing quietly.
+
+Queued work is **kept**, not discarded: a job is a cursor into a collection, and a
+half-rebuilt index is stale for the entries the job has not reached yet. Reactivating
+schedules it again and it carries on from where it stopped.
 
 **Deleting** the plugin from the Plugins screen is the question, and the answer is a setting:
 

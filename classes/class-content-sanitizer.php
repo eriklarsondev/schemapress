@@ -56,7 +56,7 @@ class ContentSanitizer
         }
 
         if (FieldTypes::hasChildren($type)) {
-            return self::values($value, $field['fields']);
+            return self::values($value, isset($field['fields']) ? $field['fields'] : []);
         }
 
         if ($value === null) {
@@ -79,6 +79,9 @@ class ContentSanitizer
         $rows = is_array($value) ? $value : [];
         $min = isset($field['config']['min']) ? (int) $field['config']['min'] : 0;
         $max = isset($field['config']['max']) ? (int) $field['config']['max'] : 0;
+        // a definition always carries this for a nesting type; defaulted
+        // because a type registered through the filter reaches here too
+        $fields = isset($field['fields']) && is_array($field['fields']) ? $field['fields'] : [];
 
         $clean = [];
 
@@ -94,13 +97,15 @@ class ContentSanitizer
 
             $clean[] = [
                 'id' => !empty($row['id']) ? sanitize_key($row['id']) : self::id(),
-                'values' => self::values($values, $field['fields']),
+                'values' => self::values($values, $fields),
             ];
         }
 
-        // pad up to the configured minimum so templates can rely on the count
+        // pad up to the configured minimum so templates can rely on the count.
+        // SchemaModel keeps max at or above min, so this cannot push the list
+        // past the ceiling the break above enforces
         while (count($clean) < $min) {
-            $clean[] = ['id' => self::id(), 'values' => self::values([], $field['fields'])];
+            $clean[] = ['id' => self::id(), 'values' => self::values([], $fields)];
         }
 
         return $clean;

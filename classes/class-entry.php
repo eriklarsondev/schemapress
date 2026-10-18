@@ -16,9 +16,16 @@ if (!defined('ABSPATH')) {
  *   {{ person.name }}
  *   {{ person.photo.url }}
  *
- * A field key colliding with one of this class's own methods (`id`, `title`,
- * `slug`, `state`, `rows`) resolves to the method. Reach a field of that name
- * with `get('id')`.
+ * A field key colliding with one of this class's own methods resolves to the
+ * METHOD, and the rule is every method rather than a list worth memorising —
+ * `id`, `title`, `slug`, `state`, `modified`, `isPublished`,
+ * `hasUnpublishedChanges`, and everything inherited from Fields: `get`, `has`,
+ * `rows`, `group`, `definition`, `all`, `schema`, `keys`, `count`. Reach a field
+ * of any of those names with `get('id')`.
+ *
+ * Only in Twig, where there are no parentheses to tell a method from a
+ * property. In PHP the two never collide: `$entry->title` is the field and
+ * `$entry->title()` is the entry's own.
  */
 class Entry extends Fields
 {

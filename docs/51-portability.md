@@ -22,7 +22,7 @@ travels.
 ```json
 {
   "schemapress": 1,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "exportedAt": "2026-09-10T09:15:00Z",
   "site": "https://staging.example.com",
   "collections": [
@@ -32,14 +32,36 @@ travels.
       "label": "Team Member",
       "description": "The people we list on the about page.",
       "definition": { "version": 1, "settings": {}, "fields": [] },
-      "entries": []
+      "entries": [
+        {
+          "id": "86a8d140-4ecb-442f-b9e9-debfc82404a3",
+          "slug": "ada-lovelace",
+          "title": "Ada Lovelace",
+          "status": "publish",
+          "values": { "full_name": "Ada Lovelace" },
+          "publishedAt": "2026-09-06T19:41:35Z"
+        }
+      ]
     }
   ],
-  "components": []
+  "components": [],
+  "media": {
+    "42": {
+      "file": "2026/09/ada.jpg",
+      "filename": "ada.jpg",
+      "url": "https://staging.example.com/wp-content/uploads/2026/09/ada.jpg"
+    }
+  }
 }
 ```
 
-`entries` is only present when **Include the entries** was ticked.
+`schemapress` is the **format** version, which an importer checks before reading anything;
+`version` is the plugin that wrote the file, and is there for a person reading it. `entries`
+and `media` are only present when **Include the entries** was ticked.
+
+`values` is the stored bag, not the resolved one — an image is an attachment id, which is
+what `media` exists to translate. `publishedAt` is restored along with the values, so
+re-importing an archive does not re-date every entry to the moment of the import.
 
 ### The key is the identity
 
@@ -113,6 +135,13 @@ undo a deletion somebody made here on purpose. The report lists each one and why
 An entry that already exists here (same id) is **overwritten** with the file's values. That
 is what restoring means, but it is not a merge — edits made on this site since the export are
 replaced.
+
+Its `publishedAt` comes back with it, rather than being set to the moment of the import.
+Publishing an entry normally stamps that date with the time it happened, which for an import
+would be the same afternoon for every entry in the file — and `publishedAt` is what an
+archive is almost always ordered by, so a restored collection came back in an order its own
+values contradicted. An entry the file had as a draft gets no date, because it has no
+published copy here to date.
 
 ### Images and files
 

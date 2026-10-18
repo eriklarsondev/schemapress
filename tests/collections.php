@@ -24,6 +24,7 @@ use SchemaPress\Entries;
 use SchemaPress\Content;
 use SchemaPress\Entry;
 use SchemaPress\Inflector;
+use SchemaPress\Query;
 use SchemaPress\SchemaRepository;
 
 $passed = 0;
@@ -192,6 +193,35 @@ $padded = ContentSanitizer::values([], $fields);
 
 check('pads to the repeater min', 1, count($padded['links']));
 check('a padded row still gets an id', true, !empty($padded['links'][0]['id']));
+
+// A max below the min cannot be obeyed: rows are truncated at the max and then
+// padded up to the min, so the padding won and stored a list the field's own
+// ceiling said was impossible. Normalizing lifts the max rather than lowering
+// the min, because the min is the half a template relies on for its count.
+$impossible = SchemaModel::normalize(['fields' => [[
+    'label' => 'Rows',
+    'type' => 'repeater',
+    'config' => ['min' => 5, 'max' => 2],
+    'fields' => [['label' => 'Label', 'type' => 'text']],
+]]])['fields'];
+
+check('a max below the min is lifted to it', 5, $impossible[0]['config']['max']);
+check('and the min is left alone', 5, $impossible[0]['config']['min']);
+check(
+    'so padding cannot breach the ceiling',
+    5,
+    count(ContentSanitizer::values(['rows' => [['values' => ['label' => 'a']]]], $impossible)['rows'])
+);
+
+// no ceiling at all is still no ceiling
+$uncapped = SchemaModel::normalize(['fields' => [[
+    'label' => 'Rows',
+    'type' => 'repeater',
+    'config' => ['min' => 3],
+    'fields' => [['label' => 'Label', 'type' => 'text']],
+]]])['fields'];
+
+check('a min with no max leaves the max open', 0, $uncapped[0]['config']['max']);
 
 // --- content types -----------------------------------------------------------
 
@@ -2160,6 +2190,65 @@ check('and refuses to guess with no argument', null, sp_test_resolve($schema, 'R
 check('a field resolver reads the resolved value', 'Ada', sp_test_resolve($schema, 'CrewMember', 'fullName', $list['nodes'][0]));
 check('and the entry id comes off the entry', true, sp_test_resolve($schema, 'CrewMember', 'id', $list['nodes'][0]) !== '');
 
+// --- the page a GraphQL query gets without asking -----------------------------
+
+echo "\nGraphQL pages like REST\n";
+
+// The schema and the REST namespace are supposed to answer the same read the
+// same way, and the default page size was the one number where they did not: a
+// query with no `limit` fell through to Entries::PER_PAGE, which is the PHP
+// API's ten, rather than Query::PAGE_SIZE, which is what `?limit=` defaults to
+// over HTTP. Same question, two answers, and only one of them documented.
+sp_test_reset();
+
+$paged = sp_test_type('Story', [
+    ['label' => 'Headline', 'type' => 'text'],
+], ['publicApi' => ['list' => true, 'single' => true]]);
+
+// more than the ceiling, so the clamp has something to clamp
+$total = Query::MAX_PAGE_SIZE + 5;
+
+for ($i = 0; $i < $total; $i++) {
+    Entries::save($paged, null, ['values' => ['headline' => 'S' . $i], 'publish' => true]);
+}
+
+$fields = SchemaRepository::definition($paged)['fields'];
+$resolveList = new ReflectionMethod('SchemaPress\\Graphql', 'resolveList');
+
+/**
+ * One list query, as the root resolver runs it.
+ *
+ * @param array $args
+ *
+ * @return array
+ */
+function sp_test_graphql_list(array $args)
+{
+    global $paged, $fields, $resolveList;
+
+    return $resolveList->invoke(null, $paged, $fields, $args, 'Story');
+}
+
+$unasked = sp_test_graphql_list([]);
+
+check('a query with no limit gets the REST page size', Query::PAGE_SIZE, $unasked['count']);
+check('and the total ignores the page', $total, $unasked['total']);
+check('a limit it asks for is honored', 5, sp_test_graphql_list(['limit' => 5])['count']);
+check(
+    'one past the ceiling is clamped rather than refused',
+    Query::MAX_PAGE_SIZE,
+    sp_test_graphql_list(['limit' => 500])['count']
+);
+
+// a page and an offset are alternatives, and the offset is the one that wins
+check('page two is another page of the same size', Query::PAGE_SIZE, sp_test_graphql_list(['page' => 2])['count']);
+check('an offset counts entries', 5, sp_test_graphql_list(['offset' => Query::MAX_PAGE_SIZE])['count']);
+check(
+    'and an offset beside a page ignores the page',
+    5,
+    sp_test_graphql_list(['offset' => Query::MAX_PAGE_SIZE, 'page' => 2])['count']
+);
+
 // --- what the schema will not expose -----------------------------------------
 
 echo "\nGraphQL exposes what REST exposes\n";
@@ -2188,6 +2277,97 @@ check('the master switch takes the whole schema down', [], $schema['fields']);
 check('including the shared types', [], $schema['types']);
 
 SchemaPress\Settings::save(['restApi' => true]);
+
+// --- a type somebody else registered -----------------------------------------
+
+echo "\nA field type added through the filter\n";
+
+// The filter is the documented way to add a type, and it used to only half
+// work. `index` did not exist, so the only instruction that could be given was
+// "add it to Index::TYPES" — a constant, which a plugin on the other side of a
+// filter cannot reach. And the code that walks a definition tested for the
+// literal names `group` and `repeater`, so a type declaring `repeatable` was
+// STORED as rows and then validated as though the list of rows were one row's
+// values, which found no fields in it and passed every required field inside.
+sp_test_reset();
+
+add_filter('schemapress/field_types', function ($types) {
+    $types['rating'] = [
+        'label' => 'Rating',
+        'default' => null,
+        'index' => 'NUMERIC',
+        'sanitize' => function ($value) {
+            return $value === '' || $value === null ? null : max(1, min(5, (int) $value));
+        },
+    ];
+
+    // repeatable ALONE, with no `children` beside it: a type holding a list of
+    // rows holds the fields those rows are made of, and there is no such thing
+    // as one without them
+    $types['stack'] = [
+        'label' => 'Stack',
+        'default' => [],
+        'repeatable' => true,
+    ];
+
+    return $types;
+});
+
+new SchemaPress\FieldTypes();
+
+$custom = SchemaModel::normalize(['fields' => [
+    ['label' => 'Score', 'type' => 'rating'],
+    ['label' => 'Bio', 'type' => 'wysiwyg'],
+    [
+        'label' => 'Steps',
+        'type' => 'stack',
+        'fields' => [['label' => 'Caption', 'type' => 'text', 'required' => true]],
+    ],
+]])['fields'];
+
+check('a registered type survives normalizing', 'rating', $custom[0]['type']);
+check('a registered type can start at a width', 'full', $custom[0]['config']['width']);
+
+// what `index` buys: the thing the documentation promised and could not deliver
+check('one that declares an index is filterable', true, SchemaPress\Index::indexable($custom[0]));
+check('and compares the way it said', 'NUMERIC', SchemaPress\Index::compareAs($custom[0]));
+check('one that declares none is not', false, SchemaPress\Index::indexable($custom[1]));
+check('and is absent from the indexable set', false, isset(SchemaPress\Index::fields($custom)['bio']));
+check('while the one that is, is present', true, isset(SchemaPress\Index::fields($custom)['score']));
+
+// repeatable implies children, so the definition carries the child fields
+check('a repeatable type gets its child fields', 'caption', $custom[2]['fields'][0]['key']);
+
+$stacked = ContentSanitizer::values([
+    'score' => '9',
+    'steps' => [['values' => ['caption' => 'First']], ['values' => ['caption' => 'Second']]],
+], $custom);
+
+check('its sanitizer runs', 5, $stacked['score']);
+check('and its rows are sanitized as rows', 2, count($stacked['steps']));
+check('each with its own values', 'Second', $stacked['steps'][1]['values']['caption']);
+
+// the bug this closes: validating a list of rows as one bag found no fields in
+// it, so a required field inside a row was never looked at
+$incomplete = Validator::check(
+    ContentSanitizer::values(['steps' => [['values' => ['caption' => '']]]], $custom),
+    $custom
+);
+
+check('a required field inside a row is still required', 1, count($incomplete));
+check('and the message names the row', 'Steps 1 → Caption is required.', $incomplete[0]['message']);
+
+// resolved as rows too, so a template reads it the way it reads a repeater
+$resolvedStack = SchemaPress\Resolver::values($stacked, $custom)['steps'];
+
+check('a repeatable type resolves to rows', 2, count($resolvedStack));
+check('with their values under data', 'First', $resolvedStack[0]['data']['caption']);
+
+// and the built-in registry comes back, so nothing after this sees the extras
+$GLOBALS['wp_filters'] = [];
+new SchemaPress\FieldTypes();
+
+check('the registry goes back to the built-ins', false, SchemaPress\FieldTypes::exists('rating'));
 
 // --- result ------------------------------------------------------------------
 

@@ -94,7 +94,7 @@ class Index
      */
     public static function indexable(array $field)
     {
-        return isset(self::TYPES[$field['type'] ?? '']);
+        return self::compare($field['type'] ?? '') !== '';
     }
 
     /**
@@ -106,7 +106,46 @@ class Index
      */
     public static function compareAs(array $field)
     {
-        return self::TYPES[$field['type'] ?? ''] ?? 'CHAR';
+        $compare = self::compare($field['type'] ?? '');
+
+        return $compare !== '' ? $compare : 'CHAR';
+    }
+
+    /**
+     * How one type's values compare, or '' when they cannot be indexed.
+     *
+     * TYPES above is the built-in answer. A type registered through
+     * `schemapress/field_types` gives its own with an `index` key — `'CHAR'` or
+     * `'NUMERIC'` — which is what makes a custom type filterable without
+     * editing this file. TYPES is a constant, so the only instruction that
+     * could be given before this existed was "add it to Index::TYPES", which is
+     * not something a plugin on the other side of a filter can do.
+     *
+     * A type that says nothing is not indexed, which is the right default: the
+     * ones left out of TYPES are left out because nothing sensible can be asked
+     * of them, and a new type is more likely to be another of those than not.
+     *
+     * @param string $type
+     *
+     * @return string CHAR, NUMERIC, or '' for a type that cannot be indexed
+     */
+    private static function compare($type)
+    {
+        $type = (string) $type;
+
+        if (isset(self::TYPES[$type])) {
+            return self::TYPES[$type];
+        }
+
+        $registered = FieldTypes::get($type);
+
+        if (!is_array($registered) || !isset($registered['index'])) {
+            return '';
+        }
+
+        $declared = strtoupper((string) $registered['index']);
+
+        return in_array($declared, ['CHAR', 'NUMERIC'], true) ? $declared : '';
     }
 
     /**
@@ -146,8 +185,8 @@ class Index
     {
         self::clear($post_id, $draft ? self::DRAFT_PREFIX : self::PREFIX);
 
-        foreach (self::fields($fields) as $key => $field) {
-            foreach (self::rowsFor($values[$key] ?? null, $field) as $row) {
+        foreach (array_keys(self::fields($fields)) as $key) {
+            foreach (self::rowsFor($values[$key] ?? null) as $row) {
                 add_post_meta($post_id, self::key($key, $draft), $row);
             }
         }
@@ -308,12 +347,16 @@ class Index
      * time. Everything else is exactly one row — including an empty one, so
      * ordering never drops the entry.
      *
+     * The shape of the value is the whole of what decides this, which is why the
+     * field definition is not a parameter: a select that allows several holds a
+     * list and one that does not holds a string, so asking the value is both
+     * simpler and right for a stored value whose field has since changed.
+     *
      * @param mixed $value
-     * @param array $field
      *
      * @return array<string> the meta values to store
      */
-    private static function rowsFor($value, array $field)
+    private static function rowsFor($value)
     {
         if (is_array($value)) {
             return $value === [] ? [''] : array_map([self::class, 'scalar'], $value);

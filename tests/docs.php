@@ -176,6 +176,69 @@ if ($node === '') {
     }
 }
 
+// --- Twig --------------------------------------------------------------------
+
+echo "\nTwig samples parse\n";
+
+// The real compiler, not a guess at one. Twig is a dev dependency for exactly
+// this: a theme renders these through Timber, and a `{% endfor %}` that is
+// missing or an `{% if %}` that never closes is a white screen rather than a
+// mis-rendered block. Fourteen of these shipped unchecked, because the fences
+// looked like code whether or not they were.
+$twig = dirname(__DIR__) . '/vendor/twig/twig/src/Environment.php';
+
+if (!file_exists($twig)) {
+    echo "  --    skipped: no twig in vendor/ — run composer install\n";
+} else {
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
+
+    $environment = new Twig\Environment(new Twig\Loader\ArrayLoader([]), ['cache' => false]);
+    $blocks = sp_docs_blocks('twig');
+
+    check('there are twig samples to check', true, count($blocks) > 0);
+
+    foreach ($blocks as $block) {
+        $complaint = '';
+
+        try {
+            // parse rather than render: these name variables a page supplies,
+            // so there is nothing to render them against — and a template that
+            // parses is the whole of what can be checked without the page
+            $environment->parse($environment->tokenize(
+                new Twig\Source($block['code'], $block['page'])
+            ));
+        } catch (Twig\Error\Error $error) {
+            $complaint = sprintf('%s (line %d)', $error->getRawMessage(), $error->getTemplateLine());
+        }
+
+        check(sprintf('%s, twig block %d', $block['page'], $block['at']), '', $complaint);
+    }
+}
+
+// --- shell -------------------------------------------------------------------
+
+echo "\nShell samples parse\n";
+
+$bash = trim((string) shell_exec('command -v bash 2>/dev/null'));
+
+if ($bash === '') {
+    echo "  --    skipped: no bash on this machine\n";
+} else {
+    $blocks = sp_docs_blocks('bash');
+
+    check('there are shell samples to check', true, count($blocks) > 0);
+
+    foreach ($blocks as $block) {
+        // -n parses without running, which is the only safe way to check a
+        // sample whose whole purpose is to delete things
+        check(
+            sprintf('%s, bash block %d', $block['page'], $block['at']),
+            '',
+            sp_docs_parses($block['code'], 'sh', [$bash, '-n'])
+        );
+    }
+}
+
 // --- JSON --------------------------------------------------------------------
 
 echo "\nJSON samples parse\n";

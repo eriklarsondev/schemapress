@@ -73,13 +73,20 @@ Both are `null` when empty, so guard with `has()` before reaching in:
 
 ```php
 <?php foreach ($person->rows('links') as $link) : ?>
-  <a href="<?php echo esc_url($link->get('url.url')); ?>">
+  <a href="<?php echo esc_url($link->get('url')['url']); ?>">
     <?php echo esc_html($link->get('label')); ?>
   </a>
 <?php endforeach; ?>
 ```
 
 Rows nest. A repeater inside a repeater is `rows()` again on the inner accessor.
+
+:::note A dot path descends through groups, not through composite values
+`get('address.city')` works because a Group is made of *fields* and `city` is one of them.
+A Link, an Image and a File are single values that happen to be arrays — they have no
+fields inside them — so `get('url.url')` finds nothing at the second step and returns the
+default. Read the value and then index it: `get('url')['url']`, or `$link->url['url']`.
+:::
 
 ### Nothing is escaped for you
 

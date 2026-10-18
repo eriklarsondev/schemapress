@@ -18,6 +18,7 @@ A **dataset** is a named list a Dropdown can point at instead.
 | `ca_provinces` | Two-letter provincial codes |
 | `au_states` | State and territory abbreviations |
 | `months` | `1` to `12` |
+| `weekdays` | `1` to `7`, Monday first |
 
 Choose one on a Dropdown field's settings, under **Options from**.
 

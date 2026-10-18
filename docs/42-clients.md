@@ -13,12 +13,14 @@ switch shows the collection's endpoint once it is on — copy it from there rath
 assembling it by hand.
 
 :::caution
-Until it is on, every request answers `403`.
+Until it is on, every request to that collection answers `403`. If the site's **REST
+Content API** master switch is off instead, there is no route to refuse and you get a `404`
+— see **Errors**.
 :::
 
 ### Encoding the query string
 
-Every parameter is a flat `name=value` pair, so there is nothing exotic to encode:
+Plain equality is a flat `name=value` pair, so there is nothing exotic to encode:
 
 ```js
 const params = new URLSearchParams({
@@ -38,12 +40,30 @@ curl -G 'https://example.com/wp-json/schemapress/api/team-members' \
   --data-urlencode 'sort=full_name'
 ```
 
-An operator is a suffix on the name — `role_ne`, `headcount_gte`, `full_name_startsWith` —
-and a list operator takes a comma-separated value:
+A list of alternatives is a comma-separated value, which is the only punctuation a value
+carries:
 
 ```js
-const params = new URLSearchParams({ role_in: 'Design,Engineering' })
+const params = new URLSearchParams({ role: 'Design,Engineering' })
 ```
+
+An **operator goes in brackets** — `filters[field][$op]` — because a parameter name should
+say which field it is about and nothing else. There is no `?headcount_gte=10`:
+
+```js
+const params = new URLSearchParams({
+  'filters[headcount][$gte]': '10',
+  'filters[full_name][$startsWith]': 'G',
+})
+```
+
+:::caution A name that is not a field filters nothing
+`?headcount_gte=10` is not an error — it is read as a filter on a field called
+`headcount_gte`, which does not exist, so it is **dropped** and the request comes back with
+the whole collection in it. Every filter on this API fails wide, so a client built on a
+spelling it does not accept looks like it is working until somebody counts the rows. The
+accepted shapes are listed in full under **Filters**.
+:::
 
 ### A client
 
@@ -153,12 +173,37 @@ yourself is slower, can deadlock on a single-worker server, and returns the same
 
 ### Caching
 
-Responses carry no cache headers of their own, so they are as cacheable as any other
-WordPress REST route on your install.
+Every response carries an **ETag**, hashed from the body. Send it back in `If-None-Match`
+and you get a `304` with no body — which is the single cheapest thing a polling client can
+do:
 
-A published entry changes only when someone publishes it, so this content caches well.
-Cache at your CDN or in your client keyed on the full query string — two different filters
-are two different resources.
+```js
+let etag = null
+let cached = null
+
+async function poll(url) {
+  const res = await fetch(url, { headers: etag ? { 'If-None-Match': etag } : {} })
+
+  // nothing has changed, and nothing was transferred to find that out
+  if (res.status === 304) {
+    return cached
+  }
+
+  etag = res.headers.get('ETag')
+  cached = await res.json()
+
+  return cached
+}
+```
+
+`fetch` does this for you when the response is already in the browser's HTTP cache; a build
+step or a server-side client has to hold the ETag itself.
+
+`Cache-Control` is `max-age=0, must-revalidate` unless the site has set a max-age, so by
+default a cache must ask every time — and gets a 304 for its trouble rather than a body. A
+published entry changes only when somebody publishes it, so if you cache beyond that, key
+on the full query string: two different filters are two different resources. See
+**Caching** for what each directive promises and where the max-age is set.
 
 ### Cross-origin requests
 

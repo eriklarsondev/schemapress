@@ -230,6 +230,49 @@ check('and what would not go is still in the trash', 1, Entries::trashed($type)[
 
 $GLOBALS['sp_test_undeletable'] = [];
 
+// THE SAME BUG, in the queued half. Batch::purge() also reads the front of a
+// list and deletes what it read, also has no cursor to advance, and is reached
+// by deleting a collection of more than INLINE_LIMIT entries. It reported what
+// it READ rather than what went, so a page nothing could delete kept the job
+// alive: cron escaped on its time budget and rescheduled at zero progress
+// forever, and Batch::finish() — which `wp schemapress jobs --run` calls and
+// which has no budget — did not return at all.
+//
+// THIS HANGS IF IT REGRESSES, for the reason the sweep above does.
+sp_test_reset();
+$type = lifecycle_type();
+
+$entry = Entries::save($type, null, ['values' => ['full_name' => 'Immovable'], 'publish' => true]);
+
+foreach ($GLOBALS['wp_posts'] as $candidate) {
+    if (get_post_meta($candidate->ID, Entries::META_UID, true) === $entry['id']) {
+        $GLOBALS['sp_test_undeletable'] = [$candidate->ID];
+    }
+}
+
+$job = Batch::queue('purge', ['type_id' => $type, 'delete_type' => true]);
+
+check('a purge nothing can delete gives up rather than looping', 0, Batch::finish($job));
+check('and leaves the job off the queue', [], Batch::status());
+
+// the collection outlives a purge it refused to finish, deliberately: an entry
+// that survived its own deletion is still an entry, and dropping the definition
+// would leave it orphaned under a post type nothing can name
+check('the collection it could not empty is still there', true, ContentType::get($type) !== null);
+
+$GLOBALS['sp_test_undeletable'] = [];
+
+// and the ordinary path still finishes, and still takes the collection with it
+sp_test_reset();
+$type = lifecycle_type();
+
+Entries::save($type, null, ['values' => ['full_name' => 'Goes'], 'publish' => true]);
+
+$job = Batch::queue('purge', ['type_id' => $type, 'delete_type' => true]);
+
+check('a purge that can run erases what it reads', 1, Batch::finish($job));
+check('and deletes the collection with the last of them', null, ContentType::get($type));
+
 // --- copying -----------------------------------------------------------------
 
 echo "\nDuplicating\n";
@@ -920,6 +963,64 @@ check('it is reported as skipped', 1, $again['skipped']);
 check('and stays in the trash, alone', 1, Entries::trashed($type)['total']);
 check('with nothing re-created beside it', 0, Entries::all($type, ['view' => Entries::DRAFT])['total']);
 
+echo "\nWhen an import says an entry was published\n";
+
+// Saving publishes, and publishing stamps publishedAt with the moment it
+// happened — which for an import is the moment of the import. So a restored
+// archive came back claiming every entry went live the same afternoon, in an
+// order its own values contradicted. The export has carried this date since the
+// format was written; nothing read it back.
+sp_test_reset();
+$type = lifecycle_type();
+
+$old = Entries::save($type, null, ['values' => ['full_name' => 'Ada'], 'publish' => true]);
+$draft = Entries::save($type, null, ['values' => ['full_name' => 'Grace']]);
+
+$file = Portability::export([], ['entries' => true]);
+
+// what the file says, rather than what this site happens to hold
+$stamps = [];
+
+foreach ($file['collections'][0]['entries'] as $one) {
+    $stamps[$one['values']['full_name']] = $one['publishedAt'];
+}
+
+check('the export carries a date for the published entry', true, $stamps['Ada'] !== '');
+check('and none for the draft', '', $stamps['Grace']);
+
+// rewritten to a date this site could not have invented, so a restored stamp
+// cannot be confused with one the import made
+$file['collections'][0]['entries'] = array_map(function ($one) {
+    if ($one['values']['full_name'] === 'Ada') {
+        $one['publishedAt'] = '2019-04-10T08:30:00Z';
+    }
+
+    return $one;
+}, $file['collections'][0]['entries']);
+
+sp_test_reset();
+$type = lifecycle_type();
+
+Portability::import($file, ['entries' => true]);
+
+$restored = [];
+
+foreach (Entries::all($type, ['view' => Entries::DRAFT])['entries'] as $one) {
+    $restored[$one['values']['full_name']] = $one;
+}
+
+check(
+    'the date the file gave is the date the entry keeps',
+    '2019-04-10T08:30:00Z',
+    $restored['Ada']['publishedAt']
+);
+
+check('and the entry is published', true, $restored['Ada']['isPublished']);
+
+// an entry the file had as a draft has no published copy here to date
+check('a draft gets no published date', '', $restored['Grace']['publishedAt']);
+check('and is still a draft', false, $restored['Grace']['isPublished']);
+
 echo "\nWarnings\n";
 
 sp_test_reset();
@@ -1085,6 +1186,34 @@ check(
 );
 
 check('which is capped', 86400, Settings::normalize(['apiCacheMaxAge' => 999999])['apiCacheMaxAge']);
+
+// --- saving some of the settings ---------------------------------------------
+
+echo "\nA partial settings save keeps what it does not mention\n";
+
+// normalize() DEFAULTS an absent key, which is right when reading a row an
+// older version wrote and wrong on a write: restApi defaults to on, so a caller
+// that posted only { deleteDataOnUninstall: true } switched the content API
+// back on without naming it. The admin screen always sends all three together,
+// so this is about every other caller — a deploy script, a CLI wrapper.
+Settings::save(['restApi' => false, 'apiCacheMaxAge' => 600, 'deleteDataOnUninstall' => false]);
+
+Settings::save(['deleteDataOnUninstall' => true]);
+
+check('the master switch is left where it was', false, Settings::all()['restApi']);
+check('and so is the max-age', 600, Settings::all()['apiCacheMaxAge']);
+check('while what was asked for is stored', true, Settings::all()['deleteDataOnUninstall']);
+
+Settings::save(['restApi' => true]);
+
+check('and a later save keeps the one before it', true, Settings::all()['deleteDataOnUninstall']);
+check('having changed what it named', true, Settings::all()['restApi']);
+
+// absent is "leave it" on a write; normalize() still defaults a FRESH read, so
+// a site with no row at all reads as the defaults rather than as switched off
+check('a site with no row still reads the defaults', true, Settings::normalize([])['restApi']);
+
+Settings::save(['restApi' => true, 'apiCacheMaxAge' => 0, 'deleteDataOnUninstall' => false]);
 
 // --- routing -----------------------------------------------------------------
 

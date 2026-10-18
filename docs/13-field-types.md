@@ -27,13 +27,20 @@ that is not the thing is not kept as an approximation of it.
 
 | Type | Stores | Notes |
 | --- | --- | --- |
-| **Number** | A float, or nothing | `min`, `max` and `step` are enforced on save |
+| **Number** | A float, or nothing | `min` and `max` are enforced on save; `step` only guides the control |
 | **Date** | `2026-09-08` | A wall clock, not an instant — see below |
 | **Date and time** | `2026-09-08T19:00:00` | |
 | **Time** | `19:00:00` | |
 | **Toggle** | `true` or `false` | Off is an answer, not an absence |
 | **Dropdown** | One value, or a list | From your own options or a [dataset](#datasets) |
 | **Color** | `#3b82f6` | Filterable and sortable |
+
+:::note `step` is the control's, not the value's
+`min` and `max` are refused on save, by the server as well as the form — see
+**Validation**. `step` is the arrow key's increment on the number input and nothing more: a
+value that does not land on it is still stored. If a quantity really must be a multiple of
+something, say so with `min` and `max` on a field that counts the multiples.
+:::
 
 :::caution Dates are wall-clock, `publishedAt` is an instant
 "The event starts at 19:00" means seven in the evening wherever the event is. Nothing is
@@ -133,12 +140,34 @@ add_filter('schemapress/field_types', function ($types) {
         'label' => 'Rating',
         'default' => null,
         'sanitize' => fn($value) => $value === '' ? null : max(1, min(5, (int) $value)),
+        // optional: how its values compare, so it can be filtered and sorted
+        'index' => 'NUMERIC',
+        // optional: the width its control starts at
+        'width' => 'third',
     ];
 
     return $types;
 });
 ```
 
-That is enough to store and deliver the value correctly. It has no control to edit it with
-until one is registered in `src/shared/fields/`, and it cannot be filtered on until it is
-added to `Index::TYPES`.
+That is enough to store, index and deliver the value correctly. It has no control to edit it
+with until one is registered in `src/shared/fields/`.
+
+| Key | |
+| --- | --- |
+| `label` | What the type is called in the field picker |
+| `default` | The value an entry holds before anybody fills it in |
+| `sanitize` | `fn($value, $field)` — what is actually stored. Return the empty default for anything that is not the thing |
+| `index` | `CHAR` or `NUMERIC`, to make it filterable and sortable. Omit for a type nothing sensible can be asked of |
+| `width` | `third`, `half`, `two-thirds` or `full`. Defaults to `full` |
+| `children` | `true` to hold child fields, the way a Group does |
+| `repeatable` | `true` to hold an ordered list of child rows, the way a Repeater does. Implies `children` |
+
+:::note A nesting type is nesting everywhere or nowhere
+Sanitizing, validating, resolving, searching, exporting and the GraphQL schema all ask the
+registry whether a type nests rather than checking for the names `group` and `repeater`, so
+a type that declares `children` or `repeatable` is walked into by all of them. They used to
+test for the literal names, which meant a custom nesting type was *stored* as rows and then
+validated as though it were a single bag — and required fields inside it passed without
+being looked at.
+:::

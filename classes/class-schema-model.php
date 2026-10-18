@@ -66,7 +66,9 @@ class SchemaModel
      * @param mixed $settings
      * @param array $fields   the normalized field list
      *
-     * @return array{draftAndPublish: boolean, listColumns: array|null}
+     * @return array{draftAndPublish: boolean, publicApi: array{list: boolean,
+     *               single: boolean}, titleField: string, slugField: string,
+     *               listColumns: array|null}
      */
     private static function normalizeSettings($settings, array $fields)
     {
@@ -321,15 +323,6 @@ class SchemaModel
     }
 
     /**
-     * Whitelists the type-specific config bag, so stored definitions cannot
-     * accumulate junk.
-     *
-     * @param array  $field
-     * @param string $type
-     *
-     * @return array
-     */
-    /**
      * Clamps a leading offset so the control still fits on its row. One pushing a
      * field past the twelfth column wraps it to a row of its own with the gap
      * still in front of it — not what was asked for, and not recoverable from the
@@ -421,7 +414,17 @@ class SchemaModel
 
             case 'repeater':
                 $clean['min'] = isset($config['min']) ? absint($config['min']) : 0;
+                // never below the minimum, because the two are enforced by
+                // different halves of the sanitizer and the minimum wins: rows
+                // are truncated at the max and then padded up to the min, so
+                // min 5 / max 2 stored a five-row value the field's own ceiling
+                // said was impossible. 0 is "no ceiling" and is left alone
                 $clean['max'] = isset($config['max']) ? absint($config['max']) : 0;
+
+                if ($clean['max'] > 0 && $clean['max'] < $clean['min']) {
+                    $clean['max'] = $clean['min'];
+                }
+
                 $clean['row_label'] = isset($config['row_label'])
                     ? sanitize_text_field($config['row_label'])
                     : '';
