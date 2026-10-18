@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: SchemaPress\n"
 "Report-Msgid-Bugs-To: https://github.com/eriklarsondev/schemapress/issues\n"
-"POT-Creation-Date: 2026-10-17 16:14+0000\n"
+"POT-Creation-Date: 2026-10-18 18:21+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -27,17 +27,17 @@ msgid "%1$d of %2$d"
 msgstr ""
 
 #. translators: 1: a field's name, 2: a number of characters
-#: classes/class-validator.php:140
+#: classes/class-validator.php:148
 msgid "%1$s must be %2$d characters or fewer."
 msgstr ""
 
 #. translators: 1: a field's name, 2: the largest allowed value
-#: classes/class-validator.php:161
+#: classes/class-validator.php:169
 msgid "%1$s must be %2$s or less."
 msgstr ""
 
 #. translators: 1: a field's name, 2: the smallest allowed value
-#: classes/class-validator.php:152
+#: classes/class-validator.php:160
 msgid "%1$s must be %2$s or more."
 msgstr ""
 
@@ -147,7 +147,7 @@ msgid "%d sub fields"
 msgstr ""
 
 #. translators: %s: the title of the entry being copied
-#: classes/class-entries.php:731
+#: classes/class-entries.php:728
 msgid "%s (copy)"
 msgstr ""
 
@@ -157,17 +157,17 @@ msgid "%s cannot be saved as written"
 msgstr ""
 
 #. translators: %s: a field's name
-#: classes/class-validator.php:100
+#: classes/class-validator.php:108
 msgid "%s is required."
 msgstr ""
 
 #. translators: %s: a field's name
-#: classes/class-validator.php:171
+#: classes/class-validator.php:179
 msgid "%s must be unique, and another entry already has that value."
 msgstr ""
 
 #. translators: %s: a repeater field's name
-#: classes/class-validator.php:199
+#: classes/class-validator.php:207
 msgid "%s needs at least one row."
 msgstr ""
 
@@ -279,7 +279,7 @@ msgstr ""
 msgid "Above zero this also tells caches you do not control — a CDN, a proxy — not to ask at all for that long. A correction published now may take that long to appear."
 msgstr ""
 
-#: classes/class-schema-model.php:430
+#: classes/class-schema-model.php:433
 msgid "Add Row"
 msgstr ""
 
@@ -361,7 +361,7 @@ msgstr ""
 msgid "An import never turns on a collection’s public API, whatever the file says. Publishing is a decision about this site."
 msgstr ""
 
-#: classes/class-graphql.php:602
+#: classes/class-graphql.php:606
 msgid "Any one of these must hold."
 msgstr ""
 
@@ -781,7 +781,7 @@ msgstr ""
 msgid "Every field on this form is in the sidebar."
 msgstr ""
 
-#: classes/class-graphql.php:598
+#: classes/class-graphql.php:602
 msgid "Every one of these must hold."
 msgstr ""
 
@@ -878,7 +878,7 @@ msgstr ""
 msgid "How many this page returned."
 msgstr ""
 
-#: classes/class-graphql.php:706
+#: classes/class-graphql.php:710
 msgid "How many, up to 100."
 msgstr ""
 
@@ -1006,7 +1006,7 @@ msgstr ""
 msgid "Link"
 msgstr ""
 
-#: classes/class-admin.php:68
+#: classes/class-admin.php:162
 msgid "Loading SchemaPress…"
 msgstr ""
 
@@ -1253,12 +1253,12 @@ msgstr ""
 msgid "On this page"
 msgstr ""
 
-#: classes/class-graphql.php:671
+#: classes/class-graphql.php:675
 msgid "One ordering clause."
 msgstr ""
 
 #. translators: %s: a collection's name
-#: classes/class-graphql.php:737
+#: classes/class-graphql.php:741
 msgid "One published %s, by id or by slug."
 msgstr ""
 
@@ -1348,7 +1348,7 @@ msgid "Published"
 msgstr ""
 
 #. translators: %s: a collection's plural name
-#: classes/class-graphql.php:698
+#: classes/class-graphql.php:702
 msgid "Published %s."
 msgstr ""
 
@@ -1515,7 +1515,7 @@ msgstr ""
 msgid "Schema"
 msgstr ""
 
-#: classes/class-admin.php:47 classes/class-admin.php:48 src/admin/Sidebar.js:51 src/admin/Sidebar.js:179 src/admin/views/DocsView.js:247
+#: classes/class-admin.php:78 classes/class-admin.php:79 src/admin/Sidebar.js:51 src/admin/Sidebar.js:179 src/admin/views/DocsView.js:247
 msgid "SchemaPress"
 msgstr ""
 
@@ -1602,7 +1602,7 @@ msgstr ""
 msgid "Single entries are not served over HTTP."
 msgstr ""
 
-#: classes/class-graphql.php:711
+#: classes/class-graphql.php:715
 msgid "Skip this many entries. Not with page."
 msgstr ""
 
@@ -1619,7 +1619,7 @@ msgstr ""
 msgid "Somebody else changed this component while you were editing it. Reload before saving, or your changes will replace theirs."
 msgstr ""
 
-#: classes/class-entries.php:821
+#: classes/class-entries.php:818
 msgid "Somebody else saved this entry while you were editing it. Reload to see their changes — your version is not lost, it is still in the form."
 msgstr ""
 
@@ -1942,7 +1942,7 @@ msgstr ""
 msgid "Unsupported field type:"
 msgstr ""
 
-#: classes/class-entries.php:1488 src/admin/views/EntriesView.js:784 src/admin/views/EntriesView.js:1031 src/admin/views/EntryView.js:348
+#: classes/class-entries.php:1494 src/admin/views/EntriesView.js:784 src/admin/views/EntriesView.js:1031 src/admin/views/EntryView.js:348
 msgid "Untitled"
 msgstr ""
 
@@ -1974,7 +1974,7 @@ msgstr ""
 msgid "Warning"
 msgstr ""
 
-#: classes/class-graphql.php:666
+#: classes/class-graphql.php:670
 msgid "What a list may be ordered by."
 msgstr ""
 
@@ -2023,7 +2023,7 @@ msgid "When the entry was first created."
 msgstr ""
 
 #. translators: %s: a GraphQL type name
-#: classes/class-graphql.php:616
+#: classes/class-graphql.php:620
 msgid "Which %s to return."
 msgstr ""
 
