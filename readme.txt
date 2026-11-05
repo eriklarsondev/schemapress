@@ -4,7 +4,7 @@ Tags: custom fields, structured content, headless, rest api, content types
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -157,6 +157,10 @@ Not yet. It is the largest remaining gap in the plugin and the next feature in.
 
 == Changelog ==
 
+= 0.3.1 =
+* Fixed: documentation corrections. The README credited a per-collection permission system that 0.3.0 removed, and 0.3.0's own release notes filed eleven additions — including the WPGraphQL integration — under "Removed".
+* Changed: Prettier is configured by a `.prettierrc` file rather than a `package.json` key. Affects contributors only.
+
 = 0.3.0 =
 * Added: a WPGraphQL integration. Every collection open for reading joins the site's GraphQL schema, behind the same switches REST uses.
 * Added: `createdAt` on every entry, over REST and in GraphQL.
@@ -205,6 +209,10 @@ Not yet. It is the largest remaining gap in the plugin and the next feature in.
 * First release.
 
 == Upgrade Notice ==
+
+= 0.3.1 =
+Documentation and tooling only — nothing in the plugin's behavior changed. Safe to skip if
+you are not reading the source.
 
 = 0.3.0 =
 Adds a WPGraphQL integration and an entry sidebar. Two removals need reading

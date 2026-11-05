@@ -91,7 +91,7 @@ is not committed; the release zip carries its own, built with `--no-dev`.
 ```bash
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
-npm test                  # both suites (547 assertions, no framework)
+npm test                  # all three suites (951 assertions, no framework)
 npm run format            # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check      # report without writing; this is what CI runs
 npm run lint:js           # ESLint over the admin
@@ -115,7 +115,7 @@ CI runs five jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review c
 review tool; lint and formatting; and a check that the committed `build/` matches `src/` —
 the plugin ships built, so a change to the admin has to be rebuilt and committed with it.
 
-Releases are tag-triggered. `git tag v0.3.0 && git push --tags` runs the suite, rebuilds,
+Releases are tag-triggered. `git tag v0.3.1 && git push --tags` runs the suite, rebuilds,
 packages, publishes to wordpress.org and attaches the zip to a GitHub release. Edits to
 `readme.txt` or `assets/` on `main` update the directory listing without a release, since
 wordpress.org versions those separately from the code.
@@ -156,7 +156,7 @@ Four supporting pieces sit beside those:
 
 | | |
 | --- | --- |
-| `class-capabilities.php` | the plugin's own two capabilities, and per-collection roles |
+| `class-capabilities.php` | the plugin's own two capabilities, and the roles granted them on activation |
 | `class-batch.php` | work that walks every entry, as a job with a cursor cron resumes |
 | `class-portability.php` | export and import; the key is the identity, never the title or the post id |
 | `class-cli.php` | the same operations for a deploy script, registered only under WP-CLI |
@@ -192,10 +192,15 @@ recounts a bug that is fixed. That is changelog, and it belongs in `CHANGELOG.md
 **Class files** are `classes/class-{kebab-name}.php`, autoloaded from the namespaced class
 name. No Composer classmap to regenerate.
 
-**Formatting is configured, not conventional.** The `prettier` key in `package.json` for
-JavaScript and CSS — 2-space, single quotes, no semicolons, 100 columns — and
-`.config/php-cs-fixer.php` for PHP (PSR-12). `npm run format` applies both, and a
-pre-commit hook applies them to staged files. Don't hand-format against the grain of either.
+**Formatting is configured, not conventional.** `.prettierrc` for JavaScript and CSS —
+2-space, single quotes, no semicolons, 100 columns — and `.config/php-cs-fixer.php` for
+PHP (PSR-12). `npm run format` applies both, and a pre-commit hook applies them to staged
+files. Don't hand-format against the grain of either.
+
+`.prettierrc` is the one formatter config in the root rather than in `.config/`, because
+Prettier's config discovery walks up from the file being formatted and does not look in
+`.config/` before version 3.5. Moving it would leave `lint-staged` and every editor
+integration formatting to the defaults.
 
 **Color and contrast.** Every token in `src/shared/style.css` is measured, and the comments
 record the ratio and why it was chosen. If you change one, measure it. Body text clears
@@ -233,8 +238,8 @@ version:
 
 **Formatting is automatic.** A pre-commit hook runs Prettier over JavaScript and CSS and
 PHP-CS-Fixer over PHP, and refuses a commit whose PHP does not parse. `npm run format`
-does the same by hand. Prettier's settings are the `prettier` key in `package.json`;
-PHP-CS-Fixer's are `.config/php-cs-fixer.php` (PSR-12). Neither is `phpcs`, which is a
+does the same by hand. Prettier's settings are in `.prettierrc`; PHP-CS-Fixer's are
+`.config/php-cs-fixer.php` (PSR-12). Neither is `phpcs`, which is a
 separate security-focused ruleset described at the top of `.config/phpcs.xml`.
 
 Security vulnerabilities go through
@@ -256,7 +261,7 @@ not the issue tracker.
   only moves on publish, so a live entry's unpublished wording cannot be found in the
   builder's own listing until it goes live. Deliberate — the same row is what the front end
   searches — but it surprises people editing a long draft.
-- The admin bundle is ~490KB, over webpack's advisory. Prism accounts for ~37KB and the
+- The admin bundle is ~380KB, over webpack's advisory. Prism accounts for ~37KB and the
   compiled documentation ships inline with the screen; both are candidates for a dynamic
   import once someone can verify chunk loading in a plugin subdirectory.
 - An export is one JSON document, so it is capped at 5,000 entries. Use a database backup

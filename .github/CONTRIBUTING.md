@@ -43,7 +43,7 @@ Day to day:
 ```bash
 npm start              # watch build while working on the admin
 npm run build          # production build — commit build/ with your change
-npm test               # both suites, 547 assertions, no framework
+npm test               # all three suites, 951 assertions, no framework
 npm run format         # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check   # report without writing — what CI runs
 npm run pot            # regenerate languages/schemapress.pot
@@ -115,7 +115,7 @@ be able to install. The pin makes that automatic.
 Two formatters, because there are two languages and no tool does both well. Both run
 automatically on commit; you should rarely need to think about them.
 
-**JavaScript and CSS: Prettier** (the `prettier` key in `package.json`). Two-space indent, single quotes, no
+**JavaScript and CSS: Prettier** (`.prettierrc`). Two-space indent, single quotes, no
 semicolons, 100 columns. That is deliberately *not* the WordPress house style — it is the
 style the admin was already written in, and 100 columns was chosen by measuring churn
 against the existing source (80 moved 1,984 lines, 120 moved 1,418, 100 moved 855).
@@ -143,8 +143,10 @@ Prettier is rewriting, and lint-staged runs separate glob groups concurrently �
 processes writing one file. Catching a lint error in CI a few minutes later is worth more
 than that race.
 
-A local `.php-cs-fixer.php` overrides the committed `.dist` file if you want to
-experiment; it is not gitignored, so do not commit it.
+To experiment with the PHP rules, copy the ruleset to `.config/php-cs-fixer.local.php` and
+run the fixer against it by hand — `vendor/bin/php-cs-fixer fix
+--config=.config/php-cs-fixer.local.php`. Nothing discovers that file on its own; the npm
+script and the hook both name the committed one. It is gitignored, so it stays yours.
 
 **The pre-commit hook** (husky plus lint-staged; see the `lint-staged` block in
 `package.json`) formats staged files and refuses a commit containing a PHP file that does
