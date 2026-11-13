@@ -43,7 +43,7 @@ Day to day:
 ```bash
 npm start              # watch build while working on the admin
 npm run build          # production build — commit build/ with your change
-npm test               # all three suites, 951 assertions, no framework
+npm test               # all three suites, 1037 assertions, no framework
 npm run format         # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check   # report without writing — what CI runs
 npm run pot            # regenerate languages/schemapress.pot

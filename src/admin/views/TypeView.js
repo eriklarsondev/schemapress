@@ -212,7 +212,10 @@ export function TypeView({ type, onChanged, onDeleted }) {
         </TabPanel>
 
         <TabPanel value="fields">
-          <FieldsTab fields={fields} onChange={saveFields} />
+          {/* its machine key, not its id: a relation stores the key, so this is
+              what a reverse field compares against to say which relations
+              point back here */}
+          <FieldsTab fields={fields} onChange={saveFields} collection={type.key} />
         </TabPanel>
 
         <TabPanel value="layout">

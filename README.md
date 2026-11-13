@@ -23,14 +23,22 @@ like* is your theme's business. That one line explains most of the design decisi
 
 ## What it does
 
-**Modeling.** Twenty field types — text, rich text, the contact types, numbers, dates,
+**Modeling.** Twenty-one field types — text, rich text, the contact types, numbers, dates,
 dropdowns (with built-in datasets for countries, US states, Canadian provinces,
-Australian states, months and weekdays), image, gallery, file, color, JSON, link, group
-and repeater. Fields carry rules — required, max length, range, unique — enforced on the
-server as well as in the form, and
+Australian states, months and weekdays), image, gallery, file, color, JSON, link, group,
+repeater and **relation**. Fields carry rules — required, max length, range, unique —
+enforced on the server as well as in the form, and
 conditions that show one field based on another's value. A **component** is a named group
 of fields defined once and imported into as many collections as you like; importing copies
 it rather than pointing at it, so deleting the original cannot take content down with it.
+
+**Relating.** One field type, facing either way: a collection points at another — one entry
+or an ordered list of them, read back already resolved — or it reads back whatever points
+at it. Only the pointing side stores anything; the other direction is answered from the
+index when the entry is read, so the two cannot disagree and nothing has to be rebuilt when
+a collection changes. One hop deep, published
+entries only, and filterable the way any other field is, which is what makes "every
+article by this author" an ordinary query.
 
 **Editing.** Every entry keeps two copies of its values — what is published and what is
 being worked on — so editing a live entry never takes it off the site half finished, and
@@ -91,7 +99,7 @@ is not committed; the release zip carries its own, built with `--no-dev`.
 ```bash
 npm start                 # watch build while working on the admin
 npm run build             # production build; commit build/ with your change
-npm test                  # all three suites (951 assertions, no framework)
+npm test                  # all three suites (1037 assertions, no framework)
 npm run format            # Prettier over JS/CSS, PHP-CS-Fixer over PHP
 npm run format:check      # report without writing; this is what CI runs
 npm run lint:js           # ESLint over the admin
@@ -115,7 +123,7 @@ CI runs five jobs: the suite on PHP 8.2, 8.3 and 8.4; the wordpress.org review c
 review tool; lint and formatting; and a check that the committed `build/` matches `src/` —
 the plugin ships built, so a change to the admin has to be rebuilt and committed with it.
 
-Releases are tag-triggered. `git tag v0.3.1 && git push --tags` runs the suite, rebuilds,
+Releases are tag-triggered. `git tag v0.4.0 && git push --tags` runs the suite, rebuilds,
 packages, publishes to wordpress.org and attaches the zip to a GitHub release. Edits to
 `readme.txt` or `assets/` on `main` update the directory listing without a release, since
 wordpress.org versions those separately from the code.
@@ -152,10 +160,11 @@ There is no Twig integration. A query is built in PHP and the result handed to w
 renders the page; an `Entry` answers an array key, a property and a method, so
 `person.full_name` resolves in a template with nothing registered for it.
 
-Four supporting pieces sit beside those:
+Five supporting pieces sit beside those:
 
 | | |
 | --- | --- |
+| `class-relations.php` | entries pointing at entries: one side stores a reference, the other is a query over the index |
 | `class-capabilities.php` | the plugin's own two capabilities, and the roles granted them on activation |
 | `class-batch.php` | work that walks every entry, as a job with a cursor cron resumes |
 | `class-portability.php` | export and import; the key is the identity, never the title or the post id |

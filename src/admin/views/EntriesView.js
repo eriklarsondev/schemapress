@@ -108,9 +108,11 @@ const TRASH_ACTIONS = [{ value: 'restore', label: () => __('Restore', 'schemapre
  *
  * Narrower than that list on purpose: an image and a file ARE indexed, so the
  * API can ask whether one is set, but they are indexed as attachment ids and
- * ordering by an id is ordering by upload order wearing a photograph. The rest
- * cannot be indexed at all — rich text is a document, a link and a group hold
- * several values, and a repeater holds many rows.
+ * ordering by an id is ordering by upload order wearing a photograph. A
+ * relation is the same story with a uuid — it is indexed so "everything by this
+ * author" can be asked, and sorting by it would order the table by nothing at
+ * all. The rest cannot be indexed — rich text is a document, a link and a group
+ * hold several values, and a repeater holds many rows.
  *
  * A header that cannot sort says so by not offering. A sort that silently did
  * nothing would be worse than none.
@@ -200,7 +202,40 @@ function cellValue(field, entry) {
     )
   }
 
+  // the related entries' NAMES, which is the only readable thing a relation
+  // holds: the stored value is identifiers, and a column of uuids tells you
+  // nothing about which rows are linked to what
+  if (field.type === 'relation') {
+    return related(entry.data?.[field.key])
+  }
+
   return cell(field, value)
+}
+
+/**
+ * Resolved relations as a line of names.
+ *
+ * @param {*} value one resolved entry, or a list of them
+ * @return {string} The names, or ''.
+ */
+function related(value) {
+  const entries = Array.isArray(value) ? value : value ? [value] : []
+  const names = entries.map((one) => one?.title || one?.slug || '').filter(Boolean)
+
+  if (names.length === 0) {
+    return ''
+  }
+
+  // the first two and a count, rather than a cell that grows with the row. a
+  // table column is scanned, and eleven names is a paragraph
+  return names.length > 2
+    ? sprintf(
+        /* translators: 1: two entry names, 2: how many more there are */
+        __('%1$s +%2$d more', 'schemapress'),
+        names.slice(0, 2).join(', '),
+        names.length - 2
+      )
+    : names.join(', ')
 }
 
 /**

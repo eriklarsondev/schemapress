@@ -27,6 +27,8 @@ trip over, on any of the three surfaces.
 | Link | `{ url, label, target }` | `$e->site['url']` | `{{ e.site.url }}` |
 | Group | a nested object | `$e->get('address.city')` | `{{ e.get('address.city') }}` |
 | Repeater | `[{ id, data }]` | `$e->rows('links')` | `{% for r in e.rows('links') %}` |
+| Relation | an object, a list, or `null` | `$e->author['title']` | `{{ e.author.title }}` |
+| Relation, reading back | a list | `$e->articles` | `{% for a in e.articles %}` |
 
 PHP and Twig are reading the same resolved data; the difference is only that PHP hands you
 arrays and Twig lets you walk them with a dot. **Values in JSON**, **Values in PHP** and
@@ -71,6 +73,50 @@ able to tell the difference.
 In PHP and Twig an empty text field reads as `null` too, because `get()` returns the default
 for anything empty and the default is `null` unless you pass one. `get('bio', '')` is how
 you ask for the empty string back. The raw stored bag, `""` and all, is `all()`.
+
+### Relations arrive resolved too
+
+A relation is a reference while it is stored and a whole entry by the time you read it, so
+there is still nothing to populate:
+
+:::tabs
+```twig In Twig
+<article>
+  <h2>{{ article.title }}</h2>
+
+  {% if article.author %}
+    <p>By <a href="/team/{{ article.author.slug }}">{{ article.author.title }}</a></p>
+    {{ article.author.bio|raw }}
+  {% endif %}
+
+  {% for tag in article.tags %}
+    <span class="tag">{{ tag.title }}</span>
+  {% endfor %}
+</article>
+```
+```php In PHP
+<?php if ($article->has('author')) : ?>
+  <p>By <?php echo esc_html($article->author['title']); ?></p>
+<?php endif; ?>
+
+<?php foreach ($article->get('tags', []) as $tag) : ?>
+  <span class="tag"><?php echo esc_html($tag['title']); ?></span>
+<?php endforeach; ?>
+```
+```js From JSON
+if (article.author) {
+  byline.textContent = article.author.title
+}
+
+article.tags.forEach((tag) => list.append(chip(tag.title)))
+```
+:::
+
+A relation holding one entry is an object or `null`; one holding several, and every one
+set to read back, is a list — and both follow the **field** rather than what it happens to hold, so
+a multiple relation with one entry in it is still a list of one. `title` is there when the
+collection at the other end names its entries. **Field types** covers the rest: one hop,
+the published view, and what a closed collection gives away.
 
 ### Escaping is not the same on all three
 

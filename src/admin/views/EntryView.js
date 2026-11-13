@@ -279,6 +279,11 @@ export function EntryView({ type, fields, entryId, onBack, onSaved }) {
     <FieldControl
       field={field}
       value={entry.values?.[field.key]}
+      // the resolved copy of the entry, for the one kind of field whose value
+      // is not in `values` because nothing stores it: a reverse relation is
+      // answered by the server when the entry is read, and this is where that
+      // answer arrived. See RelationControl
+      context={{ entry: entry.id, data: entry.data }}
       onChange={(value) =>
         setEntry({
           ...entry,

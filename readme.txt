@@ -4,7 +4,7 @@ Tags: custom fields, structured content, headless, rest api, content types
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,7 +54,16 @@ refuse.
 Text, Textarea, Rich Text, Email, URL, Phone, Number, Date, Date and time, Time,
 Toggle, Dropdown (with built-in datasets for countries, US states, Canadian
 provinces, Australian states, months and weekdays), Image, Gallery, File, Color,
-JSON, Link, Group and Repeater.
+JSON, Link, Group, Repeater and Relation.
+
+= Relations =
+
+A collection points at another — one entry, or an ordered list of them — and
+reads back already resolved, with no populate step. Only the pointing side
+stores anything: a relation set to **read back** is answered from the index
+when the entry is read, so the two can never disagree about what is linked to
+what. Relations are filterable like any other field, which makes
+"every article by this author" an ordinary query.
 
 = Rules and reuse =
 
@@ -153,9 +162,20 @@ now if you would rather not wait for cron.
 
 = Are there relations between collections? =
 
-Not yet. It is the largest remaining gap in the plugin and the next feature in.
+Yes. A **Relation** field points at another collection and holds one entry of
+it or an ordered list, and the same field type set to **read back** lists
+whatever points at this entry. Between them they say one-to-one, one-to-many,
+many-to-one and many-to-many; the Schema tab draws which one you have.
 
 == Changelog ==
+
+= 0.4.0 =
+* Added: relations. A **Relation** field points at another collection and holds one entry of it, one nobody else may hold, or an ordered list — and the same field set to **read back** lists whatever points at this entry. Between them they say one-to-one, one-to-many, many-to-one and many-to-many.
+* Added: the Schema tab draws the relationship and names its kind, in words — `many to one`, not `N to 1`.
+* Added: relations are filterable like any other field, so "every article by this author" is an ordinary query on all three surfaces.
+* Added: `Relations::pointingAt()`, for a CDN purge that has to reach the collections embedding the one that changed.
+* Added: `schemapress/relation_depth` and `schemapress/job_abandoned`.
+* Fixed: documentation corrections found by auditing every documented claim against the code — an undocumented hook, two stale field-type lists, two missing validation rules, and a cache-purge recipe that did not account for relations.
 
 = 0.3.1 =
 * Fixed: documentation corrections. The README credited a per-collection permission system that 0.3.0 removed, and 0.3.0's own release notes filed eleven additions — including the WPGraphQL integration — under "Removed".
@@ -209,6 +229,13 @@ Not yet. It is the largest remaining gap in the plugin and the next feature in.
 * First release.
 
 == Upgrade Notice ==
+
+= 0.4.0 =
+Adds relations between collections. Nothing existing changes: the new field type
+is opt-in, and a collection without one behaves exactly as it did. If you front
+the site with a CDN, read the Caching page — a relation means publishing one
+entry changes the response of every entry pointing at it, which the old purge
+recipe did not cover.
 
 = 0.3.1 =
 Documentation and tooling only — nothing in the plugin's behavior changed. Safe to skip if

@@ -26,7 +26,7 @@ import { clearUnsaved, useUnsavedGuard, PANEL } from '../../shared/unsaved'
  * @param {Object} props
  * @return {JSX.Element} The tab.
  */
-export function FieldsTab({ fields, onChange }) {
+export function FieldsTab({ fields, onChange, collection = '' }) {
   const [draft, setDraft] = useState(fields)
   const [saving, setSaving] = useState(false)
 
@@ -77,7 +77,12 @@ export function FieldsTab({ fields, onChange }) {
 
       <Card>
         <CardBody>
-          <FieldsEditor fields={draft} fieldTypes={fieldTypes} onChange={setDraft} />
+          <FieldsEditor
+            fields={draft}
+            fieldTypes={fieldTypes}
+            collection={collection}
+            onChange={setDraft}
+          />
         </CardBody>
       </Card>
 

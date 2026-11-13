@@ -204,6 +204,43 @@ rather than as a non-empty string:
 ?filters[bio][$notNull]=true
 ```
 
+### Filtering by what an entry points at
+
+A relation is filtered by the identifier it holds, which is how you ask the question the
+other way round without a field reading it back:
+
+:::tabs
+```http Over HTTP
+?author=0b78c8b9-3bd4-45fb-978f-983eaf998026
+?filters[tags][$in][0]=9f2c41ab-…&filters[tags][$in][1]=4d1e77ba-…
+```
+```php In PHP
+<?php
+$theirs = SchemaPress::collection('articles')
+    ->where('author', $author->id())
+    ->sort('published_on', 'desc')
+    ->get();
+```
+```graphql In GraphQL
+query Theirs {
+  articles(where: { author: { eq: "0b78c8b9-…" } }) {
+    nodes { title }
+  }
+}
+```
+:::
+
+A relation holding several is indexed a reference at a time, so it matches if **any** of
+them does — the same behaviour a dropdown that takes several has. That is also what a
+relation **reading back** runs underneath, which makes the two interchangeable: the field is
+the convenient form, and this is the one that pages.
+
+:::note The value is the identifier
+`?author=ada-lovelace` works only if the slug is what was stored. The admin always writes
+the uuid, so that is what a filter should carry — `entry.id` on whatever you were just
+reading, never the title.
+:::
+
 ### Combining filters
 
 Several filters are joined with **and**, which is what you get without asking:

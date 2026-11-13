@@ -46,8 +46,11 @@ class Index
      *
      * Absent deliberately: wysiwyg (a blob of markup nothing sensible can be
      * asked about), link and group (composite), repeater and gallery (many
-     * values per row, which is a different index), and json (a shape this
-     * collection does not describe).
+     * values per row, which is a different index), json (a shape this collection
+     * does not describe). A relation facing back stores nothing to index
+     * either — it is ANSWERED from this index rather than written to it — but
+     * that is a question about the field rather than its type, so it lives in
+     * indexable() below.
      *
      * @var array<string, string> type => NUMERIC or CHAR
      */
@@ -66,6 +69,11 @@ class Index
         'date' => 'CHAR',
         'datetime' => 'CHAR',
         'time' => 'CHAR',
+        // the identifier of whatever it points at, one row per reference — so a
+        // relation that holds several is filtered exactly as a multi-select is,
+        // and "every post by this author" is an ordinary `$eq`. It is also what
+        // answers a reverse field, from the other side
+        'relation' => 'CHAR',
         'number' => 'NUMERIC',
         'toggle' => 'NUMERIC',
         'image' => 'NUMERIC',
@@ -88,12 +96,22 @@ class Index
     /**
      * Whether a field can be filtered and sorted on.
      *
+     * A relation facing BACK is the one case where the answer is not simply its
+     * type's: it stores nothing, so there is no row to compare. Indexing it
+     * anyway would write an empty row per entry and make `$null` on it true of
+     * every entry in the collection — a filter that matches everything, which
+     * is the direction a filter must never be wrong in.
+     *
      * @param array $field
      *
      * @return boolean
      */
     public static function indexable(array $field)
     {
+        if (Relations::isInverse($field)) {
+            return false;
+        }
+
         return self::compare($field['type'] ?? '') !== '';
     }
 

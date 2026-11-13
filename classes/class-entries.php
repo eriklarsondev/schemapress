@@ -82,7 +82,7 @@ class Entries
      * A page of entries.
      *
      * @param integer $type_id
-     * @param array   $args    page, perPage, search, orderby, order, view
+     * @param array   $args    page, perPage, search, orderby, order, view, depth
      *
      * @return array{entries: array, total: integer, pages: integer}
      */
@@ -131,8 +131,15 @@ class Entries
 
         $entries = [];
 
+        // normally zero: a listing is the start of a read, not the middle of
+        // one. It is not when the listing IS the middle of one — a reverse
+        // relation asks this for the entries pointing at the one being read,
+        // and those have to carry on counting from where it got to or two
+        // collections pointing at each other would never stop resolving
+        $depth = max(0, (int) ($args['depth'] ?? 0));
+
         foreach ($query->posts as $post) {
-            $entries[] = self::shape($post, $definition, 0, $view);
+            $entries[] = self::shape($post, $definition, $depth, $view);
         }
 
         return [
@@ -143,6 +150,95 @@ class Entries
             // "11-20 of 34" without the client guessing at the size it got
             'page' => $page,
             'perPage' => $perPage,
+        ];
+    }
+
+    /**
+     * Entries as something to choose from: what a relation field's picker lists,
+     * and how it reads back the names of the references already stored in one.
+     *
+     * Names, not entries. The picker shows a list of titles and gets the whole
+     * of every entry on it — every image resolved, every relation of its own
+     * followed — which is the same page of work the collection's own listing
+     * does, for a dropdown. `ids` is the other half: a relation holds
+     * identifiers, and the control has to say what they are called before
+     * anybody can tell whether they are the right ones.
+     *
+     * Unpublished entries are included and SAID SO. You point a relation at a
+     * draft all the time — the two are being written together — and the one
+     * thing that must not happen is finding out at publish time that half the
+     * references resolve to nothing on the front end.
+     *
+     * @param integer $type_id
+     * @param array   $args    search, perPage, ids (a list of uuids or slugs)
+     *
+     * @return array<array{id: string, title: string, slug: string, state: string}>
+     */
+    public static function pick($type_id, array $args = [])
+    {
+        $type = ContentType::get($type_id);
+
+        if (!$type) {
+            return [];
+        }
+
+        $refs = isset($args['ids']) && is_array($args['ids']) ? $args['ids'] : null;
+
+        // asked for by identifier, and answered IN THE ORDER ASKED: the order
+        // of a relation's references is content — it is the order the control
+        // draws them in, and the order a template loops them
+        if ($refs !== null) {
+            $rows = [];
+
+            foreach (array_slice($refs, 0, 100) as $ref) {
+                $post = self::resolve($type_id, (string) $ref);
+
+                if ($post) {
+                    $rows[] = self::listed($post, (string) $ref);
+                }
+            }
+
+            return $rows;
+        }
+
+        $query = new \WP_Query([
+            'post_type' => $type['postType'],
+            'post_status' => ['publish', 'draft'],
+            'posts_per_page' => min(50, max(1, (int) ($args['perPage'] ?? 20))),
+            's' => isset($args['search']) ? sanitize_text_field($args['search']) : '',
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'suppress_filters' => false,
+        ]);
+
+        return array_map(function ($post) {
+            return self::listed($post);
+        }, $query->posts);
+    }
+
+    /**
+     * One entry as a row of a picker.
+     *
+     * @param \WP_Post $post
+     * @param string   $ref the identifier it was asked for by, which is the one
+     *                      the field stores — a slug where a slug was written
+     *
+     * @return array
+     */
+    private static function listed($post, $ref = '')
+    {
+        $draftTitle = get_post_meta($post->ID, self::META_DRAFT_TITLE, true);
+        $published = $post->post_status === 'publish';
+
+        return [
+            'id' => $ref !== '' ? $ref : (self::storedUid($post->ID) ?: self::uid($post->ID)),
+            'title' => is_string($draftTitle) && $draftTitle !== ''
+                ? $draftTitle
+                : get_the_title($post),
+            'slug' => $post->post_name,
+            'state' => !$published
+                ? 'draft'
+                : (self::ahead($post->ID) > 0 ? 'modified' : 'published'),
         ];
     }
 
@@ -195,6 +291,63 @@ class Entries
         }
 
         return self::shape($post, SchemaRepository::definition($type_id), $depth, $view);
+    }
+
+    /**
+     * An entry's identity, without reading a single one of its values.
+     *
+     * What a relation delivers on its last hop, and what the builder's own
+     * picker lists. Both want the same three things — what to address it by,
+     * what to link to, what to call it — and neither wants the cost of the rest:
+     * resolving an entry expands its images and follows its own relations, which
+     * on the last hop is work that would be thrown away, and in a picker is work
+     * repeated for every row of a search.
+     *
+     * It is also what BOUNDS a relation read. Nothing below this line can reach
+     * another entry, so the last hop cannot be the start of another one.
+     *
+     * @param integer $type_id
+     * @param string  $ref     a uuid or a slug
+     * @param string  $view    published or draft
+     *
+     * @return array|null {id, slug, title}, or null when nothing answers to it
+     */
+    public static function identity($type_id, $ref, $view = self::PUBLISHED)
+    {
+        $post = self::resolve($type_id, $ref);
+
+        if (!$post) {
+            return null;
+        }
+
+        $view = self::view($view);
+
+        // an entry that has never been published has nothing to show on a
+        // published read, the same answer get() gives
+        if ($view === self::PUBLISHED && $post->post_status !== 'publish') {
+            return null;
+        }
+
+        $identity = [
+            'id' => self::storedUid($post->ID) ?: self::uid($post->ID),
+            'slug' => $post->post_name,
+        ];
+
+        // the same rule the delivered shape follows: a name only where the
+        // collection says which field is the name. See Relations::shape
+        if (self::titleField($type_id) === '') {
+            return $identity;
+        }
+
+        $draftTitle = $view === self::DRAFT
+            ? get_post_meta($post->ID, self::META_DRAFT_TITLE, true)
+            : '';
+
+        $identity['title'] = is_string($draftTitle) && $draftTitle !== ''
+            ? $draftTitle
+            : get_the_title($post);
+
+        return $identity;
     }
 
     /**
@@ -1170,11 +1323,13 @@ class Entries
             ? get_post_meta($post->ID, self::META_DRAFT_TITLE, true)
             : '';
 
+        // read, not minted. the backfill in class-upgrade.php is what makes
+        // the fallback unreachable: without it, delivering an entry over the
+        // public API wrote a meta row, which is not something a GET should do
+        $uid = self::storedUid($post->ID) ?: self::uid($post->ID);
+
         return [
-            // read, not minted. the backfill in class-upgrade.php is what makes
-            // the fallback unreachable: without it, delivering an entry over the
-            // public API wrote a meta row, which is not something a GET should do
-            'id' => self::storedUid($post->ID) ?: self::uid($post->ID),
+            'id' => $uid,
             'title' => is_string($draftTitle) && $draftTitle !== ''
                 ? $draftTitle
                 : get_the_title($post),
@@ -1201,8 +1356,14 @@ class Entries
                 : '',
             // stored, for the editor to load back into its controls
             'values' => $values,
-            // resolved, for a template or a client to render
-            'data' => Resolver::values($values, $definition['fields'], $depth),
+            // resolved, for a template or a client to render. the view and the
+            // entry's own identifier travel with it because a relation needs
+            // both: which copy of the entry at the other end to show, and — for
+            // a reverse relation — who it is that is being pointed at
+            'data' => Resolver::values($values, $definition['fields'], $depth, [
+                'view' => $view,
+                'entry' => $uid,
+            ]),
         ];
     }
 

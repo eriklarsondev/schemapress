@@ -75,3 +75,29 @@ add_action('schemapress/entry_published', function ($id, $values, $type_id) {
 
 `entry_unpublished` and `entry_deleted` are the pair to it — anything built from an entry
 being live has to come down when it stops being.
+
+:::caution A relation makes one entry's change somebody else's response
+Correct an author's name and every article that points at it is a different response, with
+a different ETag — while nothing about those articles was saved and nothing fired for
+them. Purging only the collection that changed leaves the ones that embed it stale.
+
+`Relations::pointingAt()` names them, so the recipe extends to one line:
+
+```php
+add_action('schemapress/entry_published', function ($id, $values, $type_id) {
+    $key = SchemaPress\ContentType::key($type_id);
+
+    foreach (array_merge([$key], SchemaPress\Relations::pointingAt($key)) as $tag) {
+        wp_remote_post('https://example.test/purge', [
+            'blocking' => false,
+            'body' => ['tag' => "schemapress:{$tag}"],
+        ]);
+    }
+}, 10, 3);
+```
+
+It walks nested fields too, since a relation inside a group or a repeater row embeds
+exactly as a top-level one does. A field that **reads back** is not counted: it is answered
+from the index when the entry is read, so what changes is the response you are already
+purging.
+:::

@@ -271,6 +271,7 @@ class SchemaModel
                 continue;
             }
 
+            $field = self::renamed($field);
             $type = isset($field['type']) ? sanitize_key($field['type']) : 'text';
 
             if (!FieldTypes::exists($type)) {
@@ -287,6 +288,46 @@ class SchemaModel
     }
 
     /**
+     * Types that have been folded into another, as the type they are now.
+     *
+     * `reverse` was a second relation type before the direction became a
+     * setting on the one. It is kept here rather than dropped because
+     * normalizeFields DELETES a field whose type it does not recognise — so
+     * without this, opening a collection that had one and pressing Save would
+     * quietly take the field out of the schema.
+     *
+     * @var array<string, array>
+     */
+    private const RENAMED = [
+        'reverse' => ['type' => 'relation', 'direction' => 'inverse'],
+    ];
+
+    /**
+     * Rewrites a field stored under a type that has since been folded into
+     * another.
+     *
+     * @param array $field
+     *
+     * @return array
+     */
+    private static function renamed(array $field)
+    {
+        $type = isset($field['type']) ? sanitize_key($field['type']) : '';
+
+        if (!isset(self::RENAMED[$type])) {
+            return $field;
+        }
+
+        $to = self::RENAMED[$type];
+        $config = isset($field['config']) && is_array($field['config']) ? $field['config'] : [];
+
+        $field['type'] = $to['type'];
+        $field['config'] = array_merge($config, ['direction' => $to['direction']]);
+
+        return $field;
+    }
+
+    /**
      * Builds a single normalized field, recursing for group/repeater children.
      *
      * @param array   $field
@@ -299,18 +340,30 @@ class SchemaModel
      */
     private static function normalizeField(array $field, $key, $label, $type, $nested = false)
     {
+        $config = self::normalizeConfig($field, $type, $nested);
+
+        // a field answered at read time has nobody to hold either rule to:
+        // required would fail every save against a value nobody can fill in,
+        // and unique is a question about stored values there are none of.
+        // Corrected here rather than enforced downstream, so the definition
+        // says what is actually true of the field.
+        //
+        // Read off the normalized CONFIG rather than the type, because a
+        // relation is one type facing either way — see Relations::isInverse
+        $derived = Relations::isInverse(['type' => $type, 'config' => $config]);
+
         $normalized = [
             'key' => $key,
             'label' => $label !== '' ? $label : self::humanize($key),
             'type' => $type,
             'help' => isset($field['help']) ? sanitize_text_field($field['help']) : '',
-            'required' => !empty($field['required']),
+            'required' => !$derived && !empty($field['required']),
             // whether two entries may hold the same value here. beside
             // `required` rather than in the config bag, because both are facts
             // about the DATA — what the collection will accept — while the
             // config bag is what the form does with it
-            'unique' => !empty($field['unique']),
-            'config' => self::normalizeConfig($field, $type, $nested),
+            'unique' => !$derived && !empty($field['unique']),
+            'config' => $config,
         ];
 
         if (FieldTypes::hasChildren($type)) {
@@ -464,6 +517,47 @@ class SchemaModel
                 // how tall the editor is, in rows. a payload is usually either
                 // three lines or three hundred, and the field knows which
                 $clean['rows'] = isset($config['rows']) ? max(3, absint($config['rows'])) : 8;
+                break;
+
+            case 'relation':
+                // which collection, by its machine key rather than its post id.
+                // see Relations::target — a key is the one name that survives an
+                // export, and the id is a row number in the database it left
+                $clean['collection'] = isset($config['collection'])
+                    ? sanitize_key($config['collection'])
+                    : '';
+
+                // which way it faces. `inverse` is answered about THE ENTRY —
+                // "which entries point at this one" — so inside a group or a
+                // repeater row there is nothing of its own to ask about and
+                // every row would list the same thing. Forced back rather than
+                // refused, the way `region` is for a nested field, so the
+                // definition says what is actually true of it
+                $clean['direction'] = !$nested && ($config['direction'] ?? '') === 'inverse'
+                    ? 'inverse'
+                    : 'owns';
+
+                if ($clean['direction'] === 'inverse') {
+                    // WHICH relation over there points back here. a collection
+                    // may hold two — an author and an editor — and without this
+                    // the field would have to guess which it is the other end of
+                    $clean['field'] = isset($config['field'])
+                        ? sanitize_key($config['field'])
+                        : '';
+
+                    break;
+                }
+
+                // one entry or several. a fact about the FIELD and not about
+                // whatever it happens to hold, for the reason `gallery` is its
+                // own type: what is stored, what is delivered and what the
+                // control draws all change with it
+                $clean['multiple'] = !empty($config['multiple']);
+                // a ceiling on how many, for the relations that are "up to three
+                // related articles". no minimum: `required` already means at
+                // least one, and there is nothing to pad a list of references
+                // with the way a repeater pads its rows
+                $clean['max'] = isset($config['max']) ? absint($config['max']) : 0;
                 break;
         }
 

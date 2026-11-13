@@ -15,15 +15,22 @@ direct call to the admin route stored whatever it was given.
 | --- | --- | --- |
 | **Required** | any field | Must be answered before the entry can be saved |
 | **Must be unique** | Text, Textarea, Email, URL, Phone, Number, Date, Date and time, Time | No two entries in the collection may hold the same value |
+| **Holds one, exclusively** | Relation | The same rule, as the shape that says it: no two entries may point at the same one |
 | **Max length** | Text, Textarea, Email, URL, Phone | At most this many characters |
 | **Min** / **Max** | Number | Within these bounds, inclusive |
 | **Min rows** / **Max rows** | Repeater | How many rows the list may hold |
+| **Most images** | Gallery | A ceiling on how many |
+| **Most entries** | Relation holding several | The same |
 
-:::note The row counts shape the value rather than refusing it
-Every rule above refuses the write and stores nothing — except **Min rows** and **Max
-rows**, which are applied on the way in: rows past the maximum are dropped, and a list short
-of the minimum is padded with empty ones so a template can rely on the count. A max below
-the min is read as the min, since padding would otherwise have to break one of the two.
+:::note The ceilings shape the value rather than refusing it
+Every rule above refuses the write and stores nothing — except the last three, which are
+applied on the way in. Rows, images and references past the maximum are dropped, and a
+repeater short of its minimum is padded with empty rows so a template can rely on the
+count. A max below the min is read as the min, since padding would otherwise have to break
+one of the two.
+
+Neither a Gallery nor a Relation has a minimum: **Required** already means at least one,
+and there is nothing to pad a list of references with the way a repeater pads its rows.
 :::
 
 ### What counts as answered

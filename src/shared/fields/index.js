@@ -35,6 +35,7 @@ import { GalleryField } from './GalleryControl'
 import { ColorField, JsonField } from './ValueControls'
 import { LinkField } from './LinkControl'
 import { RichTextField } from './RichTextControl'
+import { RelationField } from './RelationControl'
 import { RepeaterField, GroupField } from './RepeaterControl'
 
 const CONTROLS = {
@@ -56,6 +57,7 @@ const CONTROLS = {
   gallery: GalleryField,
   file: FileField,
   link: LinkField,
+  relation: RelationField,
   group: GroupField,
   repeater: RepeaterField,
 }

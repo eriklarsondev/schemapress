@@ -414,6 +414,10 @@
 
   left: 0.5rem;
 }
+.schemapress .left-2\.5 {
+
+  left: 0.625rem;
+}
 .schemapress .left-3 {
 
   left: 0.75rem;
@@ -806,6 +810,10 @@
 
   max-height: 18rem;
 }
+.schemapress .max-h-80 {
+
+  max-height: 20rem;
+}
 .schemapress .max-h-\[calc\(100vh-4rem\)\] {
 
   max-height: calc(100vh - 4rem);
@@ -967,6 +975,12 @@
 .schemapress .-translate-y-1\/2 {
 
   --tw-translate-y: -50%;
+
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.schemapress .rotate-180 {
+
+  --tw-rotate: 180deg;
 
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
@@ -1314,6 +1328,10 @@
 .schemapress .border-ring\/40 {
 
   border-color: hsl(var(--sp-ring) / 0.4);
+}
+.schemapress .border-ring\/50 {
+
+  border-color: hsl(var(--sp-ring) / 0.5);
 }
 .schemapress .border-ring\/60 {
 
@@ -1920,6 +1938,10 @@
 .schemapress .leading-\[1\.15\] {
 
   line-height: 1.15;
+}
+.schemapress .leading-\[1\.5\] {
+
+  line-height: 1.5;
 }
 .schemapress .leading-\[1\.6\] {
 
@@ -3609,6 +3631,14 @@ body.toplevel_page_schemapress #wpfooter {
 .schemapress .hover\:bg-accent:hover {
 
   background-color: hsl(var(--sp-accent));
+}
+.schemapress .hover\:bg-accent\/20:hover {
+
+  background-color: hsl(var(--sp-accent) / 0.2);
+}
+.schemapress .hover\:bg-accent\/30:hover {
+
+  background-color: hsl(var(--sp-accent) / 0.3);
 }
 .schemapress .hover\:bg-accent\/40:hover {
 

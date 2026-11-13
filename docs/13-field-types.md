@@ -3,7 +3,7 @@
 
 ## Field types
 
-Twenty types, in four groups. What separates them is not how they look — that is your
+Twenty-one types, in five groups. What separates them is not how they look — that is your
 theme's business — but **what they store** and **what can be asked of them**.
 
 ### Text
@@ -82,6 +82,156 @@ other than this collection. It is stored **decoded**, so it comes back through t
 JSON rather than as JSON inside a string. Invalid JSON is not stored.
 :::
 
+### Relations
+
+**One type**, facing either way. "An author's articles" and "an article's author" are two
+views of one relationship, not two kinds of field, so which way a relation faces is a
+shape you pick in its settings rather than a type you had to choose before you knew which
+collection you meant.
+
+| Shape | Stores | |
+| --- | --- | --- |
+| **Holds one** | One entry's identifier | Several entries may hold the same one |
+| **Holds one, exclusively** | The same, refused to anybody else | What a one-to-one is |
+| **Holds several** | An ordered list of identifiers | The order is content |
+| **Reads back** | Nothing at all | Lists whatever points at this entry |
+
+The three that hold something store the identifier and nothing else, so correcting a name
+on the entry at the other end corrects it everywhere that points at it — the same bargain
+**Image** makes with the media library. **Reads back** stores nothing: the answer is a
+query against the index, run when the entry is read.
+
+:::note Why only one side stores anything
+Writing both sides means two copies of one fact, and this plugin has four places where
+copies come apart: a draft ahead of what is published, the trash, an import, and a bulk
+action. An inverse that is derived cannot drift. It is also why a relation that reads back
+is read-only in the admin — the reference lives on the *other* entry, and saving a draft of
+one entry to change another is not something the entry form can promise to do safely.
+:::
+
+Every relationship a content API usually names separately is one or two of those shapes:
+
+| What you want | How to say it |
+| --- | --- |
+| An article has one author | A relation on Article, **holds one** |
+| …and an author has many articles | Plus a relation on Author, **reads back**, through that field |
+| An article has several tags, a tag has many articles | **Holds several** on Article, **reads back** on Tag |
+| A desk has one person and nobody else may have them | **Holds one, exclusively** |
+| A link to one collection that nothing needs to walk backwards | Any of the first three, with nothing reading them back |
+
+**Choosing a collection** comes first, then the shape. A relation that reads back asks one
+more question — *which of that collection's relations* it is the other end of — because a
+collection may point here twice, as an author and as an editor.
+
+#### Reading the diagram
+
+The Schema tab draws the relation rather than only listing its settings, and names the
+kind underneath:
+
+```
+Article   [many] ←→ [one]   Author
+            many-to-one
+```
+
+The mark on each end is how many entries sit there, in words rather than in the `1`/`N` a
+database diagram uses, and **one arrow or two is the whole of what an inverse looks
+like**. A single arrow is a relation you can only walk one way; a double arrow is one
+either end can read.
+
+The line is always read **from the field's own collection outwards**, which is what keeps
+the marks and the name agreeing. Standing on Article that relationship is a many-to-one;
+standing on Author the very same relationship is a one-to-many. Both are its ordinary
+names — which one you say depends on where you are standing, and the diagram says where
+that is.
+
+Three facts decide the kind:
+
+| | Set where | Shows as |
+| --- | --- | --- |
+| How many it holds | The shape, on this field | `one` or `many` on the far end |
+| Whether anyone else may hold the same one | **Holds one, exclusively** | `one` or `many` on the near end |
+| Whether the far collection reads it back | A relation set to **Reads back** *there* | one arrow, or two |
+
+| Near | Far | Inverse | Named |
+| --- | --- | --- | --- |
+| many | one | no | one-way |
+| many | one | yes | many-to-one |
+| one | one | yes | one-to-one |
+| many | many | no | many-way |
+| many | many | yes | many-to-many |
+| one | many | — | one-to-many, which is the same relationship seen from the other end |
+
+The third fact belongs to the *other* collection, which is why it is drawn rather than
+offered as a fourth shape: a control here that wrote a field into a collection you are not
+looking at would be a schema change you did not see. Where the second arrow is missing the
+panel says exactly which field to add, and where.
+
+:::caution A reference is not a checked link
+An identifier that names nothing is still stored. That is what makes an import
+order-independent: a file can write the articles before the authors they point at have
+been read out of it, and the links come back the moment the authors arrive. The cost is
+that a reference whose entry was deleted stays in the field and resolves to nothing —
+which is what the entry form shows it as.
+:::
+
+#### What a relation comes back as
+
+A related entry arrives with its identity and then its fields beside them, which is the
+same shape the API delivers an entry it was asked for:
+
+```json
+{
+  "id": "9f2c41ab-…",
+  "slug": "on-the-analytical-engine",
+  "author": {
+    "id": "0b78c8b9-…",
+    "slug": "ada-lovelace",
+    "title": "Ada Lovelace",
+    "bio": "<p>The first programmer.</p>"
+  }
+}
+```
+
+`title` is there when the collection **names its entries** — when its Settings nominate a
+title field. Where none is nominated, WordPress still derives a title for its own row, but
+that derivation is an accident of field order rather than anything the schema said, so it
+is not published. A field of the related collection whose key is `id`, `slug` or `title`
+moves aside to `id_field` and so on, rather than replacing the entry's own.
+
+Three rules bound what a read costs and what it says:
+
+| | |
+| --- | --- |
+| **One hop** | A relation inside a relation resolves to `id`, `slug` and `title` alone. Two collections pointing at each other would otherwise be a read with no end to it. Raise it with the `schemapress/relation_depth` filter, knowing each hop multiplies |
+| **The view** | A published read only ever resolves published entries; one pointing at a draft comes back `null`, or drops out of a list. The builder's own screens see drafts, and say which they are |
+| **Fifty** | A relation that reads back answers with at most fifty entries. It is a query with no natural end — "every post by this author" is 3 on one site and 9,000 on another. Past that, use the collection's own list endpoint with a filter, which pages |
+
+:::caution What reading back costs on a *list*
+It is a query per entry, and then the full resolution of everything that query returns. A
+page of 20 authors with 10 posts each is **110 queries and 200 resolved entries** for one
+response — measured, on an install with no persistent object cache.
+
+That is not a defect; it is what was asked for. But it is worth knowing before putting a
+field that reads back on a collection you serve as a list. Reading **one** entry is the
+shape it is for. For the list, leave the field off and ask the other collection instead:
+
+```http
+GET /wp-json/schemapress/api/articles?author=<uuid>&pageSize=10
+```
+
+One query, paged, and the same entries.
+:::
+
+:::caution Relations into a collection that is closed
+On the **public API**, a relation into a collection that is not open for **Read one**
+delivers `id`, `slug` and `title` and no fields. A published entry may say *which* author
+wrote it — the publisher put that reference in a published entry on purpose — but a
+collection that has not opted in does not have its fields read out through the back of one
+that has. In a template the whole entry is there either way: a template runs on the server
+with the database in front of it, and re-fetching what it already holds is the `populate`
+step this plugin does not have.
+:::
+
 ### Starting widths
 
 A new field starts at a width that suits what its control draws. **This is only a
@@ -99,7 +249,7 @@ width you will get before you let go.
 | Starts at | Types |
 | --- | --- |
 | **A third** | Image, Toggle, Color, Number, Date, Time, Phone |
-| **Half** | Text, Email, URL, Dropdown, File, Date and time, JSON |
+| **Half** | Text, Email, URL, Dropdown, File, Date and time, JSON, Relation |
 | **Full** | Textarea, Rich Text, Link, Gallery, Group, Repeater |
 
 Fields that already exist keep the width they were saved with. A field type you register
@@ -125,10 +275,17 @@ is stored as `region` in the field's config, and nothing it does reaches the API
 ### What can be filtered and sorted
 
 Filterable: Text, Textarea, Email, URL, Phone, Dropdown, Color, Number, Date, Date and
-time, Time, Toggle, Image, File.
+time, Time, Toggle, Image, File, Relation.
 
-Not filterable: Rich Text, Link, Group, JSON, Gallery, and anything inside a Repeater. See
-**What can be queried** for why.
+Not filterable: Rich Text, Link, Group, JSON, Gallery, a relation that reads back, and
+anything inside a Repeater. See **What can be queried** for why.
+
+A Relation is filtered by the identifier it holds — `?author=9f2c41ab-…` is every article
+by that author, and a relation holding several matches if *any* of its references does,
+exactly as a multi-valued dropdown behaves. Sorting by one is offered nowhere: it would
+order the list by a uuid, which is to say by nothing. A relation that **reads back**
+stores no value to index, which is the same reason it cannot be filtered on — it is
+*answered from* this index rather than written to it.
 
 ### Adding your own
 

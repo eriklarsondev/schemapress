@@ -308,6 +308,21 @@ class Portability
             $report['collections'][] = $result;
         }
 
+        // after every collection, not during: a file whose first collection
+        // points at its third would otherwise be reported as broken halfway
+        // through reading itself
+        ContentType::flush();
+
+        foreach ($report['collections'] as $index => $collection) {
+            $dangling = self::danglingRelations($collection['id'], $collection['label']);
+
+            $report['collections'][$index]['warnings'] = array_merge(
+                $collection['warnings'],
+                $dangling
+            );
+            $report['warnings'] = array_merge($report['warnings'], $dangling);
+        }
+
         $report['media'] = ['matched' => $media['matched'], 'missing' => $media['missing']];
 
         if ($media['missing'] > 0) {
@@ -699,6 +714,51 @@ class Portability
                     $type
                 );
             }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Relations in an imported collection that point at a collection this site
+     * does not have.
+     *
+     * Not a refusal: a file holding one half of a pair is a perfectly ordinary
+     * thing to import, and the references stay stored and start resolving the
+     * moment the other half arrives — see class-relations.php. It is worth a
+     * sentence, because the symptom without one is a field that is filled in
+     * and delivers nothing.
+     *
+     * @param integer $type_id
+     * @param string  $label
+     *
+     * @return string[]
+     */
+    private static function danglingRelations($type_id, $label)
+    {
+        $warnings = [];
+
+        foreach (SchemaRepository::definition($type_id)['fields'] as $field) {
+            if (!Relations::isRelation($field)) {
+                continue;
+            }
+
+            $key = (string) ($field['config']['collection'] ?? '');
+
+            if ($key === '' || ContentType::find($key)) {
+                continue;
+            }
+
+            $warnings[] = sprintf(
+                /* translators: 1: collection name, 2: field name, 3: a collection's machine key */
+                __(
+                    '%1$s: “%2$s” points at the collection “%3$s”, which is not on this site. Import that one too and the links come back.',
+                    'schemapress'
+                ),
+                $label,
+                $field['label'],
+                $key
+            );
         }
 
         return $warnings;

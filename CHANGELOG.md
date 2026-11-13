@@ -6,6 +6,143 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [semantic versioning](https://semver.org/) — while this is `0.x`,
 a minor bump may still change behavior, and the notes say when it does.
 
+## [0.4.0] — 2026-11-13
+
+### Added
+
+- **Relations.** A collection can point at another. **One field type**, facing either way,
+  picked as a shape in the field editor:
+
+  | | |
+  | --- | --- |
+  | **Holds one** | One entry's identifier — several entries may hold the same one |
+  | **Holds one, exclusively** | The same, refused to anybody else. What a one-to-one is |
+  | **Holds several** | An ordered list of identifiers; the order is content |
+  | **Reads back** | Nothing at all — lists whatever points at this entry |
+
+  One type rather than two, because "an author's articles" and "an article's author" are
+  two views of one relationship and nobody models them as different *kinds* of field —
+  making them different types meant choosing the direction before you had chosen the
+  collection. Between them the four shapes say every relationship a content API usually
+  names separately: one-to-many, many-to-one, one-to-one, many-to-many, and the one-way
+  pair where nothing reads back.
+
+  The three that hold something store the identifier and nothing else, so correcting a name
+  at the other end corrects it everywhere pointing at it — the bargain Image already makes
+  with the media library. A related entry comes back resolved: its identity and then its
+  own fields beside them, the same shape the API delivers an entry it was asked for.
+
+- **Reading back stores nothing.** "The articles whose Author points at me" is a query
+  against the index, run when the entry is read. Writing both sides would mean two copies
+  of one fact, and there are four places in this plugin where copies come apart — a draft
+  ahead of what is published, the trash, an import, a bulk action. A derived inverse cannot
+  drift, and nothing has to be rebuilt when a collection changes. It is read-only in the
+  admin, because the reference lives on the *other* entry and saving a draft of one entry
+  to change another is not something the entry form can promise to do safely — so the field
+  names the collection and the field it *is* set on, which makes the list a direction to
+  follow rather than a dead end. It says when it has stopped at its fiftieth entry, too,
+  rather than letting a ceiling read as the whole answer.
+
+- **The Schema tab draws the relation and names its kind** — one-way, many-to-one,
+  one-to-one, many-way, many-to-many or one-to-many — rather than leaving you to work out
+  which one some switches add up to. It reads in words, `many → one`, not in the `1`/`N` a
+  database diagram uses: the person reading it is deciding what their content *is*, and
+  "many" is the word they would have used anyway. The line is read from the field's own
+  collection outwards, which is what keeps the marks and the name agreeing — standing on
+  Article it is a many-to-one and standing on Author the very same relationship is a
+  one-to-many.
+
+  One arrow or two is the whole of what an inverse looks like. That is the one part of the
+  kind a field does not decide for itself, and it is drawn rather than offered as a fifth
+  shape on purpose: a control here that wrote a field into a collection you are not looking
+  at would be a schema change you did not see. Where the second arrow is missing, the panel
+  names the field to add and the collection to add it to.
+
+- **Relations are filterable**, by the identifier they hold: `?author=9f2c41ab-…` is every
+  article by that author, on all three surfaces. A relation holding several is indexed a
+  reference at a time, so it matches if any of them does — the behaviour a multi-valued
+  dropdown already has. Sorting by one is offered nowhere; it would order a list by a uuid.
+
+- **`SchemaPressReference` and `<Collection>Ref` in the GraphQL schema.** A reference type
+  exists only for a collection open for Read one; a relation into one that is closed
+  resolves as the shared identity-only type, so a closed collection's fields are absent
+  from a response *and* from introspection. The same rule governs REST, where a relation
+  into a closed collection delivers `id`, `slug` and `title` and no fields — a published
+  entry may say *which* author wrote it, but a collection that has not opted in does not
+  have its fields read out through the back of one that has.
+
+- **`schemapress/relation_depth`**, for sites that want more than one hop. One by default:
+  two collections pointing at each other would otherwise be a read with no end to it, and
+  each hop multiplies — a page of 25 entries each pointing at 5 others is 125 reads at one
+  hop and 625 at two. Past the last hop a relation still carries `id`, `slug` and `title`.
+
+- **`GET /relations` and `GET /lookup/{collection}`** on the admin transport, both
+  capability-checked: what a relation may point at, and the entries of one collection as
+  names to choose from. The picker searches rather than scrolls — a collection is however
+  many entries the site has — and lists drafts, saying which they are, because linking to a
+  draft is ordinary and finding out at publish time that half the references resolve to
+  nothing is not.
+
+- **A field that reads back can be neither required nor unique.** There is nobody to
+  require it of and no stored value to be unique about, so a definition claiming either is
+  corrected on the way in rather than enforced forever against a value nobody can fill in —
+  and the entry form stops offering the asterisk. It is also absent from the index: writing
+  an empty row per entry would make `$null` on it true of every entry in the collection, a
+  filter that matches everything, which is the direction a filter must never be wrong in.
+
+- **`Relations::pointingAt()`**, which names the collections that embed entries of a given
+  one. A relation is a dereference, so correcting an author's name changes the delivered
+  body — and the ETag — of every article carrying it, while nothing about those articles
+  was saved and nothing fired for them. A site behind a CDN has to purge them too, and this
+  is how it knows which. Nested fields are walked, since a relation inside a group or a
+  repeater row embeds exactly as a top-level one does.
+
+### Changed
+
+- **`Resolver::values()` takes the view and the entry being read**, as a fourth `$context`
+  argument. A relation is the first value whose expansion depends on more than the value
+  itself: which copy of the entry at the other end to show, and — reading back — who is
+  being pointed at. A published read only ever resolves published entries, so a
+  relation pointing at a draft comes back `null` on the front end and is visible, labelled,
+  in the builder. The `$depth` argument that had been threaded through this class since the
+  first release is now the thing that bounds those reads.
+
+- **`Entries::all()` accepts a depth**, so the listing a relation runs when it reads back
+  carries on counting from where the read that triggered it got to, rather than starting
+  again at zero.
+
+### Fixed
+
+- **Picking a relation's shape applied only half of it.** The shape sets both halves of the
+  field — `unique` sits beside `required`, the rest in the config bag — and it was written
+  in two calls. Each spread the same field object, the one the panel was rendered with, so
+  the second landed on the parent's unchanged list and silently discarded the first:
+  choosing **Holds several** set `unique` and never set `multiple`. One call now writes
+  both.
+
+- **An imported relation no longer depends on the order the file was read in.** A reference
+  is stored whether or not it currently resolves, which is what lets an import write the
+  articles before the authors they point at have been read out of the same document. An
+  import that brings half a pair now says which collection is missing rather than leaving a
+  field that is filled in and delivers nothing.
+
+- **Documentation that had drifted.** An audit against the code found five things stated
+  wrongly or not at all: `schemapress/job_abandoned` fires and was not in the hooks table
+  (nor was the fact that a job which cannot progress is dropped rather than retried
+  forever); the filterable list under **What can be queried** omitted Relation; the
+  validation rules table omitted both ceilings that shape a value rather than refusing it —
+  Gallery's **Most images**, which has never been listed, and Relation's **Most entries** —
+  and omitted uniqueness on a relation; and the CDN purge recipe under **Caching** purged
+  only the collection that changed. The counts, type lists, operator tables, widths,
+  capability names, settings keys and CLI commands are now checked against the code rather
+  than maintained by hand.
+
+- **What a relation that reads back costs on a list endpoint is now written down**, with
+  the measured number: a page of 20 authors with 10 posts each is 110 queries and 200
+  resolved entries for one response. It is what was asked for rather than a defect, but it
+  is worth knowing before putting such a field on a collection served as a list — the
+  other collection's own endpoint, filtered, is one query and pages.
+
 ## [0.3.1] — 2026-11-05
 
 A documentation and tooling release. Nothing in the plugin's behavior changed.

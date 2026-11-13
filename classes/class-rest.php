@@ -135,6 +135,30 @@ class Rest
             ]
         );
 
+        // what a relation may point at, and what already points somewhere.
+        // Fetched when a relation field is opened rather than sent with the
+        // page, for the reason the component list is: collections are made on
+        // another screen, and a stale list here would offer one that is gone
+        register_rest_route(self::NAMESPACE, '/relations', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'relations'],
+                'permission_callback' => [$this, 'canEdit'],
+            ],
+        ]);
+
+        // Named by the collection rather than by its id, and deliberately: a
+        // relation field stores the collection's KEY, so the control filling one
+        // in has a name and no id to go with it. Looking the id up first would
+        // be a request to find out where to send a request
+        register_rest_route(self::NAMESPACE, '/lookup/(?P<collection>[A-Za-z0-9_-]+)', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'lookup'],
+                'permission_callback' => [$this, 'canEdit'],
+            ],
+        ]);
+
         $this->trashRoutes();
         $this->bulkRoutes();
         $this->portabilityRoutes();
@@ -982,6 +1006,61 @@ class Rest
             'report' => $report,
             'types' => ContentType::all(),
             'components' => Component::all(),
+        ]);
+    }
+
+    /**
+     * Every collection a relation can point at, with the relations each already
+     * holds — so the builder can offer a target, and then offer which of that
+     * target's relations a reverse field is the other end of.
+     *
+     * @return \WP_REST_Response
+     */
+    public function relations()
+    {
+        ContentType::flush();
+
+        return rest_ensure_response(['collections' => Relations::catalog()]);
+    }
+
+    /**
+     * Entries of one collection as names to choose from — what a relation
+     * field's picker searches, and how it reads back what the references
+     * already in the field are called.
+     *
+     * `ids` is the second question and not a filter on the first: the field
+     * holds identifiers and has to say what they are, in the order it holds
+     * them, whether or not they would turn up in a search.
+     *
+     * @param \WP_REST_Request $request
+     *
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function lookup($request)
+    {
+        $type = ContentType::find((string) $request['collection']);
+
+        if (!$type) {
+            return new \WP_Error(
+                'schemapress_unknown_collection',
+                __('No collection with that name.', 'schemapress'),
+                ['status' => 404]
+            );
+        }
+
+        $ids = (string) $request->get_param('ids');
+
+        $args = $ids !== ''
+            ? ['ids' => array_filter(array_map('trim', explode(',', $ids)), 'strlen')]
+            : [
+                'search' => (string) $request->get_param('search'),
+                'perPage' => $request->get_param('perPage'),
+            ];
+
+        return rest_ensure_response([
+            'collection' => $type['key'],
+            'label' => $type['singularLabel'] ?: $type['label'],
+            'entries' => Entries::pick($type['id'], $args),
         ]);
     }
 

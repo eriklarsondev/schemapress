@@ -24,6 +24,14 @@ say so. Reads of whole entries are unaffected — the JSON document is the recor
 index is only a mirror of it.
 :::
 
+:::note A job that cannot move is dropped
+Every pass either advances a job or retires it. If one handles nothing at all — another
+plugin vetoing a deletion is the case that happens — it is taken off the queue rather than
+left to be picked up forever, and `schemapress/job_abandoned` fires with the cursor it got
+to. The work did not finish: the next save, or `wp schemapress reindex`, queues it again
+from a clean start.
+:::
+
 If WP-Cron is disabled on your site, nothing drains the queue on its own. Run it yourself:
 
 ```bash

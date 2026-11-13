@@ -88,6 +88,37 @@ fields inside them — so `get('url.url')` finds nothing at the second step and 
 default. Read the value and then index it: `get('url')['url']`, or `$link->url['url']`.
 :::
 
+### Relations
+
+A relation reads like any other value, because by the time a template sees it the
+reference has already been followed:
+
+```php
+<?php if ($article->has('author')) : ?>
+  <p class="byline">
+    <a href="/team/<?php echo esc_attr($article->author['slug']); ?>">
+      <?php echo esc_html($article->author['title']); ?>
+    </a>
+  </p>
+<?php endif; ?>
+
+<?php foreach ($article->get('tags', []) as $tag) : ?>
+  <span class="tag"><?php echo esc_html($tag['title']); ?></span>
+<?php endforeach; ?>
+```
+
+It is an array rather than an accessor — a plain `['id' => …, 'slug' => …]` with the
+related collection's fields beside them — so it is indexed rather than walked with
+`get()`. A relation holding one entry is that array or `null`; one holding several, and
+every one that reads back, is a list.
+
+:::note A relation does not nest forever
+Inside a related entry, that entry's own relations carry `id`, `slug` and `title` only.
+`$article->author['title']` is always there; `$article->author['employer']['founded']` is
+not. Fetch the second hop yourself — `SchemaPress::collection('companies')->find($id)` —
+or raise `schemapress/relation_depth` and pay for it on every read.
+:::
+
 ### Nothing is escaped for you
 
 Values come back as data. It is the template's job to decide whether a given spot needs

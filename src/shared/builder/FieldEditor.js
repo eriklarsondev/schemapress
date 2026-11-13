@@ -36,6 +36,7 @@ import {
   Image as ImageIcon,
   Paperclip,
   Link2,
+  Waypoints,
   Rows3,
   CircleHelp,
   Blocks,
@@ -66,6 +67,7 @@ const ICONS = {
   image: ImageIcon,
   file: Paperclip,
   link: Link2,
+  relation: Waypoints,
   group: Blocks,
   repeater: Rows3,
 }
@@ -152,6 +154,42 @@ function summarize(field) {
         (field.fields || []).length
       )
 
+    case 'relation': {
+      if (!config.collection) {
+        return __('no collection yet', 'schemapress')
+      }
+
+      // the key rather than the label: a summary line is read beside the
+      // field's own key, and the two being written the same way is what makes
+      // a schema scannable
+      if (config.direction === 'inverse') {
+        return config.field
+          ? sprintf(
+              /* translators: 1: a collection's machine key, 2: a relation field's key */
+              __('reads back %1$s · %2$s', 'schemapress'),
+              config.collection,
+              config.field
+            )
+          : sprintf(
+              /* translators: %s: a collection's machine key */
+              __('reads back %s', 'schemapress'),
+              config.collection
+            )
+      }
+
+      return config.multiple
+        ? sprintf(
+            /* translators: %s: a collection's machine key */
+            __('many %s', 'schemapress'),
+            config.collection
+          )
+        : sprintf(
+            /* translators: %s: a collection's machine key */
+            __('one %s', 'schemapress'),
+            config.collection
+          )
+    }
+
     default:
       return config.placeholder || ''
   }
@@ -163,7 +201,18 @@ function summarize(field) {
  * @param {Object} props
  * @return {JSX.Element} The list editor.
  */
-export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, editing = 0 }) {
+export function FieldsEditor({
+  fields,
+  fieldTypes,
+  onChange,
+  nested = false,
+  editing = 0,
+  // the machine key of the collection being edited, where there is one. A
+  // component is not a collection and has none, which is also why a relation
+  // there cannot be set to read back: there is nothing for the other end to
+  // point at
+  collection = '',
+}) {
   const [picking, setPicking] = useState(false)
 
   // a field created from the picker opens straight away: you chose a type, and
@@ -304,6 +353,7 @@ export function FieldsEditor({ fields, fieldTypes, onChange, nested = false, edi
           siblingKeys={fields.filter((_, i) => i !== index).map((f) => f.key)}
           fieldTypes={fieldTypes}
           editing={editing}
+          collection={collection}
           startOpen={opened === field.key}
           dragging={dragging === index}
           onOpened={() => setOpened(null)}
@@ -404,6 +454,7 @@ function FieldTypePicker({
   // a repeater inside a repeater is a list of lists, which nothing downstream
   // renders and which cannot be arranged on the form. it is not offered rather
   // than offered and then quietly broken
+  //
   const offered = nested ? fieldTypes.filter((type) => !type.repeatable) : fieldTypes
 
   return (
@@ -548,6 +599,7 @@ function FieldRow({
   siblingKeys,
   fieldTypes,
   editing,
+  collection,
   startOpen,
   dragging,
   onOpened,
@@ -790,6 +842,7 @@ function FieldRow({
           <FieldConfig
             field={field}
             nested={nested}
+            collection={collection}
             onChange={(config) => update({ config })}
             onField={update}
           />
@@ -802,6 +855,7 @@ function FieldRow({
               <FieldsEditor
                 nested
                 editing={editing}
+                collection={collection}
                 fields={field.fields || []}
                 fieldTypes={fieldTypes}
                 onChange={(fields) => update({ fields })}
@@ -817,6 +871,7 @@ function FieldRow({
           siblingKeys={siblingKeys}
           fieldTypes={fieldTypes}
           editing={editing}
+          collection={collection}
           onClose={() => setOpen(false)}
           onSave={(next) => {
             onChange(next)
@@ -843,7 +898,7 @@ function FieldRow({
  * @param {Object} props
  * @return {JSX.Element} The dialog.
  */
-function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSave }) {
+function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, collection, onClose, onSave }) {
   const [draft, setDraft] = useState(field)
   const [step, setStep] = useState(0)
 
@@ -982,6 +1037,7 @@ function RepeaterDialog({ field, siblingKeys, fieldTypes, editing, onClose, onSa
             <FieldsEditor
               nested
               editing={editing}
+              collection={collection}
               fields={rows}
               fieldTypes={fieldTypes}
               onChange={(next) => update({ fields: next })}

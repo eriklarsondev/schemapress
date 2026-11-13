@@ -1405,6 +1405,7 @@ require_once SCHEMAPRESS_PATH . 'classes/class-schema-repository.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-settings.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-content-sanitizer.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-validator.php';
+require_once SCHEMAPRESS_PATH . 'classes/class-relations.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-resolver.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-fields.php';
 require_once SCHEMAPRESS_PATH . 'classes/class-entry.php';

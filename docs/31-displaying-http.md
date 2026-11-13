@@ -234,6 +234,12 @@ on, and there is no `populate` step to remember.
 | Link | `{ "url", "label", "target" }`, or `null` |
 | Group | a nested object |
 | Repeater | an array of `{ "id", "data": {…} }` |
+| Relation | the entry it points at, or `null` — an array of them when it holds several |
+| Relation, reading back | an array of the entries pointing at this one |
+
+A related entry carries `id`, `slug`, `title` where the collection names its entries, and
+then that collection's own fields beside them — the same shape as the entry you asked for.
+It resolves one hop deep, and only entries that are published. See **Field types**.
 
 :::note Dates are wall clocks, not instants
 A Date, Time or Date and time carries no timezone, and none is applied on the way in or

@@ -60,13 +60,14 @@ The definition passed is the normalized one — what was actually stored, not wh
 
 ### The site itself
 
-Five more, for the things that happen to a site rather than to one entry.
+Six more, for the things that happen to a site rather than to one entry.
 
 | Action | Arguments | Fires when |
 | --- | --- | --- |
 | `schemapress/imported` | `$report, $payload` | An import finishes — see **Export and import** |
 | `schemapress/job_queued` | `$id, $job, $args` | Work too big for a request is queued |
 | `schemapress/job_finished` | `$id, $job` | That work drains — see **Running it** |
+| `schemapress/job_abandoned` | `$id, $job` | Work stopped making progress and was dropped |
 | `schemapress/settings_saved` | `$settings` | The Settings screen is saved |
 | `schemapress/upgraded` | `$version, $minted, $from` | The plugin's stored version moves |
 
@@ -95,6 +96,14 @@ add_action('schemapress/job_finished', function ($id, $job) {
 | `schemapress/field_types` | A field type: how a value is defaulted and sanitized |
 | `schemapress/datasets` | A ready-made option list a Dropdown can draw from |
 | `schemapress/docs/files` | A Markdown page on this screen |
+| `schemapress/relation_depth` | How many hops a relation is followed for. One by default |
+
+:::caution Each hop multiplies
+`relation_depth` is a ceiling on work as much as on depth. A page of 25 entries, each
+pointing at 5 others, is 125 reads at one hop and 625 at two — and two collections
+pointing at each other are what the ceiling exists for. Past the last hop a relation still
+delivers `id`, `slug` and `title`, which is enough to link or to fetch.
+:::
 
 A site with its own closed vocabulary registers it once and every Dropdown can use it, with
 the guarantee the built-in lists have: stored once, corrected in one place.

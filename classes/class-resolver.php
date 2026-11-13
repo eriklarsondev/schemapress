@@ -21,11 +21,17 @@ class Resolver
      *
      * @param mixed   $values
      * @param array   $fields
-     * @param integer $depth
+     * @param integer $depth   how many relation hops have been followed to get
+     *                         here. See Relations::DEPTH
+     * @param array   $context view (published or draft) and entry (the uuid of
+     *                         the entry being read). Both are what a relation
+     *                         needs and nothing else does: which copy of the
+     *                         entry on the other end to show, and — for the
+     *                         reverse direction — who is asking
      *
      * @return array
      */
-    public static function values($values, array $fields, $depth = 0)
+    public static function values($values, array $fields, $depth = 0, array $context = [])
     {
         $values = is_array($values) ? $values : [];
         $resolved = [];
@@ -35,7 +41,8 @@ class Resolver
             $resolved[$key] = self::value(
                 array_key_exists($key, $values) ? $values[$key] : null,
                 $field,
-                $depth
+                $depth,
+                $context
             );
         }
 
@@ -48,10 +55,11 @@ class Resolver
      * @param mixed   $value
      * @param array   $field
      * @param integer $depth
+     * @param array   $context
      *
      * @return mixed
      */
-    public static function value($value, array $field, $depth = 0)
+    public static function value($value, array $field, $depth = 0, array $context = [])
     {
         // The nesting types are asked by capability rather than by name, so a
         // type registered through schemapress/field_types that declares
@@ -62,14 +70,15 @@ class Resolver
         // Repeatable first: a repeater has children too, and the other order
         // would read its list of rows as a single row.
         if (FieldTypes::isRepeatable($field['type'])) {
-            return self::rows($value, $field, $depth);
+            return self::rows($value, $field, $depth, $context);
         }
 
         if (FieldTypes::hasChildren($field['type'])) {
             return self::values(
                 is_array($value) ? $value : [],
                 isset($field['fields']) ? $field['fields'] : [],
-                $depth
+                $depth,
+                $context
             );
         }
 
@@ -87,9 +96,42 @@ class Resolver
             case 'link':
                 return self::link($value);
 
+            case 'relation':
+                // a relation is the only type that needs to know the view,
+                // because it is a read of OTHER entries rather than an
+                // expansion of this one's value: a draft pointing at a draft
+                // shows it in the builder and nothing on the front end.
+                //
+                // Facing back it is a read of the index instead, and what it
+                // needs to know is who is being pointed AT
+                return Relations::isInverse($field)
+                    ? Relations::inverse(
+                        $field,
+                        $depth,
+                        self::view($context),
+                        (string) ($context['entry'] ?? '')
+                    )
+                    : Relations::resolve($value, $field, $depth, self::view($context));
+
             default:
                 return $value;
         }
+    }
+
+    /**
+     * Which copy of a related entry to read.
+     *
+     * Published unless told otherwise, the same default every read path in this
+     * plugin takes: a caller that forgot to say would otherwise publish
+     * unfinished work by omission.
+     *
+     * @param array $context
+     *
+     * @return string
+     */
+    private static function view(array $context)
+    {
+        return ($context['view'] ?? '') === Entries::DRAFT ? Entries::DRAFT : Entries::PUBLISHED;
     }
 
     /**
@@ -98,10 +140,11 @@ class Resolver
      * @param mixed   $value
      * @param array   $field
      * @param integer $depth
+     * @param array   $context
      *
      * @return array
      */
-    private static function rows($value, array $field, $depth = 0)
+    private static function rows($value, array $field, $depth = 0, array $context = [])
     {
         $rows = [];
 
@@ -112,7 +155,7 @@ class Resolver
 
             $rows[] = [
                 'id' => isset($row['id']) ? $row['id'] : ContentSanitizer::id(),
-                'data' => self::values($values, $fields, $depth),
+                'data' => self::values($values, $fields, $depth, $context),
             ];
         }
 

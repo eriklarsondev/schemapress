@@ -246,6 +246,25 @@ class FieldTypes
                     ];
                 },
             ],
+            // A link to another collection's entries, in either direction —
+            // which way round is a setting rather than a second type, because
+            // "an author's articles" and "an article's author" are two views of
+            // one relationship and nobody models them as different KINDS of
+            // field.
+            //
+            // Pointing outwards it stores the identifier and nothing else, so a
+            // name corrected on the entry at the other end is corrected
+            // everywhere that points at it — the bargain `image` makes with the
+            // media library. Pointing back it stores NOTHING: the answer is a
+            // query against the index, run when the entry is read. See
+            // class-relations.php for why only one side ever stores anything
+            'relation' => [
+                'label' => __('Relation', 'schemapress'),
+                'default' => '',
+                'sanitize' => function ($value, $field) {
+                    return Relations::isInverse($field) ? null : Relations::references($value, $field);
+                },
+            ],
             // not offered in the picker: a group is what a component becomes
             // when you import one, and "Group" on its own was a container with
             // no reason to exist until you had already decided what went in it
@@ -383,6 +402,7 @@ class FieldTypes
         // the address and its label sit side by side
         'link' => 'full',
         'json' => 'half',
+        'relation' => 'half',
         'group' => 'full',
         'repeater' => 'full',
     ];

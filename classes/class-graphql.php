@@ -142,6 +142,18 @@ class Graphql
 
         self::shared();
 
+        // the reference types first, so a relation can name one before the
+        // collection it points at has been reached. Only for a collection open
+        // to being read ONE at a time, which is the same switch that decides
+        // whether REST delivers a related entry's fields or only its
+        // identity — see Relations::prune. A schema that exposed more than the
+        // HTTP API would be this plugin breaking its own bargain
+        foreach (ContentType::all() as $type) {
+            if (!empty($type['publicApi']['single'])) {
+                self::referenceType($type);
+            }
+        }
+
         foreach (ContentType::all() as $type) {
             $open = [
                 'list' => !empty($type['publicApi']['list']),
@@ -293,6 +305,20 @@ class Graphql
             ],
         ]);
 
+        // what a relation into a collection that is NOT open for single reads
+        // resolves as: the reference, and nothing behind it. The fields of a
+        // closed collection are not readable through the back of an open one,
+        // and the type being this rather than that collection's own is what
+        // keeps them out of introspection as well as out of a response
+        register_graphql_object_type(self::PREFIX . 'Reference', [
+            'description' => __('An entry of a collection that is not open to being read on its own.', 'schemapress'),
+            'fields' => [
+                'id' => ['type' => ['non_null' => 'ID']],
+                'slug' => ['type' => 'String'],
+                'title' => ['type' => 'String'],
+            ],
+        ]);
+
         register_graphql_object_type(self::PREFIX . 'Link', [
             'description' => __('An address, its label and how it opens.', 'schemapress'),
             'fields' => [
@@ -412,53 +438,59 @@ class Graphql
     }
 
     /**
-     * The object type for one collection or one nested group of fields.
+     * One collection as something another collection may point AT.
+     *
+     * A second type rather than the collection's own, because a related entry
+     * arrives in a different shape from one you asked for: its fields sit beside
+     * its identity rather than under a `data` key, which is what makes
+     * `author { role }` read the same as `teamMember { role }` over HTTP. See
+     * Relations::shape.
+     *
+     * @param array $type the collection, from ContentType::all()
+     *
+     * @return void
+     */
+    private static function referenceType(array $type)
+    {
+        self::objectType(
+            self::referenceName($type['key']),
+            SchemaRepository::definition($type['id'])['fields'],
+            sprintf(
+                /* translators: %s: a collection's name */
+                __('A %s, as another collection points at it.', 'schemapress'),
+                $type['singularLabel'] ?: $type['label']
+            ),
+            'reference'
+        );
+    }
+
+    /**
+     * The type name a collection is pointed at by.
+     *
+     * @param string $key
+     *
+     * @return string
+     */
+    private static function referenceName($key)
+    {
+        return self::typeName($key, 'Ref');
+    }
+
+    /**
+     * The object type for one collection, one nested group of fields, or one
+     * collection as a relation delivers it.
      *
      * @param string $name   the GraphQL type name
      * @param array  $fields
      * @param string $label
-     * @param string $source where a value is read from: an entry, or a bare bag
+     * @param string $source where a value is read from: an entry, a bare bag, or
+     *                       a reference — a bag with identity beside the fields
      *
      * @return void
      */
     private static function objectType($name, array $fields, $label, $source = 'entry')
     {
-        $registered = $source === 'entry'
-            ? [
-                'id' => [
-                    'type' => ['non_null' => 'ID'],
-                    'description' => __('The uuid this entry is addressed by.', 'schemapress'),
-                    'resolve' => function ($entry) {
-                        return $entry['id'] ?? '';
-                    },
-                ],
-                'slug' => [
-                    'type' => 'String',
-                    'resolve' => function ($entry) {
-                        return $entry['slug'] ?? '';
-                    },
-                ],
-                'createdAt' => [
-                    'type' => 'String',
-                    'description' => __('When the entry was first created.', 'schemapress'),
-                    'resolve' => function ($entry) {
-                        return $entry['createdAt'] ?? '';
-                    },
-                ],
-                'updatedAt' => [
-                    'type' => 'String',
-                    'resolve' => function ($entry) {
-                        return $entry['modified'] ?? '';
-                    },
-                ],
-                'publishedAt' => [
-                    'type' => 'String',
-                    'resolve' => function ($entry) {
-                        return $entry['publishedAt'] ?? '';
-                    },
-                ],
-            ]
-            : [];
+        $registered = self::identityFields($source);
 
         foreach (self::named($fields) as $field_name => $field) {
             // The entry's own names are not a field's to take. A collection with
@@ -474,7 +506,15 @@ class Graphql
                 $field_name .= 'Field';
             }
 
-            $declared = self::field($name, $field_name, $field, $source);
+            // a reference reads its fields exactly as a bag does — they sit
+            // beside its identity rather than under a `data` key, which is the
+            // whole difference between it and the collection's own type
+            $declared = self::field(
+                $name,
+                $field_name,
+                $field,
+                $source === 'reference' ? 'bag' : $source
+            );
 
             if ($declared) {
                 $registered[$field_name] = $declared;
@@ -485,6 +525,86 @@ class Graphql
             'description' => $label,
             'fields' => $registered,
         ]);
+    }
+
+    /**
+     * The names an object type brings with it, before any field is declared.
+     *
+     * A bag — a group's fields, a repeater's row — has none: it is a piece of an
+     * entry rather than one, and has no identity of its own.
+     *
+     * @param string $source entry, reference or bag
+     *
+     * @return array
+     */
+    private static function identityFields($source)
+    {
+        if ($source === 'reference') {
+            return [
+                'id' => [
+                    'type' => ['non_null' => 'ID'],
+                    'description' => __('The uuid this entry is addressed by.', 'schemapress'),
+                    'resolve' => function ($reference) {
+                        return $reference['id'] ?? '';
+                    },
+                ],
+                'slug' => [
+                    'type' => 'String',
+                    'resolve' => function ($reference) {
+                        return $reference['slug'] ?? '';
+                    },
+                ],
+                // null rather than absent where the collection names no field to
+                // title its entries by: a schema cannot have a field that is
+                // sometimes there, and what REST leaves out GraphQL answers with
+                // nothing. See Relations::shape
+                'title' => [
+                    'type' => 'String',
+                    'resolve' => function ($reference) {
+                        return $reference['title'] ?? null;
+                    },
+                ],
+            ];
+        }
+
+        if ($source !== 'entry') {
+            return [];
+        }
+
+        return [
+            'id' => [
+                'type' => ['non_null' => 'ID'],
+                'description' => __('The uuid this entry is addressed by.', 'schemapress'),
+                'resolve' => function ($entry) {
+                    return $entry['id'] ?? '';
+                },
+            ],
+            'slug' => [
+                'type' => 'String',
+                'resolve' => function ($entry) {
+                    return $entry['slug'] ?? '';
+                },
+            ],
+            'createdAt' => [
+                'type' => 'String',
+                'description' => __('When the entry was first created.', 'schemapress'),
+                'resolve' => function ($entry) {
+                    return $entry['createdAt'] ?? '';
+                },
+            ],
+            'updatedAt' => [
+                'type' => 'String',
+                'resolve' => function ($entry) {
+                    return $entry['modified'] ?? '';
+                },
+            ],
+            'publishedAt' => [
+                'type' => 'String',
+                'resolve' => function ($entry) {
+                    return $entry['publishedAt'] ?? '';
+                },
+            ],
+        ];
     }
 
     /**
@@ -532,6 +652,19 @@ class Graphql
             return ['type' => self::PREFIX . 'Link', 'resolve' => $read];
         }
 
+        if ($type === 'relation') {
+            // several or one, decided by the field rather than by the value —
+            // the rule a dropdown already follows above. Facing back it is
+            // always a list: "what points at this" has no one answer
+            $many = Relations::isInverse($field) || !empty($field['config']['multiple']);
+            $target = self::relationType($field);
+
+            return [
+                'type' => $many ? ['list_of' => $target] : $target,
+                'resolve' => $read,
+            ];
+        }
+
         // by capability rather than by name, so a nesting type registered
         // through schemapress/field_types gets a type of its own here the way
         // the built-in pair does — the same branch ContentSanitizer, Resolver
@@ -560,6 +693,27 @@ class Graphql
         }
 
         return null;
+    }
+
+    /**
+     * Which type a relation resolves as.
+     *
+     * The collection's own reference type where that collection is open to being
+     * read one at a time, and the shared one — identity and nothing else —
+     * where it is not. Also the shared one for a relation pointing at a
+     * collection that has since been deleted, which has no type to name.
+     *
+     * @param array $field
+     *
+     * @return string
+     */
+    private static function relationType(array $field)
+    {
+        $target = Relations::target($field);
+
+        return $target && !empty($target['publicApi']['single'])
+            ? self::referenceName($target['key'])
+            : self::PREFIX . 'Reference';
     }
 
     /**

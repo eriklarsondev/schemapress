@@ -193,6 +193,36 @@ Every entry type also carries `id` (non-null `ID`), `slug`, `createdAt`, `update
 | Link | `SchemaPressLink` |
 | Group | a type of its own, named after the field |
 | Repeater | a list of one, with the rows already unwrapped |
+| Relation | `<Collection>Ref`, or a list of them when it holds several |
+| Relation, reading back | `[<Collection>Ref]` |
+
+A `Ref` type is one collection as another points at it: `id`, `slug`, `title`, and then
+that collection's own fields beside them — the same flat shape REST delivers a related
+entry in.
+
+```graphql
+query Articles {
+  articles {
+    nodes {
+      title
+      author { id slug title bio }
+      tags { title }
+    }
+  }
+}
+```
+
+:::note A relation into a closed collection
+A `Ref` type exists only for a collection that is open for **Read one**. A relation into
+one that is not resolves as `SchemaPressReference` — `id`, `slug` and `title` and nothing
+else — so a closed collection's fields are absent from a response *and* from
+introspection. That is the same answer REST gives, which is the bargain this schema
+makes: it shows exactly what REST shows.
+:::
+
+A relation can be filtered on, by the identifier it holds — `where: { author: { eq:
+"9f2c41ab-…" } }`. One that reads back cannot: it stores no value to index, being answered
+*from* that index rather than written to it.
 
 `SchemaPressMedia.sizes` is a **list** rather than a map, because GraphQL has no map type —
 each entry carries the size's `name` alongside its `url`, `width` and `height`.

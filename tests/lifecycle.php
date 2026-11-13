@@ -1040,6 +1040,104 @@ $warned = Portability::import([
 
 check('a changed type and a type this site lacks are both reported', 2, count($warned['warnings']));
 
+// --- relations on the move ---------------------------------------------------
+
+echo "\nRelations across an import\n";
+
+sp_test_reset();
+
+$authors = sp_test_type('Author', [['label' => 'Name', 'type' => 'text']], ['titleField' => 'name']);
+$articles = sp_test_type('Article', [
+    ['label' => 'Title', 'type' => 'text'],
+    ['label' => 'Author', 'type' => 'relation', 'config' => ['collection' => 'author']],
+], ['titleField' => 'title']);
+
+$ada = Entries::save($authors, null, ['values' => ['name' => 'Ada Lovelace'], 'publish' => true]);
+
+Entries::save($articles, null, [
+    'values' => ['title' => 'On the Analytical Engine', 'author' => $ada['id']],
+    'publish' => true,
+]);
+
+$export = Portability::export([], ['entries' => true]);
+
+check(
+    'a relation travels as the collection’s key, not its post id',
+    'author',
+    $export['collections'][0]['definition']['fields'][1]['config']['collection']
+);
+
+check(
+    'and the reference as the entry’s own identifier',
+    $ada['id'],
+    $export['collections'][0]['entries'][0]['values']['author']
+);
+
+// a fresh site. Article sorts before Author, so the articles are read back
+// BEFORE the entries they point at even exist — which is exactly why a
+// reference is not checked on the way in. See Relations::references
+sp_test_reset();
+
+$report = Portability::import($export, ['entries' => true]);
+
+check('both collections arrive', 2, count($report['collections']));
+check('and no reference was lost to the order they were read in', 0, count($report['warnings']));
+
+$moved = Entries::all(ContentType::idFor('articles'))['entries'][0];
+
+check('so the relation resolves on the other side', 'Ada Lovelace', $moved['data']['author']['title']);
+
+// half a pair is a perfectly ordinary thing to import, and the symptom without
+// a word about it is a field that is filled in and delivers nothing
+sp_test_reset();
+
+$half = $export;
+$half['collections'] = [$export['collections'][0]];
+
+$partial = Portability::import($half, ['entries' => true]);
+
+check('importing one half of a pair is allowed', 1, count($partial['collections']));
+check('and says what is missing', 1, count($partial['warnings']));
+check(
+    'naming the collection that is not here',
+    true,
+    strpos($partial['warnings'][0], 'author') !== false
+);
+
+// --- the picker's own transport ----------------------------------------------
+
+sp_test_reset();
+
+$authors = sp_test_type('Author', [['label' => 'Name', 'type' => 'text']], ['titleField' => 'name']);
+$ada = Entries::save($authors, null, ['values' => ['name' => 'Ada Lovelace'], 'publish' => true]);
+Entries::save($authors, null, ['values' => ['name' => 'Grace Hopper']]);
+
+$rest = new SchemaPress\Rest();
+
+$listed = $rest->lookup(new WP_REST_Request(['collection' => 'authors']))->get_data();
+
+check('the picker lists a collection by name', 2, count($listed['entries']));
+check('and says what the collection is called', 'Author', $listed['label']);
+
+$states = array_column($listed['entries'], 'state', 'title');
+
+check('a draft is listed and said to be one', 'draft', $states['Grace Hopper']);
+check('and a published entry is not', 'published', $states['Ada Lovelace']);
+
+$named = $rest->lookup(new WP_REST_Request([
+    'collection' => 'author',
+    'ids' => $ada['id'] . ',nothing-by-that-name',
+]))->get_data();
+
+check('identifiers already stored are named back', 1, count($named['entries']));
+check('by the entry they reach', 'Ada Lovelace', $named['entries'][0]['title']);
+
+check(
+    'a collection nobody has is a 404',
+    404,
+    $rest->lookup(new WP_REST_Request(['collection' => 'nothing']))->get_error_data()['status']
+);
+
 // --- work too big for one request --------------------------------------------
 
 echo "\nQueued work\n";
@@ -1286,8 +1384,13 @@ $shadowed = [];
 
 foreach ($GLOBALS['wp_rest_routes'] as $route) {
     $sample = preg_replace(
-        ['/\(\?P<id>\\\\d\+\)/', '/\(\?P<entry>\[A-Za-z0-9-\]\+\)/', '/\(\?P<action>([a-z]+)[^)]*\)/'],
-        ['12', '9f2c-41ab', '$1'],
+        [
+            '/\(\?P<id>\\\\d\+\)/',
+            '/\(\?P<entry>\[A-Za-z0-9-\]\+\)/',
+            '/\(\?P<collection>\[A-Za-z0-9_-\]\+\)/',
+            '/\(\?P<action>([a-z]+)[^)]*\)/',
+        ],
+        ['12', '9f2c-41ab', 'team_members', '$1'],
         $route
     );
 

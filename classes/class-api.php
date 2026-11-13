@@ -103,8 +103,10 @@ class Api
             'spec' => $spec,
         ]);
 
-        $data = array_map(function ($entry) {
-            return $this->shape($entry);
+        $fields = SchemaRepository::definition($type['id'])['fields'];
+
+        $data = array_map(function ($entry) use ($fields) {
+            return $this->shape($entry, $fields);
         }, $result['entries']);
 
         return $this->cached($request, [
@@ -141,7 +143,7 @@ class Api
         }
 
         return $this->cached($request, [
-            'data' => $this->shape($entry),
+            'data' => $this->shape($entry, SchemaRepository::definition($type['id'])['fields']),
             'meta' => new \stdClass(),
         ]);
     }
@@ -265,13 +267,21 @@ class Api
      * `values`, `state` and `ahead` are absent — they describe the editing of an
      * entry, which is the builder's business and not the public's.
      *
-     * @param array $entry from Entries::shape()
+     * @param array $entry  from Entries::shape()
+     * @param array $fields the collection's field definitions, for the one thing
+     *                      this shape cannot read off the entry: whether a
+     *                      relation is allowed to carry what it points at. See
+     *                      Relations::prune
      *
      * @return array
      */
-    private function shape(array $entry)
+    private function shape(array $entry, array $fields = [])
     {
         $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
+
+        // a relation into a collection that has not opened itself to being read
+        // one at a time delivers the reference and not the entry behind it
+        $data = Relations::prune($data, $fields);
 
         // No `title`: WordPress needs a post_title for every row, so one is
         // invented from whichever text field comes first when the collection

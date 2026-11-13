@@ -109,6 +109,28 @@ export const api = {
   components: () => request('/components'),
 
   /**
+   * What a relation may point at, and what already points somewhere — the
+   * collections, each with the relation fields it holds.
+   *
+   * @return {Promise<{collections: Array}>} The catalog.
+   */
+  relations: () => request('/relations'),
+
+  /**
+   * Entries of one collection as names to choose from.
+   *
+   * Addressed by the collection's machine key, because that is what a relation
+   * field stores — looking its id up first would be a request to find out
+   * where to send a request.
+   *
+   * @param {string} collection the machine key, singular or plural
+   * @param {Object} args       search and perPage, or ids to name what is
+   *                            already stored
+   * @return {Promise<{collection: string, label: string, entries: Array}>} The names.
+   */
+  lookup: (collection, args = {}) => request(`/lookup/${collection}${query(args)}`),
+
+  /**
    * One component, with the fields it holds.
    *
    * @param {number} id

@@ -1,6 +1,6 @@
 {
   "name": "schemapress",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "author": "Erik Larson",
   "description": "Define reusable page content schemas and bind them to page templates",
   "license": "GPL-2.0-or-later",

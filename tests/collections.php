@@ -2278,6 +2278,335 @@ check('including the shared types', [], $schema['types']);
 
 SchemaPress\Settings::save(['restApi' => true]);
 
+// --- relations ---------------------------------------------------------------
+
+echo "\nRelations\n";
+
+sp_test_reset();
+
+$authors = sp_test_type('Author', [
+    ['label' => 'Name', 'type' => 'text'],
+    ['label' => 'Bio', 'type' => 'textarea'],
+    [
+        'label' => 'Articles',
+        // the same type as the one on the other side. Which way it faces is a
+        // setting, because "an author's articles" and "an article's author" are
+        // two views of one relationship rather than two kinds of field
+        'type' => 'relation',
+        // required and unique are both claims a field nobody fills in cannot keep
+        'required' => true,
+        'unique' => true,
+        'config' => ['collection' => 'article', 'direction' => 'inverse', 'field' => 'author'],
+    ],
+], ['titleField' => 'name', 'publicApi' => ['list' => true, 'single' => true]]);
+
+$articles = sp_test_type('Article', [
+    ['label' => 'Title', 'type' => 'text'],
+    ['label' => 'Author', 'type' => 'relation', 'config' => ['collection' => 'author']],
+    [
+        'label' => 'Related',
+        'type' => 'relation',
+        'config' => ['collection' => 'article', 'multiple' => true, 'max' => 2],
+    ],
+], ['titleField' => 'title', 'publicApi' => ['list' => true, 'single' => true]]);
+
+$authorFields = SchemaRepository::definition($authors)['fields'];
+$articleFields = SchemaRepository::definition($articles)['fields'];
+
+check('a relation keeps the collection it points at', 'author', $articleFields[1]['config']['collection']);
+check('and faces outwards unless it says otherwise', 'owns', $articleFields[1]['config']['direction']);
+check('one entry unless it says otherwise', false, $articleFields[1]['config']['multiple']);
+check('and a ceiling where it holds several', 2, $articleFields[2]['config']['max']);
+check('one that reads back says so', 'inverse', $authorFields[2]['config']['direction']);
+check('and cannot be required', false, $authorFields[2]['required']);
+check('nor unique — it stores nothing to be unique about', false, $authorFields[2]['unique']);
+check('it names the relation it is the other end of', 'author', $authorFields[2]['config']['field']);
+
+// reading back is answered about THE ENTRY, so inside a repeater row — which
+// has no identity of its own in the index — every row would list the same
+// thing. the direction is forced back rather than the field refused
+$nestedInverse = SchemaModel::normalize([
+    'fields' => [[
+        'label' => 'Rows',
+        'type' => 'repeater',
+        'fields' => [[
+            'label' => 'Back',
+            'type' => 'relation',
+            'config' => ['collection' => 'article', 'direction' => 'inverse', 'field' => 'author'],
+        ]],
+    ]],
+])['fields'][0]['fields'][0];
+
+check('and cannot be set up inside a repeater', 'owns', $nestedInverse['config']['direction']);
+
+// `reverse` was a second type before the direction became a setting on the
+// one. normalizeFields DELETES a field whose type it does not know, so a
+// collection that had one would have lost it the next time anybody pressed Save
+$renamed = SchemaModel::normalize([
+    'fields' => [[
+        'key' => 'articles',
+        'label' => 'Articles',
+        'type' => 'reverse',
+        'config' => ['collection' => 'article', 'field' => 'author'],
+    ]],
+])['fields'];
+
+check('a field stored under the old type is kept', 1, count($renamed));
+check('as the one type', 'relation', $renamed[0]['type']);
+check('facing the way it always faced', 'inverse', $renamed[0]['config']['direction']);
+check('and still pointed where it was', 'author', $renamed[0]['config']['field']);
+
+// --- what a relation stores --------------------------------------------------
+
+$ada = Entries::save($authors, null, [
+    'publish' => true,
+    'values' => ['name' => 'Ada Lovelace', 'bio' => 'The first programmer.'],
+]);
+
+$engine = Entries::save($articles, null, [
+    'publish' => true,
+    'values' => ['title' => 'On the Analytical Engine', 'author' => $ada['id']],
+]);
+
+$notes = Entries::save($articles, null, [
+    'publish' => true,
+    'values' => [
+        'title' => 'Notes',
+        // a list given to a single field, the same entry twice, something that
+        // is not an identifier at all, and more than the field's ceiling
+        'author' => [$ada['id'], 'somebody-else'],
+        'related' => [$engine['id'], $engine['id'], 'who?', $notes['id'] ?? 'x', 'y'],
+    ],
+]);
+
+$stored = Entries::get($articles, $notes['id'], 0, Entries::DRAFT)['values'];
+
+check('a list given to a single relation keeps the first', $ada['id'], $stored['author']);
+check('the same entry twice is stored once', 2, count($stored['related']));
+check('and no more than the field allows', $engine['id'], $stored['related'][0]);
+check('an identifier is kept whether or not it resolves', 'who', $stored['related'][1]);
+
+// deliberately NOT checked on the way in: an import writes a post before the
+// author it points at has been read out of the same file, and a reference that
+// had to exist on save could never be restored in that order
+$dangling = Entries::save($articles, null, [
+    'publish' => true,
+    'values' => ['title' => 'Orphan', 'author' => '5f9c2b1e-0000-4000-8000-000000000000'],
+]);
+
+check(
+    'a reference to nothing is stored',
+    '5f9c2b1e-0000-4000-8000-000000000000',
+    Entries::get($articles, $dangling['id'], 0, Entries::DRAFT)['values']['author']
+);
+check('and resolves to nothing', null, Entries::get($articles, $dangling['id'])['data']['author']);
+
+// --- what a relation delivers ------------------------------------------------
+
+$resolved = Entries::get($articles, $engine['id'])['data']['author'];
+
+check('a relation resolves to the entry it points at', $ada['id'], $resolved['id']);
+check('addressed by its slug', 'ada-lovelace', $resolved['slug']);
+check('named, because the collection says which field names it', 'Ada Lovelace', $resolved['title']);
+check('with its fields beside its identity', 'The first programmer.', $resolved['bio']);
+
+check(
+    'a relation holding several resolves to a list',
+    true,
+    is_array(Entries::get($articles, $notes['id'])['data']['related'])
+);
+
+// one hop. two collections pointing at each other would otherwise be a read
+// with no end to it
+$hop = Entries::get($articles, $notes['id'])['data']['related'][0];
+
+check('one hop carries the related entry’s fields', 'On the Analytical Engine', $hop['title']);
+check('the hop after it is identity alone', ['id', 'slug', 'title'], array_keys($hop['author']));
+
+// the collection has gone. the field still answers, so a template reading it
+// does not have to test for a field that used to be a relation
+$gone = SchemaModel::normalize([
+    'fields' => [['label' => 'Author', 'type' => 'relation', 'config' => ['collection' => 'nobody']]],
+])['fields'];
+
+check(
+    'a relation into a collection that is gone resolves to nothing',
+    null,
+    SchemaPress\Resolver::values(['author' => $ada['id']], $gone)['author']
+);
+
+// --- the view a relation is read in ------------------------------------------
+
+Entries::unpublish($authors, $ada['id']);
+
+check(
+    'an unpublished entry drops out of a published read',
+    null,
+    Entries::get($articles, $engine['id'])['data']['author']
+);
+
+check(
+    'but the builder still sees what it points at',
+    'Ada Lovelace',
+    Entries::get($articles, $engine['id'], 0, Entries::DRAFT)['data']['author']['title']
+);
+
+Entries::publish($authors, $ada['id']);
+
+// --- the other direction -----------------------------------------------------
+
+$pointing = Entries::get($authors, $ada['id'])['data']['articles'];
+
+check('a relation facing back lists what points at the entry', 2, count($pointing));
+check('with their own fields', true, isset($pointing[0]['title']));
+
+// one that names something which is not a relation would otherwise
+// filter on a field the index cannot see — and an unindexable filter matches
+// EVERYTHING, which is the wrong way for this to be wrong
+$miswired = SchemaModel::normalize([
+    'fields' => [[
+        'label' => 'Articles',
+        'type' => 'relation',
+        'config' => ['collection' => 'article', 'direction' => 'inverse', 'field' => 'title'],
+    ]],
+])['fields'];
+
+check(
+    'one pointed at a field that is not a relation lists nothing',
+    [],
+    SchemaPress\Resolver::values([], $miswired, 0, ['entry' => $ada['id']])['articles']
+);
+
+// --- filtering ---------------------------------------------------------------
+
+check(
+    'entries can be filtered by what they point at',
+    2,
+    Entries::all($articles, ['spec' => ['filters' => ['author' => ['$eq' => $ada['id']]]]])['total']
+);
+
+check(
+    'and a stranger matches nothing',
+    0,
+    Entries::all($articles, ['spec' => ['filters' => ['author' => ['$eq' => 'nobody']]]])['total']
+);
+
+// --- what the public is told -------------------------------------------------
+
+$open = sp_test_single('articles', $engine['id'])->get_data()['data'];
+
+check('an open collection delivers the related entry', 'Ada Lovelace', $open['author']['title']);
+check('with its fields', 'The first programmer.', $open['author']['bio']);
+
+// a relation is a dereference, and this plugin publishes nothing a collection
+// has not opted into. a published article may say WHO wrote it; a closed
+// collection does not have its fields read out through the back of an open one
+SchemaRepository::saveSettings($authors, ['publicApi' => ['list' => false, 'single' => false]]);
+ContentType::flush();
+
+$closedTarget = sp_test_single('articles', $engine['id'])->get_data()['data'];
+
+check(
+    'a closed collection delivers the reference alone',
+    ['id', 'slug', 'title'],
+    array_keys($closedTarget['author'])
+);
+
+check('which is still enough to address it', $ada['id'], $closedTarget['author']['id']);
+
+// --- what the builder is told ------------------------------------------------
+
+// the catalog is what draws the diagram in the schema editor, and the kind it
+// names depends on all three: how many, whether anybody else may hold the same
+// one, and whether the far collection reads it back
+$catalog = SchemaPress\Relations::catalog();
+$byKey = array_column($catalog, null, 'key');
+
+check('the catalog lists every collection', ['article', 'author'], array_keys($byKey));
+check('with the relations one holds', 'author', $byKey['article']['relations'][0]['collection']);
+check('saying how many it points at', false, $byKey['article']['relations'][0]['multiple']);
+check('and whether it holds several', true, $byKey['article']['relations'][1]['multiple']);
+
+check(
+    'and the ones facing back, which tell a two-way relation from a dead end',
+    [['key' => 'articles', 'label' => 'Articles', 'collection' => 'article', 'field' => 'author']],
+    $byKey['author']['inverses']
+);
+
+// which collections embed this one, for a cache that has to purge them: a
+// correction to an author changes the body of every article carrying it, and
+// nothing fires for those articles
+check('a collection knows what points at it', ['article'], SchemaPress\Relations::pointingAt('author'));
+check('a self-relation counts', ['article'], SchemaPress\Relations::pointingAt('article'));
+check('a collection nothing points at', [], SchemaPress\Relations::pointingAt('nobody'));
+
+// a relation nested inside a group or a repeater row embeds exactly as a
+// top-level one does, so a purge has to know about it too
+$nested = sp_test_type('Issue', [
+    ['label' => 'Title', 'type' => 'text'],
+    ['label' => 'Credits', 'type' => 'repeater', 'fields' => [
+        ['label' => 'Writer', 'type' => 'relation', 'config' => ['collection' => 'author']],
+    ]],
+], ['titleField' => 'title']);
+
+check(
+    'including one buried in a repeater row',
+    ['article', 'issue'],
+    SchemaPress\Relations::pointingAt('author')
+);
+
+// and the direction matters: reading back is answered from the index when the
+// entry is read, so nothing of ITS collection goes stale elsewhere
+check('but a field that reads back does not embed', [], SchemaPress\Relations::pointingAt('issue'));
+
+// --- the GraphQL schema ------------------------------------------------------
+
+$schema = sp_test_graphql();
+
+check('a closed collection has no reference type', false, isset($schema['types']['AuthorRef']));
+check(
+    'so a relation into it resolves as the shared one',
+    'SchemaPressReference',
+    $schema['types']['Article']['fields']['author']['type']
+);
+
+SchemaRepository::saveSettings($authors, ['publicApi' => ['list' => true, 'single' => true]]);
+ContentType::flush();
+
+$schema = sp_test_graphql();
+
+check('an open collection gets a reference type', true, isset($schema['types']['AuthorRef']));
+check(
+    'and the relation resolves as that',
+    'AuthorRef',
+    $schema['types']['Article']['fields']['author']['type']
+);
+check(
+    'its fields sit beside its identity',
+    true,
+    isset($schema['types']['AuthorRef']['fields']['bio'])
+);
+check(
+    'a relation holding several is a list of them',
+    ['list_of' => 'ArticleRef'],
+    $schema['types']['Article']['fields']['related']['type']
+);
+check(
+    'and one facing back always is',
+    ['list_of' => 'ArticleRef'],
+    $schema['types']['Author']['fields']['articles']['type']
+);
+check(
+    'a relation can be filtered on',
+    true,
+    isset($schema['inputs']['ArticleWhere']['fields']['author'])
+);
+check(
+    'one facing back cannot — it stores nothing to index',
+    false,
+    isset($schema['inputs']['AuthorWhere']['fields']['articles'])
+);
+
 // --- a type somebody else registered -----------------------------------------
 
 echo "\nA field type added through the filter\n";

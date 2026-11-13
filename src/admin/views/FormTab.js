@@ -52,6 +52,7 @@ import {
   cn,
 } from '../../ui'
 import { move } from '../../shared/utils'
+import { isInverse } from '../../shared/builder/RelationDiagram'
 import { conditionTargets } from '../../shared/conditions'
 import { clearUnsaved, useUnsavedGuard, PANEL } from '../../shared/unsaved'
 // the canvas must break its rows exactly the way the entry form does, or it is
@@ -2125,33 +2126,40 @@ function FieldCard({
         {/* required is the other setting worth a click rather than a dialog,
             and it is the one you want to SEE without opening anything — an
             asterisk that is on or off says the state of every field on the
-            screen at once, which a switch buried in a dialog never can */}
-        <button
-          type="button"
-          aria-pressed={Boolean(field.required)}
-          aria-label={sprintf(
-            /* translators: %s: the field's label */
-            __('Required: %s', 'schemapress'),
-            field.label
-          )}
-          title={
-            field.required
-              ? __('Required — click to make optional', 'schemapress')
-              : __('Optional — click to make required', 'schemapress')
-          }
-          onClick={(event) => {
-            event.stopPropagation()
-            onRequired(!field.required)
-          }}
-          className={cn(
-            'flex size-5 shrink-0 items-center justify-center rounded border text-[13px] font-semibold leading-none transition-colors',
-            field.required
-              ? 'border-destructive/40 bg-destructive/10 text-destructive'
-              : 'border-border text-muted-foreground/50 hover:border-primary/50 hover:text-foreground'
-          )}
-        >
-          <span aria-hidden="true">*</span>
-        </button>
+            screen at once, which a switch buried in a dialog never can
+
+            absent on a field nobody fills in: a relation that reads back is
+            worked out when the entry is read, so there is nobody to require it
+            of and the server drops the claim. An asterisk that cleared itself
+            on save would read as the screen losing a setting */}
+        {isInverse(field) ? null : (
+          <button
+            type="button"
+            aria-pressed={Boolean(field.required)}
+            aria-label={sprintf(
+              /* translators: %s: the field's label */
+              __('Required: %s', 'schemapress'),
+              field.label
+            )}
+            title={
+              field.required
+                ? __('Required — click to make optional', 'schemapress')
+                : __('Optional — click to make required', 'schemapress')
+            }
+            onClick={(event) => {
+              event.stopPropagation()
+              onRequired(!field.required)
+            }}
+            className={cn(
+              'flex size-5 shrink-0 items-center justify-center rounded border text-[13px] font-semibold leading-none transition-colors',
+              field.required
+                ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                : 'border-border text-muted-foreground/50 hover:border-primary/50 hover:text-foreground'
+            )}
+          >
+            <span aria-hidden="true">*</span>
+          </button>
+        )}
 
         {/* width is the one setting worth changing without opening anything,
             because it is the whole point of this screen — so it is a popover
@@ -2334,12 +2342,14 @@ function FieldDialog({ field, siblings, onClose, onSave }) {
         </Field>
 
         <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3">
-          <Switch
-            label={__('Required', 'schemapress')}
-            help={__('An entry cannot be saved without it.', 'schemapress')}
-            checked={Boolean(draft.required)}
-            onChange={(required) => update({ required })}
-          />
+          {isInverse(draft) ? null : (
+            <Switch
+              label={__('Required', 'schemapress')}
+              help={__('An entry cannot be saved without it.', 'schemapress')}
+              checked={Boolean(draft.required)}
+              onChange={(required) => update({ required })}
+            />
+          )}
 
           <ConditionSettings
             field={draft}

@@ -110,6 +110,34 @@ the default. In Twig, read the field and walk the array with a dot, as above:
 `link.url.url`. In `get()` it is `get('url')['url']`.
 :::
 
+### Relations
+
+A relation is already the entry it points at, so it is walked with a dot like anything
+else:
+
+```twig
+{% if article.author %}
+  <p class="byline">
+    <a href="/team/{{ article.author.slug }}">{{ article.author.title }}</a>
+  </p>
+{% endif %}
+
+{% for tag in article.tags %}
+  <span class="tag">{{ tag.title }}</span>
+{% endfor %}
+```
+
+It is a plain array rather than an accessor, which only matters in that there is no
+`get()` or `rows()` on it — `article.author.bio` is the whole of the API. A relation
+holding one entry is falsy when it points at nothing, so `{% if %}` is the test; one
+holding several, and every one that reads back, is a list and loops empty.
+
+:::note Only one hop
+Inside a related entry, that entry's own relations carry `id`, `slug` and `title` alone —
+`article.author.employer.founded` is empty however the schema is drawn. See **Field
+types**.
+:::
+
 ### Including a partial per entry
 
 The usual Timber pattern works unchanged, because an entry is just an object:

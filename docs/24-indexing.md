@@ -11,12 +11,17 @@ is written a second time where the database can see it, and that mirror is what 
 sorts run against.
 
 **Filterable:** Text, Textarea, Email, URL, Phone, Dropdown, Color, Number, Date, Date and
-time, Time, Toggle, Image, File.
+time, Time, Toggle, Image, File, Relation.
 
 **Not filterable:** Rich text (a blob of markup, which nothing sensible can be asked
 about), Link and Group (several values in one field), JSON (a shape this collection does not
-describe, so there is no column to compare it as), and anything inside a Repeater or a
-Gallery (many values per entry, which one row cannot hold).
+describe, so there is no column to compare it as), a Relation set to **read back** (it
+stores nothing — it is *answered from* this mirror rather than written to it), and anything
+inside a Repeater or a Gallery (many values per entry, which one row cannot hold).
+
+A Relation is filtered by the identifier it holds, and one holding several is mirrored a
+reference at a time — so it matches if *any* of them does, exactly as a Dropdown taking
+several behaves.
 
 A filter or sort naming a field that cannot be indexed is **dropped**, and so is one naming
 a field that does not exist. The query then runs without it — which means it returns
